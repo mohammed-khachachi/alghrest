@@ -1,0 +1,167 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    system: alghrest
+    env: development
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+
+  # ─────────────────────────────────────────────────────────
+  # Self-monitoring
+  # ─────────────────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+        labels:
+          service: prometheus
+
+  # ─────────────────────────────────────────────────────────
+  # Infrastructure
+  # ─────────────────────────────────────────────────────────
+  - job_name: node-exporter
+    static_configs:
+      - targets: [node-exporter:9100]
+        labels:
+          service: node-exporter
+
+  - job_name: timescaledb
+    static_configs:
+      - targets: [postgres-exporter:9187]
+        labels:
+          service: timescaledb
+
+  - job_name: redis
+    static_configs:
+      - targets: [redis-exporter:9121]
+        labels:
+          service: redis
+
+  # ─────────────────────────────────────────────────────────
+  # Kafka JMX (one entry per broker)
+  # Requires JMX exporter running alongside each broker
+  # ─────────────────────────────────────────────────────────
+  # - job_name: kafka
+  #   static_configs:
+  #     - targets: [kafka-1:9101, kafka-2:9102, kafka-3:9103]
+  #       labels:
+  #         service: kafka
+
+  # ─────────────────────────────────────────────────────────
+  # ALGHREST Application Agents
+  # Each agent exposes /metrics on its designated port
+  # Ports: 9200-9231 (agent_id + 9200)
+  # ─────────────────────────────────────────────────────────
+
+  # Tier 1 — Executive (agents 01-04)
+  - job_name: tier1_executive
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - alghrest-cio:9201
+          - alghrest-cro:9202
+          - alghrest-compliance:9203
+          - alghrest-treasurer:9204
+        labels:
+          tier: "1"
+          tier_name: executive
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: agent_host
+
+  # Tier 2 — Intelligence (agents 05-10)
+  - job_name: tier2_intelligence
+    static_configs:
+      - targets:
+          - alghrest-market-data:9205
+          - alghrest-news:9206
+          - alghrest-sentiment:9207
+          - alghrest-macro:9208
+          - alghrest-onchain:9209
+          - alghrest-geopolitical:9210
+        labels:
+          tier: "2"
+          tier_name: intelligence
+
+  # Tier 3 — Quant (agents 11-15)
+  - job_name: tier3_quant
+    static_configs:
+      - targets:
+          - alghrest-technical:9211
+          - alghrest-fundamental:9212
+          - alghrest-patterns:9213
+          - alghrest-volatility:9214
+          - alghrest-correlation:9215
+        labels:
+          tier: "3"
+          tier_name: quantitative
+
+  # Tier 4 — Strategies (agents 16-23)
+  - job_name: tier4_strategies
+    static_configs:
+      - targets:
+          - alghrest-trend:9216
+          - alghrest-mean-rev:9217
+          - alghrest-arb:9218
+          - alghrest-stat-arb:9219
+          - alghrest-market-maker:9220
+          - alghrest-options:9221
+          - alghrest-scalper:9222
+          - alghrest-swing:9223
+        labels:
+          tier: "4"
+          tier_name: strategies
+
+  # Tier 5 — Execution (agents 24-26)
+  - job_name: tier5_execution
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - alghrest-sor:9224
+          - alghrest-exec-algos:9225
+          - alghrest-sizer:9226
+        labels:
+          tier: "5"
+          tier_name: execution
+
+  # Tier 6 — DeFi (agents 27-29)
+  - job_name: tier6_defi
+    static_configs:
+      - targets:
+          - alghrest-yield:9227
+          - alghrest-mev:9228
+          - alghrest-staking:9229
+        labels:
+          tier: "6"
+          tier_name: defi
+
+  # Tier 7 — Monitoring (agents 30-32)
+  - job_name: tier7_monitoring
+    static_configs:
+      - targets:
+          - alghrest-performance:9230
+          - alghrest-rl:9231
+          - alghrest-auxiliary:9232
+        labels:
+          tier: "7"
+          tier_name: monitoring
+
+  # ─────────────────────────────────────────────────────────
+  # FastAPI application
+  # ─────────────────────────────────────────────────────────
+  - job_name: alghrest_api
+    scrape_interval: 10s
+    static_configs:
+      - targets: [alghrest-api:8000]
+        labels:
+          service: api
+    metrics_path: /metrics

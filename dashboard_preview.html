@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALGHREST System Dashboard Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bgDark: '#0B0E14',
+                        panel: '#151A22',
+                        panelHover: '#1C232E',
+                        border: '#2A3441',
+                        primary: '#3B82F6',
+                        accent: '#8B5CF6',
+                        success: '#10B981',
+                        danger: '#EF4444',
+                        warning: '#F59E0B',
+                        textMain: '#F3F4F6',
+                        textMuted: '#9CA3AF'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B0E14;
+            color: #F3F4F6;
+        }
+
+        .glass-panel {
+            background: rgba(21, 26, 34, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid #2A3441;
+            border-radius: 12px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0B0E14;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2A3441;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3B82F6;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .pulse-green {
+            background-color: #10B981;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .pulse-red {
+            background-color: #EF4444;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .pulse-yellow {
+            background-color: #F59E0B;
+            animation: pulse-yellow 2s infinite;
+        }
+
+        @keyframes pulse-yellow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .nav-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            background-color: #1C232E;
+            color: #3B82F6;
+        }
+
+        .nav-item:not(.active):hover {
+            background-color: #151A22;
+            color: #F3F4F6;
+        }
+
+        /* Kafka Flow Animation */
+        .flow-line {
+            stroke-dasharray: 10;
+            animation: dash 20s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #9CA3AF;
+            border-bottom: 1px solid #2A3441;
+            background: #151A22;
+        }
+
+        td {
+            padding: 12px;
+            font-size: 13px;
+            border-bottom: 1px solid #1C232E;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden antialiased text-textMain">
+
+    <!-- Sidebar -->
+    <aside class="w-64 border-r border-border bg-bgDark flex flex-col z-20">
+        <div class="h-16 flex items-center px-6 border-b border-border">
+            <div
+                class="w-8 h-8 rounded bg-gradient-to-br from-primary to-accent flex items-center justify-center mr-3 shadow-lg shadow-primary/20">
+                <i data-lucide="triangle" class="text-white w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xl tracking-wider text-white">ALGHREST</span>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-1" id="sidebar-nav">
+            <div onclick="switchTab('overview')"
+                class="nav-item active flex items-center px-3 py-2.5 text-textMuted rounded-lg font-medium">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Overview
+            </div>
+            <div onclick="switchTab('agents')"
+                class="nav-item flex items-center px-3 py-2.5 text-textMuted rounded-lg font-medium">
+                <i data-lucide="cpu" class="w-5 h-5 mr-3"></i> Agents Network
+                <span class="ml-auto bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full">32</span>
+            </div>
+            <div onclick="switchTab('positions')"
+                class="nav-item flex items-center px-3 py-2.5 text-textMuted rounded-lg font-medium">
+                <i data-lucide="briefcase" class="w-5 h-5 mr-3"></i> Positions
+            </div>
+            <div onclick="switchTab('kafka')"
+                class="nav-item flex items-center px-3 py-2.5 text-textMuted rounded-lg font-medium">
+                <i data-lucide="network" class="w-5 h-5 mr-3"></i> Kafka Streams
+            </div>
+            <div onclick="switchTab('risk')"
+                class="nav-item flex items-center px-3 py-2.5 text-textMuted rounded-lg font-medium">
+                <i data-lucide="shield-alert" class="w-5 h-5 mr-3"></i> Risk Manager
+                <span class="ml-auto bg-danger/20 text-danger text-xs px-2 py-0.5 rounded-full">2</span>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-border">
+            <div class="glass-panel p-4 flex flex-col gap-2">
+                <span class="text-xs text-textMuted uppercase font-semibold">System Connection</span>
+                <div class="flex items-center gap-2">
+                    <span class="status-dot pulse-green"></span>
+                    <span class="text-sm text-success font-medium">WebSocket Live</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-bgDark relative">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0">
+        </div>
+
+        <!-- Header -->
+        <header
+            class="h-16 flex items-center justify-between px-6 border-b border-border glass-panel rounded-none z-10 sticky top-0">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-1 bg-success/10 border border-success/20 rounded-full">
+                    <span class="status-dot bg-success pulse-green"></span>
+                    <span class="text-success text-xs font-bold tracking-wide">LIVE SESSION</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-textMuted font-mono text-sm flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i> <span id="clock">14:32:45 UTC</span>
+                </div>
+                <button
+                    class="flex items-center gap-2 px-4 py-1.5 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 rounded-md text-sm font-bold transition-all shadow-lg shadow-danger/10">
+                    <i data-lucide="power" class="w-4 h-4"></i> KILL SWITCH
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 z-10">
+            <div class="max-w-7xl mx-auto">
+
+                <!-- 1. OVERVIEW TAB -->
+                <div id="tab-overview" class="tab-content active space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">System Overview</h1>
+                        <p class="text-textMuted text-sm mt-1">Multi-Agent Trading Performance & Portfolio Snapshot</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="glass-panel p-5 hover:border-primary/50 transition-colors">
+                            <div class="flex justify-between">
+                                <span class="text-textMuted text-sm font-medium">Daily PnL</span>
+                                <div class="text-success"><i data-lucide="trending-up" class="w-4 h-4"></i></div>
+                            </div>
+                            <div class="mt-4">
+                                <h3 class="text-2xl font-bold text-success" id="ov-daily-pnl">+$12.45</h3>
+                                <span class="text-success text-xs font-medium" id="ov-daily-pct">+1.24% vs
+                                    yesterday</span>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5">
+                            <div class="flex justify-between">
+                                <span class="text-textMuted text-sm font-medium">Portfolio Value</span>
+                                <div class="text-accent"><i data-lucide="dollar-sign" class="w-4 h-4"></i></div>
+                            </div>
+                            <div class="mt-4">
+                                <h3 class="text-2xl font-bold text-white" id="ov-portfolio-val">$1,000.00</h3>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5">
+                            <div class="flex justify-between">
+                                <span class="text-textMuted text-sm font-medium">Active Positions</span>
+                                <div class="text-primary"><i data-lucide="target" class="w-4 h-4"></i></div>
+                            </div>
+                            <div class="mt-4">
+                                <h3 class="text-2xl font-bold text-white" id="ov-active-pos">24</h3><span
+                                    class="text-textMuted text-xs font-mono" id="ov-pos-split">14 LONG / 10 SHORT</span>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5">
+                            <div class="flex justify-between">
+                                <span class="text-textMuted text-sm font-medium">Agent Network</span>
+                                <div class="text-warning"><i data-lucide="bot" class="w-4 h-4"></i></div>
+                            </div>
+                            <div class="mt-4">
+                                <h3 class="text-2xl font-bold text-white">32<span
+                                        class="text-sm text-textMuted">/32</span></h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="glass-panel p-5 lg:col-span-2 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold text-white">Cumulative PnL</h3>
+                                <select id="pnlFilter" onchange="updateChartFilter(this.value)"
+                                    class="bg-panel border border-border text-xs text-textMuted rounded-md px-2 py-1 outline-none cursor-pointer">
+                                    <option value="1D">Today (Intraday)</option>
+                                    <option value="1W">1 Week</option>
+                                    <option value="1M">1 Month</option>
+                                    <option value="1Y">1 Year</option>
+                                </select>
+                            </div>
+                            <div class="relative w-full h-64"><canvas id="pnlChart"></canvas></div>
+                        </div>
+                        <div class="glass-panel p-5 flex flex-col gap-6">
+                            <h3 class="text-lg font-semibold text-white mb-2">Risk Monitors</h3>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1"><span
+                                        class="text-textMuted">Drawdown</span><span class="font-mono">2.4% / 7.0%</span>
+                                </div>
+                                <div class="w-full bg-bgDark rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 34%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1"><span class="text-textMuted">VaR
+                                        (95%)</span><span class="font-mono">$42.50</span></div>
+                                <div class="w-full bg-bgDark rounded-full h-2">
+                                    <div class="bg-warning h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1"><span class="text-textMuted">Net
+                                        Exposure</span><span class="font-mono" id="risk-gauge-text">15% Long</span>
+                                </div>
+                                <div class="w-full flex h-2 rounded-full overflow-hidden">
+                                    <div class="bg-success h-full" id="risk-gauge-long" style="width: 57.5%"></div>
+                                    <div class="bg-danger h-full" id="risk-gauge-short" style="width: 42.5%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. AGENTS TAB -->
+                <div id="tab-agents" class="tab-content space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">Agents Network</h1>
+                            <p class="text-textMuted text-sm mt-1">Live status of 32 autonomous agents across 7 tiers
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            <select class="bg-panel border border-border rounded-md px-3 py-1.5 text-sm outline-none">
+                                <option>All Tiers</option>
+                                <option>Tier 1: CIO</option>
+                                <option>Tier 4: Strategies</option>
+                            </select>
+                            <select class="bg-panel border border-border rounded-md px-3 py-1.5 text-sm outline-none">
+                                <option>Status: All</option>
+                                <option>Running</option>
+                                <option>Stopped</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="agentsGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- 3. POSITIONS TAB -->
+                <div id="tab-positions" class="tab-content space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Portfolio Positions</h1>
+                        <p class="text-textMuted text-sm mt-1">Real-time exposure and trade history</p>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="glass-panel p-4 flex justify-between items-center">
+                        <div class="flex gap-8">
+                            <div><span class="text-textMuted text-xs uppercase block">Long Exposure</span><span
+                                    class="text-success font-mono font-bold" id="pos-long-exp">$605.25</span></div>
+                            <div><span class="text-textMuted text-xs uppercase block">Short Exposure</span><span
+                                    class="text-danger font-mono font-bold" id="pos-short-exp">$450.12</span></div>
+                            <div><span class="text-textMuted text-xs uppercase block">Net Delta</span><span
+                                    class="text-primary font-mono font-bold" id="pos-net-delta">+$155.13</span></div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel overflow-hidden">
+                        <div class="p-4 border-b border-border bg-panel">
+                            <h3 class="font-semibold text-white" id="pos-table-title">Open Positions (24)</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Side</th>
+                                        <th>Size</th>
+                                        <th>Entry</th>
+                                        <th>Current</th>
+                                        <th>Unrealized PnL</th>
+                                        <th>Strategy</th>
+                                        <th>Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="positionsTable">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. KAFKA TAB -->
+                <div id="tab-kafka" class="tab-content space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Kafka Streams</h1>
+                        <p class="text-textMuted text-sm mt-1">Inter-agent message bus throughput and latency</p>
+                    </div>
+
+                    <!-- Diagram -->
+                    <div
+                        class="glass-panel p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
+                        <h3 class="absolute top-4 left-4 font-semibold text-textMuted text-sm">Data Flow Topology</h3>
+
+                        <div class="flex justify-between w-full max-w-4xl mt-8">
+                            <div class="p-3 bg-panel border border-border rounded-lg z-10 shadow-lg text-center">
+                                <div class="text-xs text-primary mb-1">Tier 2</div>
+                                <div class="font-bold">Data Hubs</div>
+                            </div>
+                            <div class="p-3 bg-panel border border-border rounded-lg z-10 shadow-lg text-center">
+                                <div class="text-xs text-primary mb-1">Tier 3/4</div>
+                                <div class="font-bold">Models & Strats</div>
+                            </div>
+                            <div class="p-3 bg-panel border border-border rounded-lg z-10 shadow-lg text-center">
+                                <div class="text-xs text-primary mb-1">Tier 5</div>
+                                <div class="font-bold">Execution</div>
+                            </div>
+                        </div>
+
+                        <!-- Animated Lines -->
+                        <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 0;">
+                            <path d="M 200 150 C 350 150, 400 150, 550 150" fill="none" stroke="#3B82F6"
+                                stroke-width="2" class="flow-line" opacity="0.5" />
+                            <path d="M 550 150 C 700 150, 750 150, 900 150" fill="none" stroke="#10B981"
+                                stroke-width="2" class="flow-line" opacity="0.5" />
+                            <circle cx="0" cy="0" r="4" fill="#8B5CF6">
+                                <animateMotion path="M 200 150 C 350 150, 400 150, 550 150" dur="2s"
+                                    repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="0" cy="0" r="4" fill="#10B981">
+                                <animateMotion path="M 550 150 C 700 150, 750 150, 900 150" dur="1.5s"
+                                    repeatCount="indefinite" />
+                            </circle>
+                        </svg>
+                    </div>
+
+                    <!-- Topics Grid -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kafkaGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- 5. RISK TAB -->
+                <div id="tab-risk" class="tab-content space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white text-danger">Risk Manager</h1>
+                        <p class="text-textMuted text-sm mt-1">Real-time alerts, thresholds, and kill-switch logs</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- Alerts Feed -->
+                        <div class="glass-panel flex flex-col h-[500px]">
+                            <div class="p-4 border-b border-border bg-panel flex justify-between">
+                                <h3 class="font-semibold text-white">Live Alerts Feed</h3><span
+                                    class="text-xs bg-danger/20 text-danger px-2 py-1 rounded">2 Critical</span>
+                            </div>
+                            <div class="p-4 space-y-3 overflow-y-auto flex-1" id="alertsList">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Limits Table -->
+                        <div class="glass-panel overflow-hidden h-[500px] flex flex-col">
+                            <div class="p-4 border-b border-border bg-panel">
+                                <h3 class="font-semibold text-white">Risk Limits Status</h3>
+                            </div>
+                            <div class="overflow-y-auto flex-1">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Limit</th>
+                                            <th>Current</th>
+                                            <th>Threshold</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="limitsTable">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toISOString().substr(11, 8) + ' UTC';
+        }, 1000);
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // INIT OVERVIEW CHART
+        const ctx = document.getElementById('pnlChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+        let pnlChartInstance = null;
+
+        function generateChartData(filter) {
+            let points, volatility, drift;
+            let pnl = 0;
+            const labels = [];
+            const data = [];
+
+            if (filter === '1D') {
+                points = 24; volatility = 0.8; drift = 0.6; // Ends up around $8 - $15 intraday
+                for (let i = 0; i < points; i++) {
+                    labels.push(`${i}:00`);
+                    pnl += (Math.random() - 0.4) * volatility + drift;
+                    data.push(Math.max(-2, pnl)); // AI stop-loss simulation
+                }
+            } else if (filter === '1W') {
+                points = 7; volatility = 2.5; drift = 3.5; // Ends up around $20 - $35 weekly
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                for (let i = 0; i < points; i++) {
+                    labels.push(days[i]);
+                    pnl += (Math.random() - 0.35) * volatility + drift;
+                    data.push(pnl);
+                }
+            } else if (filter === '1M') {
+                points = 30; volatility = 4; drift = 3.0; // Ends up around $80 - $120 monthly
+                for (let i = 1; i <= points; i++) {
+                    labels.push(`D${i}`);
+                    pnl += (Math.random() - 0.4) * volatility + drift;
+                    data.push(pnl);
+                }
+            } else if (filter === '1Y') {
+                points = 12; volatility = 20; drift = 65; // Ends up around $600 - $900 yearly
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                for (let i = 0; i < points; i++) {
+                    labels.push(months[i]);
+                    pnl += (Math.random() - 0.3) * volatility + drift;
+                    data.push(pnl);
+                }
+            }
+            return { labels, data };
+        }
+
+        function renderChart(filter) {
+            const chartData = generateChartData(filter);
+
+            if (pnlChartInstance) {
+                pnlChartInstance.destroy();
+            }
+
+            pnlChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        data: chartData.data,
+                        borderColor: '#10B981', backgroundColor: gradient, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 5
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#1F2937' } } }, interaction: { mode: 'index', intersect: false } }
+            });
+        }
+
+        function updateChartFilter(val) { renderChart(val); }
+        renderChart('1D');
+
+        // POPULATE AGENTS
+        const agents = [
+            { name: "CIO Agent", tier: 1, color: "accent", status: "green", msgs: "450", mem: "245 MB" },
+            { name: "Risk Governor", tier: 1, color: "accent", status: "green", msgs: "2,450", mem: "180 MB" },
+            { name: "Market Data Hub", tier: 2, color: "primary", status: "green", msgs: "1,245,120", mem: "850 MB" },
+            { name: "News Analyst", tier: 2, color: "primary", status: "green", msgs: "15,420", mem: "1.4 GB" },
+            { name: "Trend Follower", tier: 4, color: "success", status: "green", msgs: "12,120", mem: "320 MB" },
+            { name: "Mean Reversion", tier: 4, color: "success", status: "green", msgs: "18,920", mem: "290 MB" },
+            { name: "Stat Arb", tier: 4, color: "success", status: "yellow", msgs: "45,204", mem: "1.2 GB" },
+            { name: "DEX Arbitrageur", tier: 6, color: "warning", status: "red", msgs: "85,020", mem: "2.1 GB" },
+        ];
+
+        const agentHtml = agents.map(a => `
+            <div class="glass-panel p-4 flex flex-col hover:bg-panelHover transition-all cursor-pointer border border-${a.status === 'red' ? 'danger/50' : 'border'} ${a.status === 'red' ? 'bg-danger/5' : ''}">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <span class="text-[10px] font-bold text-${a.color} bg-${a.color}/10 px-2 py-0.5 rounded-sm">TIER ${a.tier}</span>
+                        <h4 class="text-white font-semibold mt-1">${a.name}</h4>
+                    </div>
+                    <span class="status-dot pulse-${a.status}"></span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div><span class="block text-[10px] text-textMuted uppercase">Messages</span><span class="font-mono text-sm text-white">${a.msgs}</span></div>
+                    <div><span class="block text-[10px] text-textMuted uppercase">Heartbeat</span><span class="font-mono text-sm ${a.status === 'red' ? 'text-danger' : 'text-white'}">${a.status === 'red' ? '14.2s' : '0.1s'}</span></div>
+                    <div><span class="block text-[10px] text-textMuted uppercase">Memory</span><span class="font-mono text-sm text-white">${a.mem}</span></div>
+                    <div><span class="block text-[10px] text-textMuted uppercase">Error Rate</span><span class="font-mono text-sm ${a.status === 'red' ? 'text-danger' : 'text-success'}">${a.status === 'red' ? '4.2%' : '0.0%'}</span></div>
+                </div>
+            </div>
+        `).join('');
+        document.getElementById('agentsGrid').innerHTML = agentHtml + agentHtml + agentHtml + agentHtml; // Duplicate to show 32
+
+        // POPULATE POSITIONS & SYNC OVERVIEW
+        const strategies = ["Trend Follower", "Mean Reversion", "Momentum", "Breakout", "Stat Arb"];
+        const pairs = ["BTC-USDT", "ETH-USDT", "SOL-USDT", "LINK-USDT", "AVAX-USDT", "MATIC-USDT", "ADA-USDT", "DOGE-USDT"];
+        const positions = [];
+        let longExp = 0, shortExp = 0;
+        let unrealizedPnl = 0;
+
+        for (let i = 0; i < 14; i++) {
+            let sym = pairs[Math.floor(Math.random() * pairs.length)];
+            let entry = sym.includes("BTC") ? 64000 + Math.random() * 2000 : sym.includes("ETH") ? 3400 + Math.random() * 200 : sym.includes("SOL") ? 140 + Math.random() * 10 : 10 + Math.random() * 100;
+            let pctReturn = (Math.random() * 0.02) - 0.005; // -0.5% to +1.5%
+            let cur = entry * (1 + pctReturn);
+            let notional = 15 + Math.random() * 30; // $15 to $45 per position (max 4.5% of portfolio)
+            longExp += notional;
+            let size = notional / entry;
+            let pnlVal = (cur - entry) * size;
+            unrealizedPnl += pnlVal;
+            positions.push({ sym, side: "LONG", size: size.toPrecision(4), entry: entry.toFixed(2), cur: cur.toFixed(2), pnlVal, pnl: (pnlVal >= 0 ? '+$' : '-$') + Math.abs(pnlVal).toFixed(2), strat: strategies[Math.floor(Math.random() * strategies.length)], age: Math.floor(Math.random() * 5 + 1) + "h " + Math.floor(Math.random() * 60) + "m" });
+        }
+        for (let i = 0; i < 10; i++) {
+            let sym = pairs[Math.floor(Math.random() * pairs.length)];
+            let entry = sym.includes("BTC") ? 64000 + Math.random() * 2000 : sym.includes("ETH") ? 3400 + Math.random() * 200 : sym.includes("SOL") ? 140 + Math.random() * 10 : 10 + Math.random() * 100;
+            let pctPriceChange = (Math.random() * 0.02) - 0.015; // -1.5% to +0.5% (shorts profit when price drops)
+            let cur = entry * (1 + pctPriceChange);
+            let notional = 15 + Math.random() * 30;
+            shortExp += notional;
+            let size = notional / entry;
+            let pnlVal = (entry - cur) * size;
+            unrealizedPnl += pnlVal;
+            positions.push({ sym, side: "SHORT", size: size.toPrecision(4), entry: entry.toFixed(2), cur: cur.toFixed(2), pnlVal, pnl: (pnlVal >= 0 ? '+$' : '-$') + Math.abs(pnlVal).toFixed(2), strat: strategies[Math.floor(Math.random() * strategies.length)], age: Math.floor(Math.random() * 5 + 1) + "h " + Math.floor(Math.random() * 60) + "m" });
+        }
+
+        // Sort by biggest impact (absolute PnL)
+        positions.sort((a, b) => Math.abs(b.pnlVal) - Math.abs(a.pnlVal));
+
+        // Sync Overview Math
+        let initialCapital = 1000.00;
+        let dailyPnl = unrealizedPnl; // Set to match exactly the sum of the positions table
+        let currentPortfolioVal = initialCapital + dailyPnl;
+        let dailyPct = (dailyPnl / initialCapital) * 100;
+
+        let totalExp = longExp + shortExp;
+        let netExp = longExp - shortExp;
+        let netExpPct = (Math.abs(netExp) / currentPortfolioVal) * 100;
+        let longPct = (longExp / totalExp) * 100;
+        let shortPct = (shortExp / totalExp) * 100;
+
+        // Update UI
+        document.getElementById('ov-portfolio-val').innerText = "$" + currentPortfolioVal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('ov-daily-pnl').innerText = (dailyPnl >= 0 ? '+$' : '-$') + Math.abs(dailyPnl).toFixed(2);
+        document.getElementById('ov-daily-pct').innerText = (dailyPct >= 0 ? '+' : '-') + Math.abs(dailyPct).toFixed(2) + "% vs yesterday";
+        document.getElementById('ov-daily-pnl').className = "text-2xl font-bold " + (dailyPnl >= 0 ? "text-success" : "text-danger");
+        document.getElementById('ov-daily-pct').className = "text-xs font-medium " + (dailyPnl >= 0 ? "text-success" : "text-danger");
+
+        document.getElementById('risk-gauge-long').style.width = longPct + "%";
+        document.getElementById('risk-gauge-short').style.width = shortPct + "%";
+        document.getElementById('risk-gauge-text').innerText = netExpPct.toFixed(1) + "% " + (netExp >= 0 ? "Long" : "Short");
+
+        document.getElementById('ov-active-pos').innerText = "24";
+        document.getElementById('ov-pos-split').innerText = "14 LONG / 10 SHORT";
+        document.getElementById('pos-long-exp').innerText = "$" + longExp.toFixed(2);
+        document.getElementById('pos-short-exp').innerText = "$" + shortExp.toFixed(2);
+        document.getElementById('pos-net-delta').innerText = (netExp >= 0 ? "+$" : "-$") + Math.abs(netExp).toFixed(2);
+        document.getElementById('pos-net-delta').className = "font-mono font-bold " + (netExp >= 0 ? "text-primary" : "text-danger");
+
+        document.getElementById('positionsTable').innerHTML = positions.map(p => `
+            <tr>
+                <td class="font-bold text-white">${p.sym}</td>
+                <td><span class="px-2 py-1 rounded text-xs font-bold ${p.side === 'LONG' ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}">${p.side}</span></td>
+                <td class="font-mono">${p.size}</td><td class="font-mono">$${p.entry}</td><td class="font-mono">$${p.cur}</td>
+                <td class="font-mono font-bold ${p.pnl.startsWith('+') ? 'text-success' : 'text-danger'}">${p.pnl}</td>
+                <td><span class="text-xs bg-panel border border-border px-2 py-1 rounded text-textMuted">${p.strat}</span></td>
+                <td class="text-textMuted text-xs">${p.age}</td>
+            </tr>
+        `).join('');
+
+        // POPULATE KAFKA
+        const topicsData = [
+            { t: 'prices.realtime', rate: () => 150 + Math.floor(Math.random() * 150), lag: () => 2 + Math.floor(Math.random() * 5) },
+            { t: 'news.tagged', rate: () => 2 + Math.floor(Math.random() * 8), lag: () => 10 + Math.floor(Math.random() * 15) },
+            { t: 'indicators.computed', rate: () => 50 + Math.floor(Math.random() * 40), lag: () => 5 + Math.floor(Math.random() * 10) },
+            { t: 'patterns.detected', rate: () => 5 + Math.floor(Math.random() * 15), lag: () => 8 + Math.floor(Math.random() * 12) },
+            { t: 'orders.approved', rate: () => (Math.random() > 0.5 ? 1 : 0), lag: () => 1 + Math.floor(Math.random() * 3) },
+            { t: 'fills.confirmed', rate: () => (Math.random() > 0.5 ? 1 : 0), lag: () => 5 + Math.floor(Math.random() * 5) },
+            { t: 'portfolio.state', rate: () => 1, lag: () => 2 },
+            { t: 'risk.alerts', rate: () => 0, lag: () => 0 }
+        ];
+        document.getElementById('kafkaGrid').innerHTML = topicsData.map(d => `
+            <div class="glass-panel p-4 flex flex-col justify-between">
+                <div class="text-sm font-medium text-white mb-2">${d.t}</div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="text-2xl font-bold text-primary font-mono">${d.rate()}</div>
+                        <div class="text-[10px] text-textMuted uppercase">msgs/sec</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm ${d.lag() > 15 ? 'text-warning' : 'text-success'} font-mono">${d.lag()}ms</div>
+                        <div class="text-[10px] text-textMuted uppercase">lag</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // POPULATE RISK
+        const alerts = [
+            { level: 'CRITICAL', msg: 'DEX Arbitrageur memory exceeded 2GB. Attempting graceful restart.', time: '14:32:10', agent: 'Agent 27' },
+            { level: 'CRITICAL', msg: 'Max Drawdown approaching threshold (6.8% / 7.0%).', time: '14:28:45', agent: 'Risk Gov' },
+            { level: 'WARNING', msg: 'Elevated slippage detected on SOL-USDT execution.', time: '14:15:22', agent: 'Execution' },
+            { level: 'INFO', msg: 'Portfolio rebalancing completed successfully.', time: '13:00:00', agent: 'CIO Agent' },
+        ];
+        document.getElementById('alertsList').innerHTML = alerts.map(a => {
+            const color = a.level === 'CRITICAL' ? 'danger' : (a.level === 'WARNING' ? 'warning' : 'primary');
+            return `
+            <div class="p-3 bg-panel border border-${color}/30 rounded-lg border-l-4 border-l-${color}">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-xs font-bold text-${color}">${a.level}</span>
+                    <span class="text-xs text-textMuted font-mono">${a.time}</span>
+                </div>
+                <p class="text-sm text-white mb-2">${a.msg}</p>
+                <div class="text-xs text-textMuted"><i data-lucide="cpu" class="w-3 h-3 inline mr-1"></i> ${a.agent}</div>
+            </div>`;
+        }).join('');
+
+        const limits = [
+            { name: 'Max Daily Drawdown', cur: '6.8%', max: '7.0%', status: 'WARNING', pct: 97 },
+            { name: 'Max Monthly Drawdown', cur: '8.2%', max: '12.0%', status: 'OK', pct: 68 },
+            { name: 'Max Leverage', cur: '1.4x', max: '3.0x', status: 'OK', pct: 46 },
+            { name: 'Single Asset Exposure', cur: '4.8%', max: '5.0%', status: 'WARNING', pct: 96 },
+            { name: 'Consecutive Losses', cur: '2 trades', max: '5 trades', status: 'OK', pct: 40 },
+        ];
+        document.getElementById('limitsTable').innerHTML = limits.map(l => `
+            <tr>
+                <td class="font-medium text-white">${l.name}</td>
+                <td class="font-mono">${l.cur}</td>
+                <td class="font-mono text-textMuted">${l.max}</td>
+                <td>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${l.status === 'WARNING' ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success'}">${l.status}</span>
+                        <div class="w-20 bg-bgDark rounded-full h-1.5"><div class="${l.status === 'WARNING' ? 'bg-warning' : 'bg-success'} h-1.5 rounded-full" style="width: ${l.pct}%"></div></div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+    </script>
+</body>
+
+</html>

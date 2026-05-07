@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-05-06T00:00:00+00:00",
+  "assignments": {
+    "cio_agent":            "claude-opus-4-7",
+    "risk_governor":        "claude-sonnet-4-6",
+
+    "market_data_hub":      "claude-sonnet-4-6",
+    "news_analyst":         "claude-sonnet-4-6",
+    "sentiment_analyst":    "claude-sonnet-4-6",
+    "macro_economist":      "claude-sonnet-4-6",
+    "geopolitical_watcher": "claude-sonnet-4-6",
+    "onchain_sleuth":       "claude-sonnet-4-6",
+
+    "technical_analyst":    "claude-sonnet-4-6",
+    "volatility_forecaster":"claude-sonnet-4-6",
+    "correlation_engine":   "claude-sonnet-4-6",
+
+    "trend_follower":       "claude-sonnet-4-6",
+    "mean_reversion":       "claude-sonnet-4-6",
+    "momentum":             "claude-sonnet-4-6",
+    "stat_arb":             "claude-sonnet-4-6",
+    "ml_predictor":         "claude-sonnet-4-6",
+    "options_strategist":   "claude-sonnet-4-6",
+    "arb_cross_exchange":   "claude-sonnet-4-6",
+    "breakout_hunter":      "claude-sonnet-4-6",
+
+    "order_router":         "claude-haiku-4-5-20251001",
+    "position_sizer":       "claude-haiku-4-5-20251001",
+    "slippage_minimizer":   "claude-haiku-4-5-20251001",
+    "hedge_manager":        "claude-haiku-4-5-20251001",
+    "fee_optimizer":        "claude-haiku-4-5-20251001",
+    "liquidation_guard":    "claude-haiku-4-5-20251001",
+
+    "yield_farmer":         "claude-sonnet-4-6",
+    "dex_arb":              "claude-sonnet-4-6",
+    "mev_hunter":           "claude-haiku-4-5-20251001",
+    "bridge_strategist":    "claude-sonnet-4-6",
+
+    "portfolio_tracker":    "claude-haiku-4-5-20251001",
+    "alert_manager":        "claude-haiku-4-5-20251001",
+    "compliance_agent":     "claude-sonnet-4-6"
+  }
+}

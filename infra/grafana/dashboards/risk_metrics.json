@@ -1,0 +1,243 @@
+{
+  "uid": "alghrest-risk-v1",
+  "title": "ALGHREST — Risk Metrics",
+  "tags": ["alghrest", "trading"],
+  "timezone": "UTC",
+  "refresh": "5s",
+  "time": { "from": "now-1d", "to": "now" },
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Portfolio VaR (95%)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 16, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#f59e0b" },
+          "custom": { "fillOpacity": 15, "lineWidth": 2 },
+          "unit": "currencyUSD"
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_portfolio_var_95_usd",
+          "legendFormat": "VaR 95%"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Drawdown Meter",
+      "type": "gauge",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 30,
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 20 },
+              { "color": "red", "value": 25 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_portfolio_drawdown_pct",
+          "legendFormat": "Drawdown"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Position Concentration by Strategy",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_strategy_exposure_usd",
+          "legendFormat": "{{strategy}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Consecutive Losses — Trend Follower",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 8, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 8 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_strategy_consecutive_losses{strategy=\"trend_follower\"}",
+          "legendFormat": "Trend"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Consecutive Losses — Mean Reversion",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 8 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_strategy_consecutive_losses{strategy=\"mean_reversion\"}",
+          "legendFormat": "MeanRev"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Consecutive Losses — Momentum",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 8, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 8 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_strategy_consecutive_losses{strategy=\"momentum\"}",
+          "legendFormat": "Momentum"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Consecutive Losses — Stat Arb",
+      "type": "stat",
+      "gridPos": { "x": 20, "y": 8, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 8 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_strategy_consecutive_losses{strategy=\"stat_arb\"}",
+          "legendFormat": "StatArb"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Kill Switch Event Log",
+      "type": "table",
+      "gridPos": { "x": 8, "y": 12, "w": 8, "h": 4 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "options": { "1": { "color": "red", "text": "TRIGGERED" } }, "type": "value" },
+                  { "options": { "0": { "color": "green", "text": "CLEAR" } }, "type": "value" }
+                ]
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_kill_switch_active",
+          "legendFormat": "Kill Switch",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Risk Alerts Feed",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "datasource": { "uid": "loki", "type": "loki" },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "loki" },
+          "expr": "{job=\"alghrest\", component=\"risk\"}"
+        }
+      ]
+    }
+  ]
+}

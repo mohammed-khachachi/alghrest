@@ -1,0 +1,221 @@
+{
+  "uid": "alghrest-agents-v1",
+  "title": "ALGHREST — Agent Health",
+  "tags": ["alghrest", "trading"],
+  "timezone": "UTC",
+  "refresh": "5s",
+  "time": { "from": "now-1d", "to": "now" },
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Agent Status Overview",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 10 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "custom": { "displayMode": "color-background" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "options": { "RUNNING": { "color": "green", "index": 0 } }, "type": "value" },
+                  { "options": { "DEGRADED": { "color": "orange", "index": 1 } }, "type": "value" },
+                  { "options": { "ERROR": { "color": "red", "index": 2 } }, "type": "value" },
+                  { "options": { "SHUTDOWN": { "color": "red", "index": 3 } }, "type": "value" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_agent_status",
+          "legendFormat": "{{agent_name}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "options": { "sortBy": [{ "displayName": "agent_id" }] }
+    },
+    {
+      "id": 2,
+      "title": "Messages Processed Rate (by Tier)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 10 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 1.5, "stacking": { "mode": "normal" } },
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "sum by (tier) (rate(alghrest_agent_messages_processed_total[1m]))",
+          "legendFormat": "Tier {{tier}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Error Rate by Agent",
+      "type": "barchart",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_agent_error_rate_pct",
+          "legendFormat": "{{agent_name}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Processing Latency p50 / p95 / p99",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 1.5 } }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(alghrest_agent_processing_latency_ms_bucket[1m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(alghrest_agent_processing_latency_ms_bucket[1m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(alghrest_agent_processing_latency_ms_bucket[1m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Memory Usage by Agent (MB)",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 512 },
+              { "color": "red", "value": 1024 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_agent_memory_mb",
+          "legendFormat": "{{agent_name}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Heartbeat Timeline",
+      "type": "state-timeline",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 0, "fillOpacity": 70 },
+          "mappings": [
+            { "options": { "1": { "color": "green", "text": "OK" } }, "type": "value" },
+            { "options": { "0": { "color": "red", "text": "DOWN" } }, "type": "value" }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_agent_heartbeat_ok",
+          "legendFormat": "{{agent_name}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Kafka Consumer Lag",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 7 },
+      "datasource": { "uid": "prometheus", "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 1.5 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 500 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "alghrest_kafka_consumer_lag_ms",
+          "legendFormat": "{{topic}}"
+        }
+      ],
+      "alert": {
+        "name": "High Kafka Consumer Lag",
+        "conditions": [
+          {
+            "evaluator": { "params": [1000], "type": "gt" },
+            "operator": { "type": "and" },
+            "query": { "params": ["A", "5m", "now"] },
+            "reducer": { "params": [], "type": "avg" },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "alerting",
+        "for": "1m",
+        "frequency": "10s",
+        "message": "Kafka consumer lag exceeds 1000ms"
+      }
+    }
+  ]
+}

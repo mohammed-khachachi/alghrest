@@ -1,0 +1,125 @@
+groups:
+  - name: alghrest.risk
+    interval: 15s
+    rules:
+
+      # ── KILL SWITCH FIRING ───────────────────────────────────────────────
+      - alert: KillSwitchActivated
+        expr: increase(alghrest_kill_switch_triggers_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: trading
+        annotations:
+          summary: "KILL SWITCH ACTIVATED"
+          description: "System kill switch fired. Scope={{ $labels.scope }}, Reason={{ $labels.reason }}"
+
+      # ── DAILY DRAWDOWN ────────────────────────────────────────────────────
+      - alert: DrawdownAlert
+        expr: alghrest_risk_daily_drawdown_pct > 0.03
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Daily drawdown > 3%"
+          description: "Daily drawdown at {{ $value | humanizePercentage }}. Alert threshold: 3%."
+
+      - alert: DrawdownHalt
+        expr: alghrest_risk_daily_drawdown_pct > 0.05
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Daily drawdown > 5% — STRATEGIES HALTING"
+          description: "Daily drawdown at {{ $value | humanizePercentage }}. Halt threshold: 5%."
+
+      # ── LEVERAGE ──────────────────────────────────────────────────────────
+      - alert: LeverageBreached
+        expr: alghrest_risk_current_leverage > 2.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Leverage approaching limit"
+          description: "Current leverage: {{ $value }}x (max: 3x)."
+
+      - alert: LeverageCritical
+        expr: alghrest_risk_current_leverage > 2.9
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Leverage critical — approaching 3x hard limit"
+
+  - name: alghrest.agents
+    interval: 30s
+    rules:
+
+      # ── AGENT DOWN ────────────────────────────────────────────────────────
+      - alert: AgentDown
+        expr: alghrest_agent_status == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent {{ $labels.agent_name }} is not running"
+          description: "Agent {{ $labels.agent_name }} (tier {{ $labels.tier }}) status is 0 (not RUNNING)."
+
+      - alert: CriticalAgentDown
+        expr: alghrest_agent_status{tier=~"1|5"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL agent {{ $labels.agent_name }} down"
+          description: "Tier {{ $labels.tier }} agent {{ $labels.agent_name }} is down. System may be impaired."
+
+      # ── KAFKA LAG ─────────────────────────────────────────────────────────
+      - alert: KafkaConsumerLag
+        expr: alghrest_kafka_consumer_lag > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Kafka consumer lag"
+          description: "Topic {{ $labels.topic }} consumer {{ $labels.consumer_group }} lag: {{ $value }} messages."
+
+  - name: alghrest.infrastructure
+    interval: 30s
+    rules:
+
+      # ── HOST CPU ──────────────────────────────────────────────────────────
+      - alert: HighCPU
+        expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage: {{ $value | humanizePercentage }}"
+
+      # ── HOST MEMORY ───────────────────────────────────────────────────────
+      - alert: HighMemory
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage: {{ $value | humanizePercentage }}"
+
+      # ── REDIS DOWN ────────────────────────────────────────────────────────
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down — state management offline"
+
+      # ── POSTGRES DOWN ─────────────────────────────────────────────────────
+      - alert: TimescaleDBDown
+        expr: up{job="timescaledb"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TimescaleDB is down — historical data storage offline"
