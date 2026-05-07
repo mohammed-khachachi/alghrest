@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ALGHREST — .gitignore
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── SECRETS & ENV ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ── PYTHON ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# ── POETRY ────────────────────────────────────────────────────────────────────
+# poetry.lock is intentionally committed — do NOT add it here
+
+# ── NODE / DASHBOARD ──────────────────────────────────────────────────────────
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+node_modules/
+dist/
+
+# ── ML ARTEFACTS ──────────────────────────────────────────────────────────────
+ml/checkpoints/
+ml/training/runs/
+*.pt
+*.onnx
+*.pkl
+
+# ── DATA & LOGS ───────────────────────────────────────────────────────────────
+data/
+logs/
+*.csv
+*.parquet
+*.db
+
+# ── DOCKER VOLUMES ────────────────────────────────────────────────────────────
+postgres-data/
+redis-data/
+kafka-data-*/
+grafana-data/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
