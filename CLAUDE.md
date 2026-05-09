@@ -57,10 +57,10 @@ ALGHREST is a 32-agent autonomous trading system organised in 7 tiers. Agents co
 Tier 1 — Executive (CIO Opus, Risk Governor, ProposalApprover)
 Tier 2 — Intelligence (market data, news, sentiment, macro, geopolitics, on-chain, price publisher)
 Tier 3 — Quant (technical analyst, GARCH volatility, correlation engine)
-Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb; ml_predictor + options_strategist pending)
+Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb, ml_predictor; options_strategist still pending)
 Tier 5 — Execution (order router, slippage minimizer, hedge mgr, fee optimizer, liquidation guard, exchange executor; position_sizer is a helper, not a runtime agent)
-Tier 6 — DeFi (yield, dex_arb, mev, bridge — all pending v0.3)
-Tier 7 — Monitoring (portfolio tracker, alert manager, compliance)
+Tier 6 — DeFi (yield_farmer, dex_arbitrageur, mev_hunter, bridge_strategist — skeletons exist but logic is stub-level; not production-ready)
+Tier 7 — Monitoring (portfolio tracker, alert manager, compliance, auditor, copy-trading channel)
 ```
 
 ### The trade execution pipeline (memorise this — it spans many files)
@@ -120,8 +120,26 @@ All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (stri
 - ID **14** — `volatility_forecaster` vs `momentum`
 - ID **15** — `correlation_engine` vs `stat_arb`
 - ID **18** — `arb_cross_exchange` vs `macro_rotator`
+- ID **32** — `compliance.py` vs `compliance_agent.py` (the latter is the legacy 251-line implementation; the new `compliance.py` is a shorter rewrite — pick one before running both)
+- ID **33** — `auditor_agent.py` uses an ID outside the original 1–32 range. The Prometheus port (`9233`) is fine, but anything that assumes "32 agents" needs updating.
 
 These cause Prometheus port clashes and Redis health-key overwrites. A renumbering pass is pending; flag rather than silently work around when touching these agents.
+
+### ML inference subsystem (`ml/` + Agent 16)
+
+The ML predictor strategy does **not** load models in-process. Instead:
+
+- `ml/models/cnn_pattern.py::CandlestickCNN` and `ml/models/rl_position_sizer.py` are loaded by `ml/inference/server.py` (FastAPI) which serves `POST /predict` on **port 8080**.
+- `agents/tier4_strategies/ml_predictor.py` (Agent 16) is just an HTTP client — it builds a 64-period OHLCV window and POSTs to `http://localhost:8080/predict`.
+- Trained weights live in `ml/weights/` (`cnn_btc_usdt.pth`, `ppo_position_sizer.zip`); training entry is `ml/training/train.py`.
+
+When deploying, the inference server is a **separate process** from the agent. Don't add it to the standard `run_agent.py` flow.
+
+### Other moving parts worth knowing
+
+- `api/main.py` is the production FastAPI app (REST + WebSocket dashboard feed). `api/mock_server.py` is a **separate dev-only mock** that fakes all 32 agents and live data — used by the dashboard when the real backend isn't running. They both bind a FastAPI app named `app`; don't run them on the same port.
+- `core/telegram/bot.py` + `bot_manager.py` back the Tier 7 alert manager. Telegram credentials come from `core/config.py` settings.
+- `infra/k8s/` and `infra/terraform/` exist but are scaffold-only (a few manifests / `main.tf` + `variables.tf`). Don't treat them as production-ready deploy targets without filling them in.
 
 ## Risk rails (hard limits — don't soften)
 
@@ -152,8 +170,9 @@ Strategies must pass all of these in `backtesting/engine.py::BacktestEngine.vali
 
 ## Pending work (v0.3)
 
-1. Tier 6 DeFi agents (yield_farmer, dex_arb, mev_hunter, bridge_strategist) — **all 4 missing**.
-2. Agent 16 `ml_predictor.py` (CNN chart + RL sizing).
-3. Agent 17 `options_strategist.py` (Deribit delta-neutral).
-4. Open issues: I4 (replace dead Reuters RSS feed in `news_analyst`), I10 (PortfolioTracker Sharpe formula).
-5. Renumber the colliding AGENT_IDs (14/15/18) listed above.
+1. Tier 6 DeFi agents — **skeletons landed** (`yield_farmer`, `dex_arbitrageur`, `mev_hunter`, `bridge_strategist`, ~60–80 lines each). Real protocol integration (Aave/Curve/Flashbots/bridge SDKs) is still TODO.
+2. Agent 16 `ml_predictor.py` — **skeleton landed**, but `run()` body is mocked. Wire it to the real `MarketState`/OHLCV window and the `ml/inference/server.py` predict endpoint.
+3. Agent 17 `options_strategist.py` (Deribit delta-neutral) — still missing.
+4. Resolve the duplicate Tier 7 compliance agents (`compliance.py` vs `compliance_agent.py`).
+5. Open issues: I4 (replace dead Reuters RSS feed in `news_analyst`), I10 (PortfolioTracker Sharpe formula).
+6. Renumber the colliding AGENT_IDs (14/15/18/32) listed above; decide whether the agent-count ceiling moves from 32 to ≥33 (auditor).
