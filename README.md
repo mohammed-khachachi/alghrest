@@ -46,6 +46,18 @@
 
 > ⚠️ **DISCLAIMER**: This software is for educational purposes. Algorithmic trading involves substantial financial risk. Always start with paper trading.
 
+### Monorepo Layout
+
+This repository hosts **two distinct projects** in one tree:
+
+- **ALGHREST** — the root multi-agent trading platform documented throughout this README.
+- **HMM_Trading** — an independent educational/research subproject for HMM-based market-regime detection, located at `alghrest-test/HMM_Trading/`. It has its own dependencies, virtual environment, tests, and documentation, and is kept intentionally decoupled from the ALGHREST runtime.
+
+Before making any change that touches both projects, read:
+
+- [docs/monorepo-workflow.md](docs/monorepo-workflow.md) — repo layout, dependency policy, branching, CI, and the rules that keep the two projects independent.
+- [docs/integration-roadmap.md](docs/integration-roadmap.md) — the staged plan (file-based CSV/JSONL → CLI → Python API) for connecting ALGHREST and HMM_Trading. No integration code exists yet.
+
 ### Current Implementation Status (v0.3.0 — in progress)
 
 - ✅ **Implemented core runtime**: Tiers 1-5 + Tier 7 monitoring + the dashboard market-data REST surface (32 runtime agents)
