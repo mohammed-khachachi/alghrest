@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import time
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
 import feedparser
 import httpx
-import spacy
 import structlog
 from anthropic import AsyncAnthropic
 
@@ -32,12 +32,30 @@ from core.utils.metrics import claude_calls, claude_input_tokens, claude_output_
 
 logger = structlog.get_logger(__name__)
 
+# Validated RSS feeds (tested 2026-05-10) - only working sources included
 RSS_FEEDS = {
-    "reuters_markets":    "https://feeds.reuters.com/reuters/businessNews",
-    "reuters_crypto":     "https://cointelegraph.com/rss",
-    "coindesk":           "https://www.coindesk.com/arc/outboundfeeds/rss/",
-    "decrypt":            "https://decrypt.co/feed",
-    "theblock":           "https://www.theblock.co/rss.xml",
+    # ✅ VALIDATED WORKING CRYPTO SOURCES
+    "cointelegraph":      "https://cointelegraph.com/rss",          # ✅ 2.7h fresh, crypto content
+    "decrypt":            "https://decrypt.co/feed",                # ✅ 4.5h fresh, crypto content
+    "theblock":           "https://www.theblock.co/rss.xml",        # ✅ 2.5h fresh, crypto content
+
+    # ✅ VALIDATED TRADITIONAL FINANCE SOURCES
+    "fed_news":           "https://www.federalreserve.gov/feeds/press_all.xml",  # ✅ Fed announcements
+
+    # 🆕 NEW WORKING SOURCES (from suggestions)
+    "bitcoinmagazine":    "https://bitcoinmagazine.com/.rss/full/",
+    "cryptoslate":        "https://cryptoslate.com/feed/",
+    "unchained":          "https://unchainedcrypto.com/feed/",
+    "coinbase_blog":      "https://blog.coinbase.com/feed",
+    "kraken_blog":        "https://blog.kraken.com/rss",
+
+    # 🔄 BACKUP ALTERNATIVE SOURCES (less frequent, but reliable)
+    "sec_gov":            "https://www.sec.gov/news/pressreleases.rss",  # SEC crypto enforcement
+    "treasury_gov":       "https://home.treasury.gov/rss/press-releases", # Treasury crypto policy
+
+    # Note: Removed broken feeds identified in validation:
+    # ❌ coindesk (308 redirect), blockworks (308 redirect), yahoo_crypto (429),
+    # ❌ marketwatch (301), cnbc_crypto (403), bbc_business (302), ap_business (DNS)
 }
 
 CRYPTO_ENTITIES = {
@@ -151,6 +169,12 @@ class NewsAnalyst(BaseAgent):
         self._seen_urls: set[str] = set()   # In-memory dedup within session
         self._http: Optional[httpx.AsyncClient] = None
 
+        # ── FEED HEALTH TRACKING ──────────────────────────────────────
+        self._feed_failures: dict[str, int] = {}  # feed_name -> failure_count
+        self._feed_last_success: dict[str, datetime] = {}  # feed_name -> last_success_time
+        self._max_feed_failures = 3
+        self._feed_timeout_minutes = 60  # Disable feed for 1 hour after max failures
+
     async def initialize(self) -> None:
         if settings.anthropic_api_key:
             self._claude = AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -158,8 +182,11 @@ class NewsAnalyst(BaseAgent):
         else:
             self.logger.warning("ANTHROPIC_API_KEY not set — news NLP disabled")
 
-        # Load spaCy for entity recognition (small English model)
+        # Load spaCy for entity recognition (small English model). spaCy is optional
+        # — install with `poetry install --with nlp`; without it, _extract_entities
+        # returns []. See pyproject.toml for the numpy-ABI rationale.
         try:
+            import spacy
             self._nlp = spacy.load("en_core_web_sm")
             self.logger.info("spaCy NLP model loaded")
         except Exception as e:
@@ -197,15 +224,37 @@ class NewsAnalyst(BaseAgent):
             await asyncio.sleep(300)  # 5-minute poll interval
 
     async def _fetch_all_feeds(self) -> list[dict]:
-        """Fetch and deduplicate articles from all RSS feeds."""
+        """Fetch and deduplicate articles from all RSS feeds with health tracking."""
         articles = []
+        healthy_feeds = 0
+        failed_feeds = 0
+
         for feed_name, feed_url in RSS_FEEDS.items():
+            # Check if feed is temporarily disabled due to failures
+            if self._should_skip_feed(feed_name):
+                continue
+
             try:
-                feed_articles = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda url=feed_url: feedparser.parse(url).entries
+                # Fetch with timeout
+                start_time = time.time()
+                feed_articles = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        None, lambda url=feed_url: feedparser.parse(url).entries
+                    ),
+                    timeout=30.0
                 )
+
+                # Check if feed returned valid data
+                if not feed_articles:
+                    raise ValueError("Empty feed or parsing failed")
+
+                # Process articles from this feed
+                feed_article_count = 0
                 for entry in feed_articles[:20]:   # Max 20 per feed
                     url = getattr(entry, "link", "")
+                    if not url:
+                        continue
+
                     url_hash = hashlib.md5(url.encode()).hexdigest()
 
                     # Redis dedup: skip if seen in last 24 hours
@@ -226,15 +275,81 @@ class NewsAnalyst(BaseAgent):
                     articles.append({
                         "url": url,
                         "url_hash": url_hash,
-                        "headline": getattr(entry, "title", ""),
-                        "summary": getattr(entry, "summary", "")[:1000],
+                        "headline": getattr(entry, "title", "").strip(),
+                        "summary": getattr(entry, "summary", "").strip()[:1000],
                         "published_at": published_dt,
                         "source": feed_name,
                     })
+                    feed_article_count += 1
+
+                # Record successful fetch
+                self._record_feed_success(feed_name)
+                healthy_feeds += 1
+                fetch_time = time.time() - start_time
+
+                self.logger.debug(
+                    f"✅ Feed {feed_name} fetched successfully",
+                    articles=feed_article_count,
+                    fetch_time_ms=int(fetch_time * 1000)
+                )
+
+            except asyncio.TimeoutError:
+                self._record_feed_failure(feed_name, "timeout")
+                failed_feeds += 1
+                self.logger.warning(f"⏱️ Feed {feed_name} timed out after 30s")
+
             except Exception as e:
-                self.logger.warning("feed fetch failed", feed=feed_name, error=str(e))
+                self._record_feed_failure(feed_name, str(e))
+                failed_feeds += 1
+                error_type = type(e).__name__
+
+                self.logger.warning(
+                    f"❌ Feed {feed_name} failed",
+                    error_type=error_type,
+                    error=str(e)[:200],
+                    failures=self._feed_failures.get(feed_name, 0)
+                )
+
+        self.logger.info(
+            "News feed poll completed",
+            healthy_feeds=healthy_feeds,
+            failed_feeds=failed_feeds,
+            total_articles=len(articles),
+            disabled_feeds=len([f for f in RSS_FEEDS.keys() if self._should_skip_feed(f)])
+        )
 
         return articles
+
+    def _should_skip_feed(self, feed_name: str) -> bool:
+        """Check if feed should be skipped due to repeated failures."""
+        failure_count = self._feed_failures.get(feed_name, 0)
+        if failure_count < self._max_feed_failures:
+            return False
+
+        # Check if timeout period has passed
+        last_success = self._feed_last_success.get(feed_name)
+        if last_success:
+            time_since_last_success = datetime.utcnow() - last_success
+            return time_since_last_success.total_seconds() < (self._feed_timeout_minutes * 60)
+
+        return True  # Skip if no successful fetches recorded
+
+    def _record_feed_success(self, feed_name: str) -> None:
+        """Record successful feed fetch."""
+        self._feed_failures[feed_name] = 0  # Reset failure counter
+        self._feed_last_success[feed_name] = datetime.utcnow()
+
+    def _record_feed_failure(self, feed_name: str, error: str) -> None:
+        """Record feed failure and potentially disable feed."""
+        current_failures = self._feed_failures.get(feed_name, 0) + 1
+        self._feed_failures[feed_name] = current_failures
+
+        if current_failures >= self._max_feed_failures:
+            self.logger.warning(
+                f"🔴 Feed {feed_name} disabled after {current_failures} failures. "
+                f"Will retry after {self._feed_timeout_minutes} minutes.",
+                last_error=error
+            )
 
     async def _process_article(self, article: dict) -> None:
         """Classify article with Claude, extract entities, publish to Kafka."""

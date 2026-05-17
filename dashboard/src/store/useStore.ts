@@ -15,6 +15,19 @@ import type {
 
 export type WsStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
+// Default symbols pre-selected on first load — matched to the most common
+// holdings so Market Data / Holdings panels render immediately without
+// requiring the user to pick anything. Exported so the "Show all" reset
+// in HoldingsPanel can restore exactly this set.
+export const DEFAULT_SELECTED_SYMBOLS: readonly string[] = [
+  'BTC',
+  'ETH',
+  'SOL',
+  'EUR/USD',
+  'AAPL',
+  'TSLA',
+] as const;
+
 export interface ToastItem {
   id: string;
   severity: 'CRITICAL' | 'WARNING' | 'INFO';
@@ -54,8 +67,13 @@ interface DashboardState {
   // UI
   toasts: ToastItem[];
 
+  // Symbol selection (Overview filter + market panel)
+  selectedSymbols: string[];
+
   // Actions
   setWsStatus: (status: WsStatus) => void;
+  setSelectedSymbols: (symbols: string[]) => void;
+  resetSelectedSymbols: () => void;
   updatePortfolioSnapshot: (data: PortfolioSnapshot) => void;
   updateAgentsPayload: (data: AgentsPayload) => void;
   updatePositions: (data: PositionsPayload) => void;
@@ -82,8 +100,13 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   riskLimits: [],
   systemStatus: null,
   toasts: [],
+  selectedSymbols: [...DEFAULT_SELECTED_SYMBOLS],
 
   setWsStatus: (status) => set({ wsStatus: status }),
+
+  setSelectedSymbols: (symbols) => set({ selectedSymbols: symbols }),
+
+  resetSelectedSymbols: () => set({ selectedSymbols: [...DEFAULT_SELECTED_SYMBOLS] }),
 
   updatePortfolioSnapshot: (data) => set({ portfolioSnapshot: data }),
 

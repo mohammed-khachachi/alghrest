@@ -1,0 +1,27 @@
+{
+  "ticker": "^GSPC",
+  "start": "2010-01-01",
+  "end": "2024-12-31",
+  "n_states": 3,
+  "covariance_type": "full",
+  "n_iter": 300,
+  "random_state": 42,
+  "transaction_cost": 0.001,
+  "trading_days_per_year": 252,
+  "feature_cols": [
+    "log_return",
+    "rolling_volatility",
+    "ma_ratio",
+    "volume_change",
+    "intraday_range"
+  ],
+  "regime_thresholds": {
+    "return_bullish": 0.0003,
+    "return_bearish": -0.0003,
+    "vol_low": 0.12,
+    "vol_high": 0.22
+  },
+  "rolling_vol_window": 20,
+  "ma_fast_window": 10,
+  "ma_slow_window": 50
+}

@@ -1,6 +1,6 @@
 # ALGHREST 🤖📈
 
-> **Production-grade autonomous multi-agent trading system — 32 agents, 7 tiers**
+> **Production-grade autonomous multi-agent trading system — 36 runtime agent modules, 7 tiers**
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)](https://fastapi.tiangolo.com)
@@ -31,7 +31,7 @@
 
 ## 🌐 Overview
 
-**ALGHREST** is a fully autonomous, event-driven algorithmic trading platform built on a hierarchical multi-agent architecture. Thirty-two specialized AI agents communicate via Apache Kafka, share real-time state through Redis, and persist time-series data in TimescaleDB.
+**ALGHREST** is a fully autonomous, event-driven algorithmic trading platform built on a hierarchical multi-agent architecture. 36 runtime agent modules communicate via Apache Kafka, share real-time state through Redis, and persist time-series data in TimescaleDB. Four of those modules are Tier 6 DeFi skeletons, and `options_strategist` is still pending.
 
 ### Key Capabilities
 
@@ -46,16 +46,22 @@
 
 > ⚠️ **DISCLAIMER**: This software is for educational purposes. Algorithmic trading involves substantial financial risk. Always start with paper trading.
 
+### Current Implementation Status (v0.3.0 — in progress)
+
+- ✅ **Implemented core runtime**: Tiers 1-5 + Tier 7 monitoring + the dashboard market-data REST surface (32 runtime agents)
+- 🚧 **Rostered but not production-ready**: Tier 6 DeFi agents are skeleton/mock implementations; keep `ENABLE_DEFI_AGENTS=false`
+- ⏳ **Pending**: `options_strategist` (Deribit delta-neutral), real provider swap-in for `connectors/data_providers/` mocks, full DeFi protocol integration
+
 ---
 
 ## 🏗 Architecture — 7-Tier Agent System
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  TIER 1 — Executive Layer (CIO + Risk Governor)                 │
-│  Strategic decisions, capital allocation, kill switch           │
+│  TIER 1 — Executive Layer (3 agents)                            │
+│  Strategic decisions, capital allocation, proposal approval     │
 ├─────────────────────────────────────────────────────────────────┤
-│  TIER 2 — Intelligence Layer (6 agents)                         │
+│  TIER 2 — Intelligence Layer (7 agents)                         │
 │  Market data, news NLP, sentiment, macro, geopolitics, on-chain │
 ├─────────────────────────────────────────────────────────────────┤
 │  TIER 3 — Quant Analysis Layer (3 agents)                       │
@@ -64,14 +70,14 @@
 │  TIER 4 — Strategy Layer (8 agents)                             │
 │  Independent capital sleeves — each strategy fully isolated     │
 ├─────────────────────────────────────────────────────────────────┤
-│  TIER 5 — Execution Layer (6 agents)                            │
+│  TIER 5 — Execution Layer (6 runtime agents + position_sizer)  │
 │  Smart order routing, slippage minimization, multi-exchange     │
 ├─────────────────────────────────────────────────────────────────┤
-│  TIER 6 — DeFi Layer (4 agents)                                 │
+│  TIER 6 — DeFi Layer (4 skeleton agents)                        │
 │  Yield farming, DEX arbitrage, MEV, cross-chain bridging        │
 ├─────────────────────────────────────────────────────────────────┤
-│  TIER 7 — Monitoring Layer (4 agents)                           │
-│  Portfolio tracker, Telegram alerts, compliance, reporting      │
+│  TIER 7 — Monitoring Layer (5 agents)                           │
+│  Portfolio tracker, alerts, compliance, auditing, copy trading  │
 └─────────────────────────────────────────────────────────────────┘
          ↕ All agents communicate via Apache Kafka topics ↕
 ```
@@ -86,6 +92,22 @@ Market Data → Intelligence → Quant Analysis → Strategies
                               Monitoring ← Portfolio State
 ```
 
+### Execution Pipeline
+
+```
+strategy → proposals.bus
+        → ProposalApprover
+        → proposals.approved
+        → OrderRouter
+        → orders.pending
+        → FeeOptimizer      (_optimised=True)
+        → SlippageMinimizer (_child=True for TWAP/VWAP children)
+        → ExchangeExecutor
+        → orders.executed + fills.confirmed
+```
+
+`orders.approved` is kept as a legacy alias, but the active execution path uses `orders.pending`.
+
 ---
 
 ## 🤖 Agent Roster
@@ -95,53 +117,57 @@ Market Data → Intelligence → Quant Analysis → Strategies
 |---|---|---|
 | 01 | **CIO Agent** | Strategic oversight, Claude Opus reasoning, capital allocation |
 | 02 | **Risk Governor** | Portfolio-level risk limits, kill switch, drawdown circuit breakers |
+| 03 | **Proposal Approver** | Position limit checking, trade proposal validation |
 
 ### Tier 2 — Intelligence
 | ID | Agent | Role |
 |---|---|---|
-| 03 | **Market Data Hub** | Real-time OHLCV aggregation from all exchanges via CCXT |
-| 04 | **Macro Economist** | FRED data, interest rates, CPI, yield curve analysis |
-| 05 | **Sentiment Analyst** | Twitter/X + Reddit social sentiment scoring |
+| 04 | **Price Publisher** | Real-time price broadcasting to Redis, 60s TTL |
+| 05 | **Market Data Hub** | Real-time OHLCV aggregation from all exchanges via CCXT |
 | 06 | **News Analyst** | RSS polling, Claude Sonnet NLP classification, FinBERT sentiment |
-| 07 | **Geopolitical Watcher** | Country risk scoring, geopolitical event detection |
-| 08 | **On-Chain Sleuth** | Glassnode + Nansen whale tracking, exchange flows, NVT ratio |
+| 07 | **Sentiment Analyst** | Twitter/X + Reddit social sentiment scoring |
+| 08 | **Macro Economist** | FRED data, interest rates, CPI, yield curve analysis |
+| 09 | **On-Chain Sleuth** | Glassnode + Nansen whale tracking, exchange flows, NVT ratio |
+| 10 | **Geopolitical Watcher** | Country risk scoring, geopolitical event detection |
 
 ### Tier 3 — Quant
 | ID | Agent | Role |
 |---|---|---|
-| 09 | **Technical Analyst** | 50+ indicators via pandas-ta, multi-timeframe confluence |
-| 10 | **Volatility Forecaster** | GARCH/EGARCH models, realized vol, IV surface |
-| 11 | **Correlation Engine** | Cross-asset correlation matrices, regime detection |
+| 11 | **Technical Analyst** | 50+ indicators via pandas-ta, multi-timeframe confluence |
+| 14 | **Volatility Forecaster** | GARCH/EGARCH models, realized vol, IV surface |
+| 15 | **Correlation Engine** | Cross-asset correlation matrices, regime detection |
 
 ### Tier 4 — Strategies (Capital Sleeves)
 | ID | Agent | Approach |
 |---|---|---|
 | 12 | **Trend Follower** | EMA crossovers, ADX filter, ATR trailing stops |
 | 13 | **Mean Reversion** | Bollinger Band squeeze, RSI extremes |
-| 14 | **Momentum** | Relative strength, cross-sectional momentum |
-| 15 | **Stat Arb** | Pairs trading, cointegration (ADF test) |
 | 16 | **ML Predictor** | CNN chart pattern recognition + RL position sizing |
-| 17 | **Options Strategist** | Delta-neutral, volatility arbitrage via Deribit |
-| 18 | **Macro Rotator** | Risk-on/risk-off regime-based asset rotation |
+| 17 | **Momentum** | Relative strength, cross-sectional momentum |
+| 18 | **Cross-Exchange Arb** | Inter-exchange price discrepancies |
 | 19 | **Breakout Hunter** | Volume-confirmed breakouts, range expansion |
+| 21 | **Stat Arb** | Pairs trading, cointegration (ADF test) |
+| 34 | **Macro Rotator** | Risk-on/risk-off regime-based asset rotation |
+| TBD | ~~**Options Strategist**~~ | *(Pending — ID not yet assigned)* Delta-neutral, volatility arbitrage via Deribit |
 
 ### Tier 5 — Execution
 | ID | Agent | Role |
 |---|---|---|
 | 20 | **Order Router** | Smart order routing across 8 exchanges, best-price selection |
-| 21 | **Position Sizer** | Kelly criterion, risk-per-trade limits (max 1%) |
 | 22 | **Slippage Minimizer** | TWAP/VWAP execution for large orders |
 | 23 | **Hedge Manager** | Portfolio delta hedging, correlation-based hedges |
 | 24 | **Fee Optimizer** | Maker/taker routing, rebate optimization |
 | 25 | **Liquidation Guard** | Margin monitoring, auto-deleveraging prevention |
+| 26 | **Exchange Executor** | Final order execution and fill confirmation |
+| — | **Position Sizer** | Helper module (Kelly criterion, 1% risk cap) — imported by strategies, not a runtime agent |
 
-### Tier 6 — DeFi
+### Tier 6 — DeFi (⚠️ skeleton implementations — see safety warning in CLAUDE.md)
 | ID | Agent | Role |
 |---|---|---|
-| 26 | **Yield Farmer** | Aave, Compound, Curve optimal yield routing |
 | 27 | **DEX Arbitrageur** | Uniswap/Curve price discrepancy capture |
 | 28 | **MEV Hunter** | Flashbots bundle submission, sandwich detection |
 | 29 | **Bridge Strategist** | Cross-chain capital allocation (ETH, ARB, OP, BASE, SOL) |
+| 35 | **Yield Farmer** | Aave, Compound, Curve optimal yield routing |
 
 ### Tier 7 — Monitoring
 | ID | Agent | Role |
@@ -149,6 +175,8 @@ Market Data → Intelligence → Quant Analysis → Strategies
 | 30 | **Portfolio Tracker** | Real-time PnL, Sharpe, drawdown dashboard |
 | 31 | **Alert Manager** | Telegram bot, PagerDuty critical alerts |
 | 32 | **Compliance Agent** | Trade logging, position limits, regulatory reporting |
+| 33 | **Auditor Agent** | Trade analysis, risk assessment, regulatory compliance |
+| 36 | **Copy Trading Channel** | Signal distribution and copy trading management |
 
 ---
 
@@ -227,25 +255,27 @@ structlog 24.4        — Structured JSON logging
 | `grafana` | grafana/grafana:10.4 | 3000 | Dashboards |
 | `node-exporter` | prom/node-exporter | 9100 | Host system metrics |
 
-### Kafka Topics (16 topics)
+### Kafka Topics (18 topics)
 
 ```
-market.data          — Real-time OHLCV ticks
-market.orderbook     — Level 2 order book snapshots
-news.raw             — Unprocessed RSS articles
+prices.realtime      — High-throughput price feed
 news.tagged          — Claude-classified news signals
-sentiment.social     — Twitter/Reddit sentiment scores
-analysis.technical   — TA indicator confluence signals
-analysis.volatility  — GARCH volatility forecasts
-strategy.signals     — Trade proposals from Tier 4
-risk.assessments     — Risk governor approvals/rejections
-orders.pending       — Orders awaiting execution
-orders.filled        — Confirmed fills from exchanges
-positions.updates    — Real-time position changes
-portfolio.state      — Aggregate portfolio snapshot
-alerts.critical      — Kill switch & emergency alerts
+sentiment.scored     — Social sentiment scores per asset
 onchain.signals      — On-chain whale/flow signals
-defi.opportunities   — DeFi yield & arbitrage signals
+macro.regime         — Global macro regime signal
+indicators.computed  — Technical indicators per symbol
+patterns.detected    — Chart/pattern detections
+volatility.forecast  — GARCH/EGARCH volatility forecasts
+correlation.matrix   — Cross-asset correlation updates
+proposals.bus        — Trade proposals from Tier 4
+proposals.approved   — ProposalApprover approvals
+orders.pending       — Orders awaiting execution
+orders.approved      — Legacy alias retained for compatibility
+orders.executed      — Execution confirmations
+fills.confirmed      — Exchange fill confirmations
+portfolio.state      — Compacted aggregate portfolio snapshot
+risk.alerts          — Kill switch and risk alerts
+rl.param.updates     — Strategy/RL parameter updates
 ```
 
 ### Network Layout
@@ -258,26 +288,52 @@ All services run on the `172.20.0.0/16` bridge network with static IPs for deter
 
 ```
 alghrest/
-├── agents/                          # All 32 trading agents
+├── agents/                          # 36 runtime agent modules + helpers
 │   ├── base_agent.py                # BaseAgent + BaseStrategy abstractions
-│   ├── tier1_executive/             # CIO + Risk Governor
-│   ├── tier2_intelligence/          # 6 intelligence agents
-│   │   ├── market_data_hub.py
-│   │   ├── macro_economist.py
-│   │   ├── sentiment_analyst.py
+│   ├── tier1_executive/             # 3 executive agents
+│   │   ├── cio_agent.py             # Claude Opus strategic reasoning
+│   │   ├── risk_governor.py         # Portfolio-level risk management
+│   │   └── proposal_approver.py     # Trade proposal validation
+│   ├── tier2_intelligence/          # 7 intelligence agents
+│   │   ├── market_data_hub.py       # OHLCV aggregation via CCXT
+│   │   ├── macro_economist.py       # FRED economic data analysis
+│   │   ├── sentiment_analyst.py     # Social sentiment scoring
 │   │   ├── news_analyst.py          # Claude Sonnet NLP + RSS
-│   │   ├── geopolitical_watcher.py
-│   │   └── onchain_sleuth.py
+│   │   ├── geopolitical_watcher.py  # Country risk assessment
+│   │   ├── onchain_sleuth.py        # Glassnode whale tracking
+│   │   └── price_publisher.py       # Redis price broadcasting
 │   ├── tier3_quant/                 # 3 quant agents
-│   │   ├── technical_analyst.py
-│   │   ├── volatility_forecaster.py
-│   │   └── correlation_engine.py
+│   │   ├── technical_analyst.py     # 50+ indicators via pandas-ta
+│   │   ├── volatility_forecaster.py # GARCH/EGARCH models
+│   │   └── correlation_engine.py    # Cross-asset correlation
 │   ├── tier4_strategies/            # 8 strategy agents (capital sleeves)
-│   │   └── trend_follower.py
-│   ├── tier5_execution/             # 6 execution agents
-│   │   └── position_sizer.py
-│   ├── tier6_defi/                  # 4 DeFi agents
-│   └── tier7_monitoring/            # 4 monitoring agents
+│   │   ├── trend_follower.py        # EMA crossover strategy
+│   │   ├── mean_reversion.py        # Bollinger Band mean reversion
+│   │   ├── momentum.py              # Cross-sectional momentum
+│   │   ├── stat_arb.py              # Pairs trading via cointegration
+│   │   ├── ml_predictor.py          # CNN pattern + RL sizing
+│   │   ├── breakout_hunter.py       # Volume-confirmed breakouts
+│   │   ├── arb_cross_exchange.py    # Inter-exchange arbitrage
+│   │   └── macro_rotator.py         # Regime-based rotation
+│   ├── tier5_execution/             # 6 runtime execution agents + helper
+│   │   ├── order_router.py          # Smart multi-exchange routing
+│   │   ├── position_sizer.py        # Kelly criterion sizing
+│   │   ├── slippage_minimizer.py    # TWAP/VWAP execution
+│   │   ├── hedge_manager.py         # Portfolio delta hedging
+│   │   ├── fee_optimizer.py         # Maker/taker optimization
+│   │   ├── liquidation_guard.py     # Margin monitoring
+│   │   └── exchange_executor.py     # Final execution + fills
+│   ├── tier6_defi/                  # 4 DeFi agents (skeleton)
+│   │   ├── yield_farmer.py          # Aave/Compound yield optimization
+│   │   ├── dex_arbitrageur.py       # Uniswap/Curve price discrepancies
+│   │   ├── mev_hunter.py            # Flashbots bundle submission
+│   │   └── bridge_strategist.py     # Cross-chain capital allocation
+│   └── tier7_monitoring/            # 5 monitoring agents
+│       ├── portfolio_tracker.py     # Real-time PnL tracking
+│       ├── alert_manager.py         # Telegram/PagerDuty alerts
+│       ├── compliance_agent.py      # Trade logging & compliance
+│       ├── auditor_agent.py         # Trade analysis & auditing
+│       └── copy_trading_channel.py  # Signal distribution
 │
 ├── core/                            # Shared core modules
 │   ├── config.py                    # Central settings (pydantic-settings)
@@ -292,13 +348,21 @@ alghrest/
 │       └── metrics.py               # Prometheus metrics registry
 │
 ├── api/                             # FastAPI REST + WebSocket
-│   ├── main.py                      # App entry point
-│   ├── routes/                      # API route handlers
+│   ├── main.py                      # Production app entry point
+│   ├── mock_server.py               # Dev-only mock — fakes agents + serves /api/{symbols,quotes,history,holdings}
+│   ├── routes/
+│   │   └── quotes.py                # Market-data REST surface (symbols, quotes, history, holdings)
 │   └── websockets/                  # Real-time WS feeds
 │
 ├── connectors/                      # Exchange & data connectors
 │   ├── exchanges/                   # CCXT, Alpaca, IBKR wrappers
-│   ├── data_providers/              # Glassnode, Nansen, FRED
+│   ├── data_providers/              # Market-data quote/history/holdings layer
+│   │   ├── base.py                  # QuoteProvider ABC + ANCHOR_DATE + random_walk_history()
+│   │   ├── crypto_provider.py       # Mock — swap for ccxt / CoinGecko
+│   │   ├── forex_provider.py        # Mock — swap for Alpha Vantage / ExchangeRate-API
+│   │   ├── equity_provider.py       # Mock — swap for Alpaca / Finnhub / IEX
+│   │   ├── router.py                # Symbol → provider routing + static catalog (24 symbols)
+│   │   └── holdings.py              # Mock 8-position ledger with broker mapping
 │   └── chains/                      # EVM + Solana RPC clients
 │
 ├── ml/                              # Machine learning pipeline
@@ -309,10 +373,15 @@ alghrest/
 ├── backtesting/
 │   └── engine.py                    # VectorBT backtesting + validation
 │
-├── dashboard/                       # Frontend monitoring dashboard
-│   ├── app/
-│   ├── components/
-│   └── lib/
+├── dashboard/                       # React 18 + Vite + Tailwind + Zustand
+│   └── src/
+│       ├── pages/Overview.tsx       # Default view: symbol selector + portfolio + holdings + market data
+│       ├── components/charts/
+│       │   ├── PortfolioOverview.tsx  # 4 KPI cards across all holdings (unfiltered)
+│       │   ├── HoldingsPanel.tsx      # Broker-grouped sections (Binance / OANDA / Alpaca) with subtotals
+│       │   └── MarketDataPanel.tsx    # Live OHLC + 30d sparkline per selected symbol
+│       ├── components/common/SymbolSelector.tsx  # Multi-select with offline fallback catalog
+│       └── lib/useLiveQuotes.ts     # Shared TanStack Query cache for all panels (1 fetch / 3s)
 │
 ├── infra/                           # Infrastructure config
 │   ├── init/                        # DB + Kafka initialization scripts
@@ -340,12 +409,12 @@ alghrest/
 
 ### 1 — Clone & Configure
 
-```bash
+```powershell
 git clone https://github.com/your-org/alghrest.git
-cd alghrest
+Set-Location alghrest
 
 # Copy environment template
-cp .env.example .env
+Copy-Item .env.example .env
 # Edit .env with your API keys (see Configuration section)
 ```
 
@@ -381,17 +450,66 @@ poetry shell
 alembic upgrade head
 ```
 
-### 5 — Start in Paper Trading Mode
+### 5 — Start Agents Locally
 
-```bash
-# Ensure ENVIRONMENT=paper_trading in .env
-# Start Tier 2 intelligence agents first
-python -m agents.tier2_intelligence.market_data_hub &
-python -m agents.tier2_intelligence.news_analyst &
+```powershell
+# Ensure ENVIRONMENT=paper_trading and ENABLE_DEFI_AGENTS=false in .env
+# Start one agent per terminal with the universal runner
+python run_agent.py agents.tier2_intelligence.market_data_hub MarketDataHub
+python run_agent.py agents.tier2_intelligence.news_analyst NewsAnalyst
 
 # Start a Tier 4 strategy agent
-python -m agents.tier4_strategies.trend_follower &
+python run_agent.py agents.tier4_strategies.trend_follower TrendFollower
+
+# Agent 16 also needs the ML inference server in a separate terminal
+Set-Location ml; python inference/server.py
 ```
+
+### 6 — Dashboard (Market-Data Demo)
+
+For dashboard work without the full agent stack, run the mock API + Vite dev server:
+
+```powershell
+# Terminal 1 — mock backend, serves /api/{symbols,quotes,history,holdings}
+python api/mock_server.py            # http://localhost:8000
+
+# Terminal 2 — React/Vite dashboard
+Set-Location dashboard; npm install; npm run dev   # http://localhost:5173
+```
+
+The Overview page comes pre-selected with `BTC, ETH, SOL, EUR/USD, AAPL, TSLA`. All demo data is anchored to **2025-05-11** — historical sparklines, holding entry prices, and "as of" labels all line up at this date. If `mock_server.py` isn't running, the symbol selector falls back to a built-in offline catalog and shows an amber warning.
+
+### 7 — Lightweight Dev Mode (Weak Machine)
+
+For laptops that can't comfortably run the full Docker stack (Kafka × 3, Redis, TimescaleDB, Prometheus, agent containers) the repo ships a slimmer path that runs **only** the mock backend + the React dashboard. No Docker, no Kafka, no Redis, no database, no agents, no ML inference server.
+
+**One-time setup (Windows PowerShell):**
+
+```powershell
+# Separate venv so the lite deps don't fight the full pyproject.toml
+py -3.12 -m venv venv-lite
+.\venv-lite\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements-lite.txt
+
+# Dashboard deps (only first time)
+Set-Location dashboard; npm install; Set-Location ..
+```
+
+**Daily use:**
+
+```powershell
+.\scripts\run_lite.ps1     # starts mock backend (:8000) + dashboard (:5173)
+.\scripts\test_lite.ps1    # ruff check . + pytest -m unit
+```
+
+`run_lite.ps1` forces `ENVIRONMENT=development` and `ENABLE_DEFI_AGENTS=false` and refuses to touch live trading paths. `requirements-lite.txt` excludes the heavy deps (`torch`, `ray`, `ccxt`, `aiokafka`, `redis`, `sqlalchemy`, `alembic`, `transformers`) — a ~200 MB install instead of ~6-8 GB.
+
+**Use it for:** dashboard UI work, `api/routes/quotes.py` and `connectors/data_providers/*` changes, pure-Python module edits, and `tests/unit/**`.
+
+**Don't use it for:** any `agents/**` runtime work, integration tests (`pytest -m integration`), or anything that exercises the Kafka execution pipeline. For those, fall back to the full Docker path above.
+
+Full walkthrough (including `Set-ExecutionPolicy` notes and a do-not-run list): [`docs/LIGHTWEIGHT_DEV.md`](docs/LIGHTWEIGHT_DEV.md).
 
 ### Service URLs
 
@@ -399,9 +517,23 @@ python -m agents.tier4_strategies.trend_follower &
 |---|---|
 | **API** | http://localhost:8000 |
 | **API Docs** | http://localhost:8000/docs |
+| **Dashboard** | http://localhost:5173 |
 | **Grafana** | http://localhost:3000 |
 | **Kafka UI** | http://localhost:8080 |
 | **Prometheus** | http://localhost:9090 |
+
+### Market-Data REST Endpoints
+
+Mounted on both `api/main.py` (production) and `api/mock_server.py` (dev):
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/symbols` | Catalog of 24 symbols (crypto / forex / equity) |
+| `GET /api/quotes?symbols=BTC,EUR/USD,AAPL` | Live OHLC + bid/ask + 24h change + volume |
+| `GET /api/history?symbol=X&days=N` | Deterministic OHLC bars ending on 2025-05-11 (2 ≤ N ≤ 365) |
+| `GET /api/holdings` | 8-position mock ledger; P&L is computed client-side by joining with `/api/quotes` |
+
+Providers in `connectors/data_providers/` are mocks. Replace the body of each `quote()` / `history()` with real provider calls (ccxt, Alpha Vantage, Alpaca) — `QuoteProvider` interface, router, and catalog stay untouched.
 
 ---
 
@@ -412,11 +544,14 @@ All configuration is managed via environment variables loaded from `.env`. See `
 ### Critical Settings
 
 ```bash
-# Operating mode — ALWAYS start with paper_trading
+# Operating mode — ALWAYS start with development or paper_trading
 ENVIRONMENT=paper_trading          # development | paper_trading | live
 
 # Starting capital
 SYSTEM_CAPITAL_USD=10000
+
+# DeFi safety override — keep false until protocol integrations are real
+ENABLE_DEFI_AGENTS=false
 
 # AI — Required for news classification and CIO reasoning
 ANTHROPIC_API_KEY=sk-ant-...
@@ -548,7 +683,7 @@ Each agent exposes metrics on port `9200 + agent_id`:
 
 Pre-provisioned dashboards:
 - **Portfolio PnL** — Real-time P&L, drawdown, Sharpe
-- **Agent Health** — All 32 agent status, heartbeats, error rates
+- **Agent Health** — Runtime agent status, heartbeats, error rates
 - **Risk Metrics** — Exposure, VaR, correlation heatmap
 - **Market Data** — Feed latency, tick rates
 - **Kafka Lag** — Consumer group lag per topic
@@ -601,9 +736,11 @@ pre-commit run --all-files
 1. Create file in the appropriate tier directory
 2. Inherit from `BaseAgent` (or `BaseStrategy` for Tier 4)
 3. Implement `initialize()`, `run()`, `shutdown()`
-4. Register agent ID (must be unique 1–32)
+4. Register agent ID (must be unique, range now 1–36+)
 5. Add to `docker-compose.yml` as a service
 6. Write unit tests in `tests/`
+
+**Note**: See CLAUDE.md for resolved agent ID conflicts and current assignments.
 
 ```python
 from agents.base_agent import BaseAgent
@@ -653,28 +790,28 @@ class MyNewAgent(BaseAgent):
 - [x] Tier 3 quant agents (TA, volatility, correlation)
 - [x] Docker Compose full infrastructure stack
 
-### v0.2.0 (Current — In Progress)
-- [x] Tier 1 executive agents (CIO with Claude Opus + Risk Governor)
-- [x] Complete Tier 4 strategy agents (momentum, stat-arb, breakout hunter, macro rotator)
-- [x] Tier 5 execution agents (order router, slippage minimizer TWAP/VWAP, hedge manager, fee optimizer, liquidation guard)
-- [x] Tier 7 monitoring agents (portfolio tracker, alert manager Telegram/PagerDuty, compliance)
+### v0.2.0 (Completed)
+- [x] Tier 1 executive agents (CIO with Claude Opus + Risk Governor + Proposal Approver)
+- [x] Complete Tier 4 strategy agents (momentum, stat-arb, breakout hunter, macro rotator, ML predictor)
+- [x] Tier 5 execution agents (order router, slippage minimizer TWAP/VWAP, hedge manager, fee optimizer, liquidation guard, exchange executor)
+- [x] Tier 6 DeFi agents (yield farming, DEX arb, MEV, bridge strategist) — *skeleton implementations*
+- [x] Tier 7 monitoring agents (portfolio tracker, alert manager, compliance, auditor, copy trading channel)
+- [x] Agent 16 ML Predictor (CNN chart pattern + RL position sizing)
 - [x] FastAPI REST endpoints + WebSocket feeds
 - [x] Docker Compose agent services
-- [ ] Dockerfile for Python agents
+- [x] Dockerfile for Python agents
 - [ ] Grafana dashboard provisioning (enhanced)
 
-### v0.3.0
-- [ ] Tier 6 DeFi agents (yield farming, DEX arb, MEV)
-- [ ] Agent 16 ML Predictor (CNN chart pattern + RL)
-- [ ] Agent 17 Options Strategist (Deribit delta-neutral)
-- [ ] Telegram copy-signal channel
-- [ ] RL position sizing agent (Ray RLlib)
-
-### v0.3.0
-- [ ] Tier 6 DeFi agents (yield farming, MEV)
-- [ ] Tier 7 monitoring agents (Telegram bot, compliance)
+### v0.3.0 (Current — In Progress)
+- [x] Market-data REST surface (`/api/{symbols,quotes,history,holdings}`) with provider-routing abstraction
+- [x] Dashboard Overview page: symbol selector, portfolio totals, broker-grouped holdings, live market data panel
+- [x] Shared TanStack Query cache (`useLiveQuotes`) — single fetch every 3s feeds all dashboard panels
+- [ ] Real provider integrations to replace mocks in `connectors/data_providers/` (ccxt / Alpha Vantage / Alpaca)
+- [ ] `options_strategist` (Deribit delta-neutral; ID not assigned while momentum uses 17)
+- [ ] Full DeFi protocol integration (Aave/Curve/Flashbots SDKs)
+- [ ] ML inference server startup automation
 - [ ] CNN chart pattern model training pipeline
-- [ ] RL position sizing agent (Ray RLlib)
+- [ ] Enhanced Telegram bot with copy-signal features
 
 ### v1.0.0
 - [ ] Kubernetes deployment manifests
@@ -705,6 +842,6 @@ Proprietary — All rights reserved. Contact the ALGHREST Team for licensing inq
 
 **Built with ⚡ by the ALGHREST Team**
 
-*32 agents. 7 tiers. One mission.*
+*36 runtime agents. 7 tiers. One mission.*
 
 </div>

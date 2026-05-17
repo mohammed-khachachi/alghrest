@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     system_capital_usd: float = 10_000.0
 
+    # ── DeFi SAFETY ──────────────────────────────────────
+    # 🚨 CRITICAL: Tier 6 DeFi agents contain mock logic and are HIGH RISK
+    # Only enable after implementing proper protocol integrations
+    enable_defi_agents: bool = False   # Force disable DeFi agents (safety override)
+
     # ── AI ────────────────────────────────────────────────
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
 

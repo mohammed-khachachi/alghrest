@@ -19,44 +19,71 @@ class DashboardWebSocketClient {
   private intentionalClose = false;
 
   connect(): void {
+    if (
+      this.ws?.readyState === WebSocket.OPEN ||
+      this.ws?.readyState === WebSocket.CONNECTING
+    ) {
+      return;
+    }
+
     this.intentionalClose = false;
     this._open();
   }
 
   disconnect(): void {
     this.intentionalClose = true;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
+  }
+
+  isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
   }
 
   private _open(): void {
     const store = useDashboardStore.getState();
     store.setWsStatus('connecting');
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     try {
-      this.ws = new WebSocket(WS_URL);
-      this.ws.binaryType = 'arraybuffer';
+      const ws = new WebSocket(WS_URL);
+      ws.binaryType = 'arraybuffer';
+      this.ws = ws;
     } catch {
+      store.setWsStatus('error');
       this._scheduleReconnect();
       return;
     }
 
-    this.ws.onopen = () => {
+    const currentWs = this.ws;
+
+    currentWs.onopen = () => {
+      if (this.ws !== currentWs) return;
       store.setWsStatus('connected');
     };
 
-    this.ws.onclose = () => {
+    currentWs.onclose = () => {
+      if (this.ws !== currentWs) return;
+      this.ws = null;
       if (this.intentionalClose) return;
       store.setWsStatus('disconnected');
       this._scheduleReconnect();
     };
 
-    this.ws.onerror = () => {
+    currentWs.onerror = () => {
+      if (this.ws !== currentWs) return;
       store.setWsStatus('error');
     };
 
-    this.ws.onmessage = (event: MessageEvent) => {
+    currentWs.onmessage = (event: MessageEvent) => {
+      if (this.ws !== currentWs) return;
       try {
         let raw: unknown;
         if (event.data instanceof ArrayBuffer) {
@@ -136,7 +163,7 @@ class DashboardWebSocketClient {
   }
 
   private _scheduleReconnect(): void {
-    if (this.intentionalClose) return;
+    if (this.intentionalClose || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => this._open(), RECONNECT_DELAY_MS);
   }
 }

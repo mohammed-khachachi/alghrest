@@ -123,6 +123,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from api.routes.quotes import router as quotes_router  # noqa: E402
+app.include_router(quotes_router)
+
 
 # ── HEALTH ENDPOINTS ──────────────────────────────────────────────────────────
 

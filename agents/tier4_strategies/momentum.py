@@ -1,5 +1,5 @@
 """
-Agent 14 — Momentum Strategy
+Agent 17 — Momentum Strategy
 Cross-sectional momentum: rank assets by 12-1 momentum (12-month return minus last month).
 Go long top-decile, short bottom-decile. Rebalance weekly.
 """
@@ -60,7 +60,7 @@ def _momentum_score(closes: np.ndarray) -> float:
 class MomentumStrategy(BaseStrategy):
     """Agent 14 — Cross-sectional momentum across top crypto assets."""
 
-    AGENT_ID = 14
+    AGENT_ID = 17
     strategy_id = "momentum_cross_sectional"
     capital_pct = 0.10
     max_positions = 6
