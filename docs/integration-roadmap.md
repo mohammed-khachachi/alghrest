@@ -69,6 +69,8 @@ This is the correct state until the trigger conditions in Level 1 are met.
 
 **Do not implement the Level 1 adapter yet.** This document records the intent. The implementation requires the trigger conditions above to be met first, in a dedicated branch and PR.
 
+**Design artifact.** The full file-layout, schema, validation, error-handling, and security rules for the Level 1 adapter are defined in [`docs/csv-adapter-contract.md`](csv-adapter-contract.md). Read that document before proposing any producer or consumer code.
+
 ## 4. Level 2 — CLI integration (optional, later)
 
 **Goal.** ALGHREST can ask HMM_Trading to regenerate outputs on demand by invoking the HMM CLI as a subprocess. The contract is still file-based — Level 2 only adds the ability to trigger a refresh.

@@ -57,6 +57,7 @@ Before making any change that touches both projects, read:
 
 - [docs/monorepo-workflow.md](docs/monorepo-workflow.md) — repo layout, dependency policy, branching, CI, and the rules that keep the two projects independent.
 - [docs/integration-roadmap.md](docs/integration-roadmap.md) — the staged plan (file-based CSV/JSONL → CLI → Python API) for connecting ALGHREST and HMM_Trading. No integration code exists yet.
+- [docs/csv-adapter-contract.md](docs/csv-adapter-contract.md) — the design contract for the Level 1 file-based adapter: file layout, CSV/JSONL schema, regime labels, validation, error handling, and security rules. No reader or writer is implemented yet.
 
 ### Current Implementation Status (v0.3.0 — in progress)
 
