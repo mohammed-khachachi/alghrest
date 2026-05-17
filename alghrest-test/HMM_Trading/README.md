@@ -1,163 +1,148 @@
-# HMM Market Regime Detection
-## نماذج ماركوف المخفية لاكتشاف أنظمة السوق
+# HMM_Trading
 
-> **مشروع بحثي** في التداول الكمي باستخدام Hidden Markov Models  
-> المصدر النظري: Stanford HMM Framework (CS229 / CS228)  
-> ⚠ لأغراض تعليمية وبحثية فقط — ليس نصيحة مالية
+## Overview
 
----
+HMM_Trading is an independent subproject inside the ALGHREST monorepo for detecting market regimes with Hidden Markov Models.
 
-## الهدف
+It is an educational and research project. It is not a live trading system, it does not place orders, and nothing in this project is financial advice. It runs independently from the root ALGHREST project.
 
-اكتشاف **الأنظمة السوقية المخفية** (Market Regimes) تلقائياً من بيانات الأسعار والأحجام، باستخدام نماذج ماركوف المخفية (HMM)، وبناء استراتيجية تداول تعليمية مبنية على هذه الأنظمة.
+## Position in the Monorepo
 
-## الفكرة
+Root project: ALGHREST.
 
-الأسواق تعيش حالات مخفية لا تُرى مباشرةً: صعود هادئ، هبوط متسارع، تذبذب جانبي، أزمة حادة.  
-HMM يكتشف هذه الحالات تلقائياً (Baum-Welch)، ثم يُرمّزها تاريخياً (Viterbi).
+Subproject path:
 
-## المرجع النظري Stanford
-
-| الملف | المسار | الملاحظة |
-|:---|:---|:---|
-| Stanford HMM Framework | CS229/CS228 (مُدمج في المشروع) | مواد ستانفورد لم تُحمَّل كـ PDF — المشروع يعتمد على المعرفة المُضمَّنة |
-| الملخص المُستخرج | `outputs/extracted_text/stanford_hmm_extracted.txt` | يُنشأ تلقائياً عند التشغيل |
-
-> إذا كان لديك ملف Stanford HMM PDF، ضعه في `references/` وسيتعرف عليه النموذج تلقائياً.
-
----
-
-## بنية المشروع
-
-```
-project/
-├── main.py                          ← نقطة التشغيل الرئيسية
-├── requirements.txt                 ← المكتبات المطلوبة
-├── README.md                        ← هذا الملف
-│
-├── references/
-│   └── README.md                    ← معلومات المراجع
-│
-├── src/
-│   ├── __init__.py
-│   ├── file_finder.py               ← البحث عن Stanford PDF
-│   ├── pdf_reader.py                ← استخراج النص من PDF
-│   ├── data_loader.py               ← تحميل بيانات السوق (yfinance)
-│   ├── features.py                  ← بناء مصفوفة الخصائص (Observations)
-│   ├── hmm_model.py                 ← تدريب GaussianHMM (Baum-Welch)
-│   ├── regime_interpreter.py        ← تفسير الأنظمة المكتشفة
-│   ├── backtest.py                  ← باكتيست تعليمي
-│   ├── visualization.py             ← رسم المخرجات
-│   └── utils.py                     ← أدوات مشتركة
-│
-├── reports/
-│   └── HMM_Trading_Report.md        ← التقرير الأكاديمي العربي
-│
-├── notebooks/
-│   └── hmm_market_regime_detection.ipynb  ← Jupyter Notebook تفاعلي
-│
-├── outputs/
-│   ├── figures/                     ← الرسوم البيانية
-│   ├── results/                     ← CSV وJSON
-│   └── extracted_text/              ← النص المستخرج من PDF
-│
-└── tests/
-    ├── test_features.py
-    ├── test_hmm_model.py
-    └── test_backtest.py
+```text
+alghrest-test/HMM_Trading/
 ```
 
----
+HMM_Trading is not a separate Git repository and it is not a submodule. It has its own configuration, tests, dependencies, generated outputs, and documentation.
 
-## التثبيت
+Keep HMM_Trading changes separate from root ALGHREST changes unless an explicit integration task requires crossing that boundary.
 
-```bash
-# 1. إنشاء بيئة افتراضية (اختياري لكن مُوصى به)
+## Quick Start
+
+Windows PowerShell:
+
+```powershell
+cd D:\My_PTOJECT\alghrest-test\alghrest-test\HMM_Trading
+
 python -m venv .venv
-source .venv/bin/activate       # Linux / Mac
-.venv\Scripts\activate          # Windows
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 
-# 2. تثبيت المكتبات
-pip install -r requirements.txt
-```
-
-## التشغيل
-
-```bash
-# تشغيل المشروع كاملاً
-cd project/
+python -m pytest tests/
 python main.py
-
-# البحث عن ملف Stanford PDF فقط
-python src/file_finder.py
-
-# استخراج النص من PDF
-python src/pdf_reader.py
 ```
 
-## استخراج النص من PDF
+## Project Structure
 
-إذا كان لديك ملف Stanford HMM PDF:
-```bash
-# ضع الملف في references/
-cp Stanford_HMM.pdf references/
-
-# ثم شغّل
-python main.py  # سيجده تلقائياً
-# أو
-python src/pdf_reader.py
+```text
+HMM_Trading/
+├── main.py
+├── configs/
+├── src/
+├── tests/
+├── references/
+├── outputs/
+├── reports/
+└── docs/
 ```
 
-## تشغيل الاختبارات
+`main.py` is the command-line entry point. `configs/` stores pipeline configuration. `src/` contains the implementation. `tests/` contains unit, integration, and artifact checks. `references/` stores source reference material. `outputs/` contains generated artifacts. `reports/` contains report material. `docs/` contains developer documentation.
 
-```bash
-pip install pytest
-cd project/
-pytest tests/ -v
+## Configuration
+
+The main configuration file is:
+
+```text
+configs/default.json
 ```
 
----
+Important keys:
 
-## مخرجات المشروع
+- `ticker`
+- `start`
+- `end`
+- `n_states`
+- `covariance_type`
+- `n_iter`
+- `random_state`
+- `transaction_cost`
+- `feature_cols`
 
-| الملف | الوصف |
-|:---|:---|
-| `outputs/figures/01_price_regimes.png` | السعر مع تلوين الأنظمة |
-| `outputs/figures/02_equity_curves.png` | أداء الاستراتيجية مقابل Buy&Hold |
-| `outputs/figures/03_regime_distribution.png` | توزيع الوقت بين الأنظمة |
-| `outputs/figures/04_transition_matrix.png` | مصفوفة انتقال الأنظمة |
-| `outputs/results/hmm_regimes.csv` | الأنظمة اليومية |
-| `outputs/results/state_summary.csv` | إحصاءات كل نظام |
-| `outputs/results/backtest_metrics.csv` | مقاييس الأداء |
-| `outputs/results/transition_matrix.csv` | مصفوفة الانتقال |
-| `outputs/extracted_text/stanford_hmm_extracted.txt` | ملخص نظري Stanford |
-| `reports/HMM_Trading_Report.md` | التقرير الأكاديمي العربي الكامل |
+Do not put secrets in HMM_Trading configuration files.
 
----
+## Running the Pipeline
 
-## حدود النموذج
+Run:
 
-- ✗ الباكتيست داخل العيّنة (In-Sample) — نتائج متحيزة نحو التفاؤل
-- ✗ لا Walk-Forward Analysis
-- ✗ لا تكاليف واقعية (Spread / Slippage)
-- ✗ N=3 تحكمي — يمكن تحسينه بـ BIC/AIC
-- ✗ لا Short بيع في النسخة الأولى
+```powershell
+python main.py
+```
 
----
+This executes:
 
-## ⚠ تحذير
+- Stanford PDF extraction
+- Market data loading
+- Feature engineering
+- HMM training
+- Regime decoding
+- Educational backtest
+- Chart generation
+- Output export
 
-هذا المشروع **لأغراض تعليمية وبحثية فقط**.  
-لا يُمثّل نصيحة مالية أو استثمارية.  
-التداول في الأسواق المالية ينطوي على مخاطر خسارة كبيرة.
+## Testing
 
----
+```powershell
+python -m pytest tests/
+python -m pytest tests/unit/
+python -m pytest tests/integration/
+python -m pytest tests/artifacts/
+```
 
-## أفكار التطوير
+Unit tests check individual components. The integration smoke test checks the pipeline path. The artifact test verifies that core generated outputs exist and are non-empty.
 
-- Walk-Forward Validation (Out-of-Sample)
-- اختيار N بـ BIC/AIC
-- Regime-Aware Portfolio Optimization
-- دمج أصول متعددة (Multi-Asset)
-- Online Baum-Welch (تحديث تدريجي)
-- Regime Switching GARCH
+## Outputs
+
+`outputs/` contains generated artifacts and is ignored by Git.
+
+Core outputs:
+
+- `outputs/results/hmm_regimes.csv`
+- `outputs/results/state_summary.csv`
+- `outputs/results/backtest_metrics.csv`
+- `outputs/results/transition_matrix.csv`
+- `outputs/figures/01_price_regimes.png`
+- `outputs/figures/02_equity_curves.png`
+- `outputs/figures/03_regime_distribution.png`
+- `outputs/figures/04_transition_matrix.png`
+
+## Documentation
+
+- [docs/architecture.md](docs/architecture.md)
+
+Future documentation may include `docs/testing.md` and `docs/outputs.md`.
+
+## Integration with ALGHREST
+
+Integration with root ALGHREST should be gradual:
+
+1. File-based CSV integration
+2. CLI integration
+3. Python API integration after packaging
+
+Level 1 is recommended as the starting point because it lets root ALGHREST consume `outputs/results/*.csv` without coupling to HMM_Trading internals.
+
+## Development Rules
+
+- Always work from the HMM_Trading directory when editing this subproject.
+- Do not run HMM tests from the root project.
+- Do not use the root virtual environment for HMM_Trading.
+- Do not use an HMM_Trading virtual environment inside root ALGHREST.
+- Do not commit `outputs/`, `.venv/`, caches, or generated files.
+- Keep root ALGHREST changes separate from HMM_Trading changes.
+
+## Disclaimer
+
+This project is for educational and research purposes. Backtest results are not production-grade trading signals. Nothing here is financial advice.
