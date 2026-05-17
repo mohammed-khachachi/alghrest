@@ -13,6 +13,10 @@ secrets/
 # ── CLAUDE CODE LOCAL SETTINGS ────────────────────────────────────────────────
 .claude/
 
+# ── CODEX LOCAL SETTINGS ─────────────────────────────────────────────────────
+.codex/sessions/
+.codex/skills/
+
 # ── PYTHON ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -25,6 +29,7 @@ dist/
 .eggs/
 .venv/
 venv/
+venv-lite/
 env/
 pip-wheel-metadata/
 .mypy_cache/
@@ -52,11 +57,21 @@ ml/training/runs/
 *.pkl
 
 # ── DATA & LOGS ───────────────────────────────────────────────────────────────
-data/
+/data/
 logs/
 *.csv
 *.parquet
 *.db
+
+# ── HMM_TRADING LOCAL ARTIFACTS ───────────────────────────────────────────────
+alghrest-test/HMM_Trading/outputs/
+alghrest-test/HMM_Trading/pytest-cache-files-*/
+alghrest-test/HMM_Trading/.venv/
+alghrest-test/HMM_Trading/.pytest_cache/
+alghrest-test/HMM_Trading/__pycache__/
+alghrest-test/HMM_Trading/**/__pycache__/
+alghrest-test/HMM_Trading/.codex/sessions/
+alghrest-test/HMM_Trading/.codex/skills/
 
 # ── DOCKER VOLUMES ────────────────────────────────────────────────────────────
 postgres-data/
@@ -69,5 +84,35 @@ grafana-data/
 .idea/
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build folders
+dist/
+build/
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS files
 .DS_Store
 Thumbs.db

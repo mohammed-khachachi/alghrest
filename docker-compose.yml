@@ -189,13 +189,14 @@ services:
       ZOOKEEPER_MAX_CLIENT_CNXNS: 100
       ZOOKEEPER_AUTOPURGE_SNAP_RETAIN_COUNT: 10
       ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: 24
+      ZOOKEEPER_4LW_COMMANDS_WHITELIST: "*"
     ports:
       - "2181:2181"
     volumes:
       - zookeeper-data:/var/lib/zookeeper/data
       - zookeeper-logs:/var/lib/zookeeper/log
     healthcheck:
-      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
+      test: ["CMD-SHELL", "echo srvr | nc -w 2 localhost 2181"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -693,6 +694,11 @@ services:
 
   # ═══════════════════════════════════════════════════════
   # TIER 4 — Strategy Agents
+  # NOTE: Agent ID reassignments (resolved collisions):
+  # - momentum: 14 → 17 (port 9217, IP .17)
+  # - stat_arb: 15 → 21 (port 9221, IP .21)
+  # - macro_rotator: 18 → 34 (port 9234, IP .34)
+  # - breakout_hunter: 19 (port 9219, IP .19)
   # ═══════════════════════════════════════════════════════
 
   agent-trend-follower:
@@ -740,13 +746,13 @@ services:
     command: python run_agent.py agents.tier4_strategies.momentum MomentumStrategy
     env_file: .env
     ports:
-      - "9214:9214"
+      - "9217:9217"
     depends_on:
       redis:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.14
+        ipv4_address: 172.20.4.17
     deploy:
       resources:
         limits:
@@ -759,13 +765,13 @@ services:
     command: python run_agent.py agents.tier4_strategies.stat_arb StatArb
     env_file: .env
     ports:
-      - "9215:9215"
+      - "9221:9221"
     depends_on:
       redis:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.15
+        ipv4_address: 172.20.4.21
     deploy:
       resources:
         limits:
@@ -797,13 +803,13 @@ services:
     command: python run_agent.py agents.tier4_strategies.macro_rotator MacroRotator
     env_file: .env
     ports:
-      - "9219:9219"
+      - "9234:9234"
     depends_on:
       redis:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.19
+        ipv4_address: 172.20.4.34
     deploy:
       resources:
         limits:
@@ -816,13 +822,13 @@ services:
     command: python run_agent.py agents.tier4_strategies.breakout_hunter BreakoutHunter
     env_file: .env
     ports:
-      - "9221:9221"
+      - "9219:9219"
     depends_on:
       redis:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.21
+        ipv4_address: 172.20.4.19
     deploy:
       resources:
         limits:
@@ -1027,7 +1033,7 @@ services:
     build: .
     container_name: alghrest-api
     restart: unless-stopped
-    command: python -m api.main
+    command: sh -c "pip install structlog uvicorn fastapi pydantic-settings redis aiokafka prometheus-client orjson pendulum tenacity httpx aiohttp asyncpg sqlalchemy && python -m api.main"
     env_file: .env
     ports:
       - "8000:8000"
@@ -1040,7 +1046,7 @@ services:
       alghrest-network:
         ipv4_address: 172.20.0.50
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; req = urllib.request.Request('http://localhost:8000/health'); urllib.request.urlopen(req)\""]
       interval: 15s
       timeout: 5s
       retries: 5

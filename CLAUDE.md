@@ -13,10 +13,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common commands
 
-```bash
-# Install (Poetry; project uses Python 3.12)
+```powershell
+# Install (Poetry; project uses Python 3.12.x, pinned <3.13)
 poetry install
 poetry install --with backtesting    # add quantstats / pyfolio-reloaded
+poetry install --with nlp            # add spaCy for news_analyst NER (optional; see ABI note below)
 
 # Run the full infra stack + agent containers
 docker compose up -d
@@ -35,6 +36,10 @@ pytest -m unit
 pytest -m integration               # needs docker compose stack up
 pytest tests/unit/test_models.py::TestX -v   # single test
 pytest --cov=agents --cov=core --cov-report=html
+# Integration suite (tests/integration/) covers the full pipeline:
+#   execution_pipeline, kafka_messaging, redis_state_management,
+#   agent_coordination, market_crash_kill_switch, ml_failover,
+#   api_dashboard_integration, backtesting_validation
 
 # Lint / format / type-check
 ruff check .
@@ -44,14 +49,52 @@ mypy agents/ core/                  # strict mode
 pre-commit run --all-files
 
 # Dashboard (React/Vite)
-cd dashboard && npm install && npm run dev    # http://localhost:5173
+Set-Location dashboard; npm install; npm run dev    # http://localhost:5173
+# The Overview page's market-data panel + holdings/P&L need /api/* on :8000.
+# Run api/mock_server.py (below) in a separate terminal first. If it's down,
+# Vite proxy returns 500 and SymbolSelector falls back to FALLBACK_SYMBOL_CATALOG.
+
+# ML inference server (required for Agent 16 ml_predictor)
+Set-Location ml; python inference/server.py          # http://localhost:8080/predict
+
+# Mock server (for dashboard development without real backend)
+python api/mock_server.py                    # http://localhost:8000 (fakes all agents + /api/{symbols,quotes,history,holdings})
+
+# Demo and testing utilities (scripts/)
+python scripts/demo_kill_switch.py             # Interactive kill switch demo (Arabic UI)
+python scripts/run_kill_switch_stress_test.py  # Stress test kill switch system
+python scripts/seed_redis.py                   # Seed Redis with initial state for local dev
+python scripts/mock_ml_server.py               # Lightweight stand-in for ml/inference/server.py
+python scripts/validate_agent_ids.py           # Detect AGENT_ID collisions across agents/**
+python scripts/validate_news_feeds.py          # Probe news_analyst RSS feeds (catches dead URLs)
+python scripts/run_tests.py                    # Convenience wrapper for the pytest suite
+
+# Universal agent runner (used by Docker services)
+python run_agent.py <module_path> <ClassName>  # Universal entry point for all agents
+python run_agent.py agents.tier1_executive.cio_agent CIOAgent
+
+# Lightweight dev mode (low-resource Windows boxes — no Docker/Kafka/Redis/agents/ML)
+py -3.12 -m venv venv-lite; .\venv-lite\Scripts\Activate.ps1
+python -m pip install -r requirements-lite.txt
+.\scripts\run_lite.ps1            # starts api/mock_server.py + dashboard only
+.\scripts\test_lite.ps1           # lite test runner (skips integration markers)
+# Full docs: docs/LIGHTWEIGHT_DEV.md
 ```
 
-Note: pytest's coverage gate (`--cov-fail-under=70`) is **intentionally disabled** in `pyproject.toml` until full suite lands. Don't re-enable casually.
+**Ta-lib dependency note:** pandas-ta requires separate ta-lib binary installation:
+- Ubuntu: `apt-get install ta-lib`  
+- macOS: `brew install ta-lib`
+- Windows: Download from https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
+
+**spaCy / numpy 2.x ABI note:** spaCy is in the optional `nlp` poetry group, not the main deps. The main env runs `numpy 2.x` (required by `pandas-ta 0.4`), but spaCy 3.8.x pins `thinc<8.4` → `numpy<2.1`, and the spaCy 4.0 dev releases pin `thinc<9.1` (compiled against the numpy 1.x ABI — `dtype size changed` at import). Installing `--with nlp` into the main env will break imports; if you need NER, use a separate venv or wait for spaCy 4.0 stable with `thinc>=9.1`. `news_analyst._extract_entities` already returns `[]` when spaCy is absent.
+
+**Windows development note:** Use PowerShell for all commands below. Docker Desktop with WSL2 backend recommended for best performance.
+
+Note: pytest's coverage gate (`--cov-fail-under=70`) is **enabled** with comprehensive integration tests covering the core pipeline. Target 70% minimum coverage across agents and core modules.
 
 ## Architecture
 
-ALGHREST is a 32-agent autonomous trading system organised in 7 tiers. Agents communicate **only** through Kafka topics and shared Redis state — there are no direct calls between agents.
+ALGHREST is a 37-service autonomous trading system with ~20 trading agents organised in 7 tiers. Agents communicate **only** through Kafka topics and shared Redis state — there are no direct calls between agents.
 
 ```
 Tier 1 — Executive (CIO Opus, Risk Governor, ProposalApprover)
@@ -59,7 +102,7 @@ Tier 2 — Intelligence (market data, news, sentiment, macro, geopolitics, on-ch
 Tier 3 — Quant (technical analyst, GARCH volatility, correlation engine)
 Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb, ml_predictor; options_strategist still pending)
 Tier 5 — Execution (order router, slippage minimizer, hedge mgr, fee optimizer, liquidation guard, exchange executor; position_sizer is a helper, not a runtime agent)
-Tier 6 — DeFi (yield_farmer, dex_arbitrageur, mev_hunter, bridge_strategist — skeletons exist but logic is stub-level; not production-ready)
+Tier 6 — DeFi (yield_farmer, dex_arbitrageur, mev_hunter, bridge_strategist — ⚠️ SKELETON IMPLEMENTATIONS ONLY, NOT PRODUCTION-READY)
 Tier 7 — Monitoring (portfolio tracker, alert manager, compliance, auditor, copy-trading channel)
 ```
 
@@ -82,6 +125,19 @@ Two non-obvious flags piggyback on `ORDERS_PENDING` messages:
 
 Kill switch path: `RISK_ALERTS` carries `KillSwitchEvent` / `HaltAllStrategies`. `ExchangeExecutor` listens and calls `connector.cancel_order` for every tracked order; failed cancels stay tracked for fill-poll retry.
 
+## ⚠️ CRITICAL: Tier 6 DeFi Safety Warning
+
+**DO NOT ENABLE DeFi AGENTS IN PRODUCTION**
+
+Tier 6 DeFi agents (`yield_farmer`, `dex_arbitrageur`, `mev_hunter`, `bridge_strategist`) contain **SKELETON IMPLEMENTATIONS** with **MOCK LOGIC**. They are **HIGH RISK** and **NOT PRODUCTION-READY**.
+
+- Set `ENABLE_DEFI_AGENTS=false` in `.env` (this is the default)
+- These agents exist for architectural completeness but lack proper protocol integrations
+- Aave, Curve, Flashbots, and bridge SDKs are not yet implemented
+- **Using these agents with real funds WILL result in loss of capital**
+
+Only enable after implementing proper DeFi protocol integrations and extensive testing on testnets.
+
 ### Base classes (always inherit, never duplicate)
 
 - `agents/base_agent.py::BaseAgent` — every agent inherits this. Provides `self.producer` (Kafka), `self.state` (Redis), `self.logger`, lifecycle (`initialize/run/shutdown`), heartbeat loop, kill-switch guard (`await self.is_halted()`), and Prometheus metrics on port `9200 + agent_id`.
@@ -99,7 +155,7 @@ async def run(self) -> None:
 
 ### Topics
 
-All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (string enum). Kafka topics are created up front by `infra/init/kafka-init.sh` (18 topics including the legacy `orders.approved` alias) — auto-create is **off**. If you add a topic, update both the enum and the init script.
+All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (string enum). Kafka topics are created up front by `infra/init/kafka-init.sh` (19 `create_topic` calls including the legacy `orders.approved` alias) — auto-create is **off**. If you add a topic, update both the enum and the init script.
 
 ### State & messaging primitives
 
@@ -110,20 +166,22 @@ All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (stri
 ### Adding a new agent
 
 1. File under the correct `agents/tierN_*/` directory.
-2. Inherit `BaseAgent` (or `BaseStrategy` for Tier 4). Set unique `AGENT_ID` 1–32.
+2. Inherit `BaseAgent` (or `BaseStrategy` for Tier 4). Set unique `AGENT_ID` (range now 1–36+).
 3. Implement `initialize() / run() / shutdown()`. Always include the kill-switch guard in `run()`.
-4. Add a service to `docker-compose.yml` using the `python run_agent.py <module> <Class>` pattern.
-5. Expose Prometheus port = `9200 + AGENT_ID` (handled automatically by `BaseAgent.start()`).
+4. Test locally: `python run_agent.py agents.tierN_category.agent_file AgentClass`
+5. Add a service to `docker-compose.yml` using the same `run_agent.py` pattern.
+6. Expose Prometheus port = `9200 + AGENT_ID` (handled automatically by `BaseAgent.start()`).
 
-### Known agent ID collisions (pre-existing, NOT from recent work)
+### Agent ID assignments (recently resolved)
 
-- ID **14** — `volatility_forecaster` vs `momentum`
-- ID **15** — `correlation_engine` vs `stat_arb`
-- ID **18** — `arb_cross_exchange` vs `macro_rotator`
-- ID **32** — `compliance.py` vs `compliance_agent.py` (the latter is the legacy 251-line implementation; the new `compliance.py` is a shorter rewrite — pick one before running both)
-- ID **33** — `auditor_agent.py` uses an ID outside the original 1–32 range. The Prometheus port (`9233`) is fine, but anything that assumes "32 agents" needs updating.
+Reassigned IDs (previously collided):
+- `momentum`: 14 → **17**
+- `stat_arb`: 15 → **21**
+- `macro_rotator`: 18 → **34**
+- `yield_farmer`: 26 → **35**
+- `copy_trading_channel`: 33 → **36**
 
-These cause Prometheus port clashes and Redis health-key overwrites. A renumbering pass is pending; flag rather than silently work around when touching these agents.
+`auditor_agent.py` uses ID **33** by design. The 1–32 range is no longer authoritative — Prometheus ports (`9200 + AGENT_ID`) just need to stay unique. `scripts/validate_agent_ids.py` is the source of truth; run it before merging a new agent.
 
 ### ML inference subsystem (`ml/` + Agent 16)
 
@@ -137,9 +195,39 @@ When deploying, the inference server is a **separate process** from the agent. D
 
 ### Other moving parts worth knowing
 
-- `api/main.py` is the production FastAPI app (REST + WebSocket dashboard feed). `api/mock_server.py` is a **separate dev-only mock** that fakes all 32 agents and live data — used by the dashboard when the real backend isn't running. They both bind a FastAPI app named `app`; don't run them on the same port.
-- `core/telegram/bot.py` + `bot_manager.py` back the Tier 7 alert manager. Telegram credentials come from `core/config.py` settings.
+- `api/main.py` is the production FastAPI app (REST + WebSocket dashboard feed). `api/mock_server.py` is a **separate dev-only mock** that fakes all 36+ agents and live data — use this for dashboard development when you don't want to spin up the full infrastructure stack. They both bind a FastAPI app named `app`; don't run them on the same port.
+- `core/telegram/bot.py` + `bot_manager.py` back the Tier 7 alert manager and copy-trading channel. Telegram credentials (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`) come from `core/config.py` settings. The bot broadcasts formatted trade signals with Arabic UI support.
 - `infra/k8s/` and `infra/terraform/` exist but are scaffold-only (a few manifests / `main.tf` + `variables.tf`). Don't treat them as production-ready deploy targets without filling them in.
+- `connectors/` holds the I/O adapter layer used by execution and intelligence agents — `exchanges/` (per-venue REST/WS clients consumed by `ExchangeExecutor`), `chains/` (on-chain RPC wrappers for Tier 6), `data_providers/` (market-data quote/history/holdings layer used by the dashboard — see below). Agents never call exchange/RPC SDKs directly; they go through these adapters.
+- `mcp/claude_model_manager/` is a Model Context Protocol server scaffold for routing Claude model selection — not part of the runtime agent flow.
+- `AGENTS.md` is the Codex-targeted sibling of this file. It overlaps heavily and may lag CLAUDE.md on some details; treat CLAUDE.md as canonical for Claude Code sessions.
+- `docs/` holds non-CLAUDE.md reference material: `LIGHTWEIGHT_DEV.md` (the venv-lite path) and `kill_switch_testing_guide.md` (Arabic-language QA scenarios for `scripts/run_kill_switch_stress_test.py`).
+- `.github/workflows/tests.yml` runs lint → unit → integration on every push/PR to `main`/`develop` and nightly at 02:00 UTC. Backtest and performance jobs are **opt-in**: include `[full-test]` or `[perf-test]` in the commit message to trigger them. Coverage uploads to Codecov; CI invokes `scripts/run_tests.py` (the same wrapper used locally), so keep that script working.
+- `dashboard/src/lib/useLiveQuotes.ts` is the **single source of truth for dashboard quote polling** — one TanStack Query call every 3s, shared across `PortfolioOverview`, `HoldingsPanel`, and `MarketDataPanel`. Do not add per-panel polling to `/api/quotes`; subscribe to this hook instead so all panels stay in lockstep and the backend only sees one request.
+- Dashboard pages live in `dashboard/src/pages/`: `Overview` (default — symbol selector + portfolio + holdings + market data), `Agents`, `Positions`, `Risk`, `Kafka`, plus three newer surfaces — `AuditorDashboard`, `BacktestSimulation`, `InvestorPitch`. The sidebar in `components/layout/Sidebar.tsx` is the routing source of truth.
+
+### Test layout
+
+`tests/` mirrors the pytest markers:
+- `tests/unit/` — fast, no external services (`pytest -m unit`). Examples: `test_kill_switch_cancel.py`, `test_prompt_caching.py`, `test_risk_engine.py`.
+- `tests/integration/` — requires `docker compose up -d` (Kafka + Redis + TimescaleDB). Covers the full pipeline: `test_execution_pipeline.py`, `test_kafka_messaging.py`, `test_market_crash_kill_switch.py`, `test_ml_failover.py`, `test_api_dashboard_integration.py`, `test_backtesting_validation.py`, etc.
+- `tests/backtests/` — backtest-marker tests (slow); currently empty.
+
+### Market-data REST surface (`connectors/data_providers/` + `api/routes/quotes.py`)
+
+A separate, dashboard-facing market-data layer — independent of the Kafka agent fabric. Used by the React Overview page (symbol selector, market-data panel, holdings + P&L).
+
+- `connectors/data_providers/base.py` — `QuoteProvider` ABC, `Quote` and `HistoricalBar` dataclasses, `random_walk_history()` helper, and `ANCHOR_DATE` (currently `2025-05-11`). All demo data is anchored to this date so historical series, sparklines, and `holdings.entry_price` line up exactly.
+- `connectors/data_providers/{crypto,forex,equity}_provider.py` — mock implementations with realistic base prices. **Designed to be swapped** for ccxt/CoinGecko (crypto), Alpha Vantage/ExchangeRate-API (forex), and Alpaca/Finnhub (equities) by replacing the class body — `QuoteProvider` interface and the router are not affected.
+- `connectors/data_providers/router.py` — `QuoteRouter` + static `_CATALOG` (24 symbols). Routes a symbol to the right provider via its `AssetClass`. Unknown symbols are silently dropped in batch calls, 404 on the single-symbol `/history` path.
+- `connectors/data_providers/holdings.py` — 8 static mock holdings with broker mapping (`crypto→Binance`, `forex→OANDA`, `equity→Alpaca`). Entry prices are computed from the *same* deterministic historical bars the sparkline renders, so they match exactly. Cached after first build.
+- `api/routes/quotes.py` exposes four endpoints, mounted on **both** `api/main.py` and `api/mock_server.py`:
+  - `GET /api/symbols` — catalog
+  - `GET /api/quotes?symbols=BTC,EUR/USD,AAPL` — live OHLC + bid/ask + 24h change + volume (jitters per call to simulate real-time)
+  - `GET /api/history?symbol=X&days=N` — deterministic OHLC bars ending on `ANCHOR_DATE`
+  - `GET /api/holdings` — static holdings ledger; P&L is computed **client-side** by joining with quotes (no double polling)
+
+When swapping the mocks for real providers: keep `_BASE_PRICES`/`_BASE_RATES` as a fallback for development, replace the body of `quote()` and `history()` with real API calls, leave everything else alone.
 
 ## Risk rails (hard limits — don't soften)
 
@@ -155,11 +243,74 @@ Strategies must pass all of these in `backtesting/engine.py::BacktestEngine.vali
 
 ## Environment & secrets
 
-- All settings flow through `core/config.py::Settings` (pydantic-settings, loads `.env`). Use `from core.config import settings`.
-- `ENVIRONMENT` ∈ `development | paper_trading | live` — gates live order placement.
-- `ANTHROPIC_API_KEY` required for CIO + news analyst.
-- Per-exchange testnet keys (`BINANCE_TESTNET_*`, etc.) are preferred during development.
-- Never commit `.env`. Hot-wallet private key and Flashbots auth key live in env, not code.
+All settings flow through `core/config.py::Settings` (pydantic-settings, loads `.env`). Use `from core.config import settings`.
+
+### Critical Environment Variables
+
+```powershell
+# Operating environment (ALWAYS start with development or paper_trading)
+ENVIRONMENT=development          # development | paper_trading | live
+SYSTEM_CAPITAL_USD=10000         # Starting capital in USD
+
+# DeFi Safety Override (CRITICAL - keep false until protocol integrations complete)
+ENABLE_DEFI_AGENTS=false         # Force disable DeFi agents for safety
+
+# AI (required for CIO Opus reasoning and news analysis)
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Exchange Configuration
+
+Start with **testnet/paper trading** only:
+
+```powershell
+# Binance (prefer testnet during development)
+BINANCE_TESTNET=true
+BINANCE_TESTNET_API_KEY=...
+BINANCE_TESTNET_SECRET=...
+
+# Alpaca US Equities (ALWAYS start with paper)
+ALPACA_BASE_URL=https://paper-api.alpaca.markets
+ALPACA_API_KEY=...
+ALPACA_SECRET=...
+
+# Deribit Options (testnet available)
+DERIBIT_TESTNET=true
+DERIBIT_API_KEY=...
+DERIBIT_SECRET=...
+```
+
+### Security Guidelines
+
+- **Never commit `.env`** to git — it's gitignored for security
+- Use **testnet keys** (`BINANCE_TESTNET_*`, `DERIBIT_TESTNET=true`) during development
+- Hot wallet ≤ 5% of capital (`PRIVATE_KEY_HOT_WALLET`, `SOLANA_PRIVATE_KEY`)
+- Separate `FLASHBOTS_AUTH_KEY` for MEV bundles (different from trading wallet)
+- All exchange API keys should be **read + trade only** (no withdrawal permissions)
+
+### Environment Progression
+
+```
+development      → Local testing, mock data allowed, no real orders
+paper_trading    → Real market data, simulated fills, no real money
+live             → Real money — requires explicit ENVIRONMENT=live
+```
+
+⛔ **The system will refuse real orders unless `ENVIRONMENT=live` is set explicitly.**
+
+## Development workflow
+
+**For dashboard-only work**: Use `python api/mock_server.py` + `Set-Location dashboard; npm run dev` — no infrastructure needed.
+
+**For agent development**: Start with `docker compose up -d` → `poetry install` → test your agent with `python run_agent.py <module> <Class>`.
+
+**For strategy development**: Always start in `ENVIRONMENT=development`, validate with backtesting engine, then progress to `paper_trading` → `live`.
+
+**Platform context**: This codebase runs on Windows 11. Use PowerShell for CLI commands. Docker Desktop with WSL2 backend provides the best container performance.
+
+### Dashboard subproject skill set
+
+`dashboard/.agents/skills/` contains a Matt-Pocock-style skill bundle (`diagnose`, `tdd`, `prototype`, `triage`, `zoom-out`, `to-prd`, `to-issues`, `improve-codebase-architecture`, etc.) — these are dashboard-scoped and only relevant when working inside `dashboard/`. They are **not** registered as Claude Code skills at the repo root; do not try to invoke them as `/skill-name` from here.
 
 ## Tooling configuration (in `pyproject.toml`)
 
@@ -168,11 +319,10 @@ Strategies must pass all of these in `backtesting/engine.py::BacktestEngine.vali
 - mypy: strict, excludes `tests/` and `ml/training/`
 - pytest: `asyncio_mode=auto`, markers `unit | integration | backtest | live`
 
-## Pending work (v0.3)
+## Known unfinished pieces
 
-1. Tier 6 DeFi agents — **skeletons landed** (`yield_farmer`, `dex_arbitrageur`, `mev_hunter`, `bridge_strategist`, ~60–80 lines each). Real protocol integration (Aave/Curve/Flashbots/bridge SDKs) is still TODO.
-2. Agent 16 `ml_predictor.py` — **skeleton landed**, but `run()` body is mocked. Wire it to the real `MarketState`/OHLCV window and the `ml/inference/server.py` predict endpoint.
-3. Agent 17 `options_strategist.py` (Deribit delta-neutral) — still missing.
-4. Resolve the duplicate Tier 7 compliance agents (`compliance.py` vs `compliance_agent.py`).
-5. Open issues: I4 (replace dead Reuters RSS feed in `news_analyst`), I10 (PortfolioTracker Sharpe formula).
-6. Renumber the colliding AGENT_IDs (14/15/18/32) listed above; decide whether the agent-count ceiling moves from 32 to ≥33 (auditor).
+- Tier 6 DeFi agents (`yield_farmer`, `dex_arbitrageur`, `mev_hunter`, `bridge_strategist`) are skeletons — see the DeFi safety warning above.
+- `options_strategist` (Deribit delta-neutral) is not yet implemented.
+- `infra/k8s/` and `infra/terraform/` are scaffold-only.
+- `connectors/data_providers/{crypto,forex,equity}_provider.py` ship as **mocks** with deterministic random walks. Real integrations (ccxt/CoinGecko, Alpha Vantage/ExchangeRate-API, Alpaca/Finnhub) replace the body of `quote()` and `history()` only — `QuoteProvider` interface, router, and catalog stay untouched.
+- `/api/holdings` is a static mock ledger (8 holdings, all `BUY`). No persistence, no order ↔ holding wiring back to the agent fabric.

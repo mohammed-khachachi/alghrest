@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ALGHREST | شرح المشروع</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-loader" id="pageLoader" aria-hidden="true">
+    <div class="loader-core"></div>
+    <span>ALGHREST</span>
+  </div>
+
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="ALGHREST">
+      <span class="brand-mark">A</span>
+      <span>
+        <strong>ALGHREST</strong>
+        <small>نظام تداول ذاتي متعدد الوكلاء</small>
+      </span>
+    </a>
+
+    <button class="menu-button" id="menuButton" type="button" aria-label="فتح القائمة" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <button class="lang-toggle" id="langToggle" type="button" aria-label="Changer la langue">FR</button>
+
+    <nav class="nav" id="mainNav" aria-label="التنقل الرئيسي">
+      <a href="#home">الرئيسية</a>
+      <a href="#status">الحالة</a>
+      <a href="#capabilities">القدرات</a>
+      <a href="#agents">الوكلاء</a>
+      <a href="#schema">شيما التفاعل</a>
+      <a href="#runtime">كيف يشتغل</a>
+      <a href="#market-data">البيانات</a>
+      <a href="#safety">الأمان</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero section reveal" id="home">
+      <div class="hero-copy">
+        <p class="eyebrow">تحديث مستند README</p>
+        <h1>ALGHREST منصة تداول ذاتية متعددة الوكلاء مبنية حول Kafka والمخاطر والمراقبة.</h1>
+        <p class="lead">
+          المشروع يعمل كبنية event-driven من 7 طبقات و37 خدمة تقريبا: وكلاء ذكاء واستراتيجيات وتنفيذ
+          يتواصلون عبر Kafka، يشاركون الحالة عبر Redis، ويحفظون بيانات الزمن الحقيقي في TimescaleDB.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#status">استعرض حالة التنفيذ</a>
+          <a class="button ghost" href="#runtime">شاهد مسار التشغيل</a>
+        </div>
+      </div>
+
+      <div class="system-visual reveal delay-1" aria-label="رسم يوضح تدفق النظام">
+        <canvas id="networkCanvas" width="680" height="480"></canvas>
+        <div class="visual-label label-one">Agents</div>
+        <div class="visual-label label-two">Kafka</div>
+        <div class="visual-label label-three">Risk</div>
+        <div class="visual-label label-four">Dashboard</div>
+      </div>
+    </section>
+
+    <section class="section stats-strip reveal" aria-label="إحصائيات المشروع">
+      <div>
+        <strong data-count="7">0</strong>
+        <span>طبقات تشغيل</span>
+      </div>
+      <div>
+        <strong data-count="37" data-suffix="+">0</strong>
+        <span>خدمة ووكيل ضمن المنظومة</span>
+      </div>
+      <div>
+        <strong data-count="18">0</strong>
+        <span>Kafka topics جاهزة</span>
+      </div>
+      <div>
+        <strong data-count="1" data-suffix="%">0</strong>
+        <span>حد أقصى للمخاطرة في الصفقة</span>
+      </div>
+    </section>
+
+    <section class="section readme-status-section reveal" id="status">
+      <div class="section-heading">
+        <p class="eyebrow">حالة التنفيذ من README</p>
+        <h2>الإصدار الحالي يجمع بين وكلاء مكتملين، واجهة بيانات جديدة، ومناطق لا تزال محمية من التشغيل الحقيقي.</h2>
+        <p class="section-copy">
+          حسب README: Tiers 1-5 وTier 7 تعمل كمنظومة مكتملة نسبيا، بينما Tier 6 DeFi ما زال هيكلا أوليا،
+          وv0.3 يركز على market-data API والـ Dashboard وتبديل مزودي البيانات الوهمية بمزودين حقيقيين.
+        </p>
+      </div>
+
+      <div class="status-grid">
+        <article class="status-card">
+          <span>v0.2.0</span>
+          <h3>طبقات الإنتاج الأساسية مكتملة</h3>
+          <p>Tiers 1-5 مع Tier 7 monitoring تغطي CIO، المخاطر، التحليل، الاستراتيجيات، التنفيذ، التنبيهات، التدقيق، والقناة الاجتماعية.</p>
+        </article>
+        <article class="status-card">
+          <span>v0.3.0</span>
+          <h3>Dashboard وMarket Data قيد التطوير</h3>
+          <p>تمت إضافة REST endpoints للرموز والأسعار والتاريخ والحيازات، مع Overview page وذاكرة TanStack Query مشتركة.</p>
+        </article>
+        <article class="status-card">
+          <span>Agent 16</span>
+          <h3>ML Predictor منفصل عن خادم النماذج</h3>
+          <p>الوكيل يبني نافذة OHLCV من 64 فترة ثم يطلب التوقعات من FastAPI inference server على المنفذ 8080.</p>
+        </article>
+        <article class="status-card warning-card">
+          <span>حماية</span>
+          <h3>DeFi وOptions ليست جاهزة للإنتاج</h3>
+          <p>وكلاء DeFi skeleton فقط، وAgent 20 Options Strategist ما زال pending؛ اترك ENABLE_DEFI_AGENTS=false.</p>
+        </article>
+      </div>
+
+      <div class="status-ribbon" aria-label="ملخص تقني سريع">
+        <span>Python 3.12 + Poetry</span>
+        <span>Kafka 7.6 / Redis 7 / TimescaleDB PG16</span>
+        <span>FastAPI + WebSocket</span>
+        <span>React 18 + Vite + Tailwind + Zustand</span>
+      </div>
+    </section>
+
+    <section class="section investor-section reveal" id="investor">
+      <div class="investor-bg-grid"></div>
+      <div class="investor-hero">
+        <div class="investor-copy">
+          <p class="eyebrow">عرض للمستثمر</p>
+          <h2>ALGHREST ليس روبوت تداول بسيط، بل منصة وكلاء قابلة للتوسع ومبنية حول المخاطر.</h2>
+          <p class="section-copy">
+            هذه الصفحة تعرض المشروع كرؤية قابلة للاستثمار: بيانات تدخل، وكلاء يحللون،
+            Kafka ينسق، المخاطر توافق، والتنفيذ يحدث مع مراقبة كاملة.
+          </p>
+          <div class="investor-actions">
+            <a class="button primary investor-primary" href="#schema">شاهد خريطة الوكلاء</a>
+            <a class="button ghost investor-ghost" href="#profit">اعرض سيناريو العائد</a>
+          </div>
+        </div>
+
+        <div class="investor-orbit" aria-label="مخطط استثماري متحرك للوكلاء">
+          <div class="orbit-ring ring-one"></div>
+          <div class="orbit-ring ring-two"></div>
+          <div class="orbit-core">
+            <strong>Kafka</strong>
+            <span>Decision Bus</span>
+          </div>
+
+          <div class="orbit-node orbit-intel">
+            <span>AI</span>
+            <strong>Intelligence</strong>
+          </div>
+          <div class="orbit-node orbit-strategy">
+            <span>S</span>
+            <strong>Strategies</strong>
+          </div>
+          <div class="orbit-node orbit-risk">
+            <span>R</span>
+            <strong>Risk</strong>
+          </div>
+          <div class="orbit-node orbit-exec">
+            <span>E</span>
+            <strong>Execution</strong>
+          </div>
+          <div class="orbit-node orbit-monitor">
+            <span>M</span>
+            <strong>Monitoring</strong>
+          </div>
+
+          <span class="orbit-packet packet-one"></span>
+          <span class="orbit-packet packet-two"></span>
+          <span class="orbit-packet packet-three"></span>
+          <span class="orbit-packet packet-four"></span>
+        </div>
+      </div>
+
+      <div class="investor-messages">
+        <article>
+          <strong>قابلية الاستثمار</strong>
+          <p>النظام مقسم إلى خدمات ووكلاء، ما يسمح بالتوسع وإضافة قدرات جديدة دون إعادة بناء كل شيء.</p>
+        </article>
+        <article>
+          <strong>مخاطر واضحة</strong>
+          <p>كل قرار تداول يمر عبر طبقة مخاطر وحدود رأس مال قبل الوصول إلى التنفيذ.</p>
+        </article>
+        <article>
+          <strong>قابلية العرض</strong>
+          <p>يمكن تحويل كل heartbeat وقرار ورسالة Kafka إلى لوحة مراقبة مقنعة للمستثمر.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="capabilities">
+      <div class="section-heading">
+        <p class="eyebrow">ماذا يمكنه أن يفعل؟</p>
+        <h2>النظام مصمم ليغطي دورة التداول كاملة من جمع البيانات إلى تنفيذ الأوامر.</h2>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card reveal delay-1">
+          <span class="icon">01</span>
+          <h3>تحليل السوق</h3>
+          <p>يجمع الأسعار، الأخبار، المعنويات، المؤشرات الاقتصادية، بيانات on-chain، والعوامل الجيوسياسية.</p>
+        </article>
+        <article class="feature-card reveal delay-2">
+          <span class="icon">02</span>
+          <h3>إنتاج استراتيجيات</h3>
+          <p>يدعم استراتيجيات trend، mean reversion، momentum، statistical arbitrage، breakout، macro rotation، و ML predictor.</p>
+        </article>
+        <article class="feature-card reveal delay-3">
+          <span class="icon">03</span>
+          <h3>إدارة المخاطر</h3>
+          <p>يطبق حدود المركز، حد 1% للمخاطرة في الصفقة، إيقاف بعد خسائر متتالية، وقاطع طوارئ عند ارتفاع الخطر.</p>
+        </article>
+        <article class="feature-card reveal delay-1">
+          <span class="icon">04</span>
+          <h3>تنفيذ الأوامر</h3>
+          <p>يمرر المقترحات إلى الموافقة، ثم توجيه الأمر، تحسين الرسوم، تقليل الانزلاق، ثم التنفيذ وتأكيد الصفقات.</p>
+        </article>
+        <article class="feature-card reveal delay-2">
+          <span class="icon">05</span>
+          <h3>مراقبة مباشرة</h3>
+          <p>Dashboard يعرض حالة الوكلاء، الأرباح والخسائر، التنبيهات، صحة النظام، وتحديثات WebSocket.</p>
+        </article>
+        <article class="feature-card warning-card reveal delay-3">
+          <span class="icon">!</span>
+          <h3>DeFi غير جاهز للإنتاج</h3>
+          <p>وكلاء DeFi الحاليون هياكل أولية فقط. لا يجب تشغيلهم بأموال حقيقية قبل دمج البروتوكولات واختبارها.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section agents-section reveal" id="agents">
+      <div class="section-heading">
+        <p class="eyebrow">الوكلاء أثناء العمل</p>
+        <h2>لوحة حية توضح كيف تتحرك الوكلاء داخل النظام.</h2>
+        <p class="section-copy">
+          هذا العرض يحاكي التشغيل الحقيقي: كل وكيل يرسل heartbeat، يقرأ أو ينشر رسائل،
+          ويتغير حمله حسب نوع المهمة. عند تشغيل النظام فعليا يمكن ربط هذه الخانة ببيانات API أو WebSocket.
+        </p>
+      </div>
+
+      <div class="agent-dashboard">
+        <div class="agent-board">
+          <div class="agent-toolbar">
+            <div>
+              <span class="live-dot"></span>
+              <strong>محاكاة مباشرة</strong>
+            </div>
+            <button class="small-button" id="toggleAgents" type="button">إيقاف مؤقت</button>
+          </div>
+
+          <div class="agent-grid" id="agentGrid" aria-live="polite"></div>
+        </div>
+
+        <aside class="event-feed" aria-label="آخر أحداث الوكلاء">
+          <div class="feed-head">
+            <h3>آخر الأحداث</h3>
+            <span id="eventCount">0</span>
+          </div>
+          <div class="feed-list" id="eventFeed"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section schema-section reveal" id="schema">
+      <div class="section-heading">
+        <p class="eyebrow">شيما تفاعل الوكلاء</p>
+        <h2>كيف تتحول فكرة تداول إلى قرار منظم داخل شبكة ALGHREST.</h2>
+        <p class="section-copy">
+          هذا المخطط مصمم للعرض أمام مستثمر: يوضح أن النظام ليس سكربت تداول بسيط،
+          بل شبكة وكلاء مستقلة تتواصل برسائل، تمر عبر حوكمة المخاطر، ثم تصل إلى التنفيذ والمراقبة.
+        </p>
+      </div>
+
+      <div class="interaction-map" aria-label="مخطط تفاعل الوكلاء">
+        <div class="map-node node-intel">
+          <span>01</span>
+          <strong>Intelligence</strong>
+          <p>أسعار، أخبار، sentiment، macro، on-chain</p>
+        </div>
+
+        <div class="map-node node-strategy">
+          <span>02</span>
+          <strong>Strategies</strong>
+          <p>Trend، Momentum، Stat Arb، ML Predictor</p>
+        </div>
+
+        <div class="map-node node-risk">
+          <span>03</span>
+          <strong>Risk Governor</strong>
+          <p>حدود رأس المال، kill switch، drawdown</p>
+        </div>
+
+        <div class="map-hub">
+          <div class="hub-rings"></div>
+          <strong>Kafka</strong>
+          <span>Message Bus</span>
+        </div>
+
+        <div class="map-node node-approval">
+          <span>04</span>
+          <strong>Proposal Approver</strong>
+          <p>يفحص المقترحات قبل السماح بالتنفيذ</p>
+        </div>
+
+        <div class="map-node node-execution">
+          <span>05</span>
+          <strong>Execution</strong>
+          <p>Order Router، Fee Optimizer، Slippage، Executor</p>
+        </div>
+
+        <div class="map-node node-monitor">
+          <span>06</span>
+          <strong>Monitoring</strong>
+          <p>Dashboard، Alerts، Audit، Portfolio Tracker</p>
+        </div>
+
+        <div class="message-stream stream-a"></div>
+        <div class="message-stream stream-b"></div>
+        <div class="message-stream stream-c"></div>
+        <div class="message-stream stream-d"></div>
+        <div class="message-stream stream-e"></div>
+        <div class="message-stream stream-f"></div>
+      </div>
+
+      <div class="investor-points">
+        <article>
+          <strong>قابلية التوسع</strong>
+          <p>إضافة وكيل جديد تتم دون كسر الباقي لأنه يتصل عبر Kafka topic واضح.</p>
+        </article>
+        <article>
+          <strong>تحكم في المخاطر</strong>
+          <p>كل مقترح يمر عبر الموافقة وحدود المركز قبل أن يصبح أمرًا قابلا للتنفيذ.</p>
+        </article>
+        <article>
+          <strong>شفافية للمراقبة</strong>
+          <p>كل heartbeat ورسالة وتنفيذ يمكن عرضه في Dashboard أو Grafana.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section split-section reveal" id="runtime">
+      <div>
+        <p class="eyebrow">كيف يكون المشروع وهو يشتغل؟</p>
+        <h2>عند التشغيل يتحول المشروع إلى شبكة خدمات تتكلم عبر Kafka وتراقب نفسها باستمرار.</h2>
+        <p class="section-copy">
+          يبدأ Docker Compose بتشغيل Kafka، Redis، TimescaleDB، API، Dashboard، Prometheus، Grafana،
+          ثم الوكلاء. كل وكيل يعمل في حلقة async، يفحص kill switch، وينشر أو يقرأ رسائل من المواضيع المناسبة.
+        </p>
+      </div>
+
+      <div class="terminal-panel" aria-label="أوامر تشغيل المشروع">
+        <div class="terminal-head">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <pre><code>docker compose up -d
+docker compose ps
+docker compose logs kafka-init
+poetry install
+alembic upgrade head
+python run_agent.py agents.tier2_intelligence.market_data_hub MarketDataHub
+python api/mock_server.py
+Set-Location dashboard
+npm run dev</code></pre>
+      </div>
+    </section>
+
+    <section class="section timeline-section reveal">
+      <div class="section-heading">
+        <p class="eyebrow">مسار الصفقة</p>
+        <h2>من فكرة الاستراتيجية إلى تنفيذ الصفقة.</h2>
+      </div>
+
+      <div class="pipeline">
+        <div class="pipeline-step reveal delay-1">
+          <strong>1</strong>
+          <span>Strategy → PROPOSALS_BUS</span>
+          <p>الاستراتيجية تولد مقترح تداول من Tier 4.</p>
+        </div>
+        <div class="pipeline-step reveal delay-2">
+          <strong>2</strong>
+          <span>ProposalApprover</span>
+          <p>يفحص PositionLimitChecker ثم ينشر إلى PROPOSALS_APPROVED.</p>
+        </div>
+        <div class="pipeline-step reveal delay-3">
+          <strong>3</strong>
+          <span>OrderRouter</span>
+          <p>يختار البورصة والخوارزمية ثم يرسل إلى ORDERS_PENDING.</p>
+        </div>
+        <div class="pipeline-step reveal delay-2">
+          <strong>4</strong>
+          <span>Fee + Slippage</span>
+          <p>FeeOptimizer يضيف _optimised وSlippageMinimizer يقسم TWAP/VWAP بعلامة _child.</p>
+        </div>
+        <div class="pipeline-step reveal delay-1">
+          <strong>5</strong>
+          <span>ExchangeExecutor</span>
+          <p>ينفذ الأمر وينشر ORDERS_EXECUTED وFILLS_CONFIRMED.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section calculator-section reveal" id="profit">
+      <div class="calculator-copy">
+        <p class="eyebrow">حاسبة تقديرية</p>
+        <h2>نسبة أرباح متوقعة حسب رأس المال المستثمر.</h2>
+        <p>
+          هذه الحاسبة تعرض سيناريوهات افتراضية فقط. التداول قد يربح أو يخسر،
+          ولا توجد نسبة مضمونة حتى مع وجود نظام آلي ومخاطر محدودة.
+        </p>
+      </div>
+
+      <div class="calculator-shell">
+        <form class="calculator" id="profitForm">
+          <label>
+            رأس المال بالدولار
+            <input id="capitalInput" type="number" min="100" step="100" value="10000">
+          </label>
+
+          <label>
+            مدة الاستثمار بالأشهر
+            <input id="monthsInput" type="number" min="1" max="60" step="1" value="12">
+          </label>
+
+          <label>
+            إضافة شهرية للاستثمار
+            <input id="monthlyInput" type="number" min="0" step="50" value="250">
+          </label>
+
+          <label>
+            السيناريو
+            <select id="scenarioInput">
+              <option value="0.02">محافظ - 2% شهريا</option>
+              <option value="0.05" selected>متوازن - 5% شهريا</option>
+              <option value="0.10">مرتفع المخاطرة - 10% شهريا</option>
+            </select>
+          </label>
+
+          <label>
+            نسبة مخاطرة الصفقة
+            <input id="riskInput" type="range" min="0.25" max="1" step="0.25" value="1">
+            <span class="range-value"><span id="riskValue">1</span>% كحد أقصى لكل صفقة</span>
+          </label>
+        </form>
+
+        <div class="results">
+          <div class="result-main">
+            <span>القيمة المتوقعة بعد المدة</span>
+            <strong id="futureValue">$0</strong>
+          </div>
+          <div class="result-grid">
+            <div>
+              <span>الربح التقديري</span>
+              <strong id="estimatedProfit">$0</strong>
+            </div>
+            <div>
+              <span>إجمالي المبالغ المضافة</span>
+              <strong id="totalContributions">$0</strong>
+            </div>
+            <div>
+              <span>العائد الكلي</span>
+              <strong id="totalReturn">0%</strong>
+            </div>
+            <div>
+              <span>خسارة شهر سيء محتملة</span>
+              <strong id="badMonth">$0</strong>
+            </div>
+          </div>
+          <canvas id="profitChart" width="720" height="280" aria-label="رسم بياني لنمو رأس المال"></canvas>
+        </div>
+      </div>
+
+      <div class="sol-example">
+        <div class="sol-copy">
+          <p class="eyebrow">مثال SOL لمدة سنتين</p>
+          <h3>كيف يمكن شرح سيناريو استثمار منظم في عملة SOL لمستثمر؟</h3>
+          <p>
+            المثال التالي يفترض رأس مال أولي مع إضافة شهرية منتظمة لمدة 24 شهرًا.
+            الهدف هو توضيح قوة الانضباط وإعادة الاستثمار، وليس توقع سعر SOL الحقيقي.
+          </p>
+        </div>
+        <div class="sol-grid">
+          <article>
+            <span>رأس مال أولي</span>
+            <strong id="solInitial">$5,000</strong>
+          </article>
+          <article>
+            <span>إضافة شهرية</span>
+            <strong id="solMonthly">$250</strong>
+          </article>
+          <article>
+            <span>المدة</span>
+            <strong id="solDuration">24 شهر</strong>
+          </article>
+          <article>
+            <span>قيمة تقديرية</span>
+            <strong id="solProjected">$0</strong>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section market-data-section reveal" id="market-data">
+      <div class="section-heading">
+        <p class="eyebrow">واجهة البيانات والداشبورد</p>
+        <h2>README يحدد مسار تطوير Dashboard بدون تشغيل كل البنية الثقيلة.</h2>
+        <p class="section-copy">
+          للتطوير السريع يمكن تشغيل mock backend على المنفذ 8000 وواجهة Vite على 5173.
+          بيانات العرض الافتراضية تشمل BTC وETH وSOL وEUR/USD وAAPL وTSLA، والتاريخ التجريبي مثبت على 2025-05-11.
+        </p>
+      </div>
+
+      <div class="endpoint-grid">
+        <article>
+          <span>GET</span>
+          <strong>/api/symbols</strong>
+          <p>كتالوج من 24 رمزا بين crypto وforex وequity.</p>
+        </article>
+        <article>
+          <span>GET</span>
+          <strong>/api/quotes?symbols=BTC,AAPL</strong>
+          <p>أسعار OHLC وbid/ask وتغير 24h وحجم التداول.</p>
+        </article>
+        <article>
+          <span>GET</span>
+          <strong>/api/history?symbol=X&days=N</strong>
+          <p>شموع OHLC حتمية تنتهي في 2025-05-11.</p>
+        </article>
+        <article>
+          <span>GET</span>
+          <strong>/api/holdings</strong>
+          <p>دفتر حيازات تجريبي، والـ P&amp;L يحسب في الواجهة.</p>
+        </article>
+      </div>
+
+      <div class="service-grid" aria-label="روابط الخدمات المحلية">
+        <a href="http://localhost:8000">API :8000</a>
+        <a href="http://localhost:8000/docs">Docs :8000/docs</a>
+        <a href="http://localhost:5173">Dashboard :5173</a>
+        <a href="http://localhost:3000">Grafana :3000</a>
+        <a href="http://localhost:8080">Kafka UI :8080</a>
+        <a href="http://localhost:9090">Prometheus :9090</a>
+      </div>
+    </section>
+
+    <section class="section safety-section reveal" id="safety">
+      <div class="section-heading">
+        <p class="eyebrow">حدود الأمان</p>
+        <h2>المشروع يحتوي على حواجز أمان يجب احترامها.</h2>
+      </div>
+
+      <div class="safety-list">
+        <article>
+          <h3>ابدأ ببيئة development أو paper_trading</h3>
+          <p>النظام يرفض الأوامر الحقيقية إلا إذا تم ضبط ENVIRONMENT=live صراحة.</p>
+        </article>
+        <article>
+          <h3>لا تشغل DeFi بأموال حقيقية</h3>
+          <p>وكلاء yield farmer و dex arbitrageur و mev hunter و bridge strategist غير جاهزين للإنتاج.</p>
+        </article>
+        <article>
+          <h3>احم المفاتيح السرية</h3>
+          <p>ملف .env لا يجب رفعه إلى Git، ومفاتيح البورصات يجب أن تكون دون صلاحية سحب.</p>
+        </article>
+        <article>
+          <h3>اختبر قبل live</h3>
+          <p>الاستراتيجيات يجب أن تمر عبر backtesting و paper trading قبل أي تشغيل حقيقي.</p>
+        </article>
+        <article>
+          <h3>لا تلين حدود المخاطر</h3>
+          <p>حد المخاطرة 1% للصفقة، الإيقاف بعد 5 خسائر متتالية، drawdown أقصى 25%، والمحفظة الساخنة لا تتجاوز 5%.</p>
+        </article>
+        <article>
+          <h3>بوابة backtesting إلزامية</h3>
+          <p>أي استراتيجية Tier 4 تحتاج 5 سنوات بيانات، 50 صفقة سنويا، Sharpe وProfit Factor وMonte Carlo ضمن الحدود.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>ALGHREST Project Explainer - صفحة ثابتة محدثة من README.</p>
+    <a href="#home">العودة للأعلى</a>
+  </footer>
+
+  <button class="back-top" id="backTop" type="button" aria-label="العودة للأعلى">↑</button>
+
+  <script src="app.js"></script>
+</body>
+</html>

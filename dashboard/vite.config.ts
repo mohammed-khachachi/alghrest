@@ -17,6 +17,11 @@ export default defineConfig({
         target: process.env['VITE_API_URL'] ?? 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/yahoo-api': {
+        target: 'https://query1.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/yahoo-api/, ''),
+      },
     },
   },
 });

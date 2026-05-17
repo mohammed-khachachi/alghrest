@@ -57,103 +57,70 @@ scrape_configs:
   #         service: kafka
 
   # ─────────────────────────────────────────────────────────
-  # ALGHREST Application Agents
-  # Each agent exposes /metrics on its designated port
-  # Ports: 9200-9231 (agent_id + 9200)
+  # ALGHREST Application Agents (32 Agents Total)
+  # Each agent exposes /metrics on port = 9200 + AGENT_ID
+  # Updated with correct container names and reassigned IDs
   # ─────────────────────────────────────────────────────────
 
-  # Tier 1 — Executive (agents 01-04)
+  # Tier 1 — Executive (IDs: 1-4)
   - job_name: tier1_executive
     scrape_interval: 10s
     static_configs:
       - targets:
-          - alghrest-cio:9201
-          - alghrest-cro:9202
-          - alghrest-compliance:9203
-          - alghrest-treasurer:9204
+          - alghrest-agent-cio:9201                    # ID: 1
+          - alghrest-agent-risk-governor:9202          # ID: 2
+          - alghrest-agent-proposal-approver:9203      # ID: 3
+          - alghrest-agent-price-publisher:9204        # ID: 4
         labels:
           tier: "1"
           tier_name: executive
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: agent_host
 
-  # Tier 2 — Intelligence (agents 05-10)
-  - job_name: tier2_intelligence
-    static_configs:
-      - targets:
-          - alghrest-market-data:9205
-          - alghrest-news:9206
-          - alghrest-sentiment:9207
-          - alghrest-macro:9208
-          - alghrest-onchain:9209
-          - alghrest-geopolitical:9210
-        labels:
-          tier: "2"
-          tier_name: intelligence
-
-  # Tier 3 — Quant (agents 11-15)
-  - job_name: tier3_quant
-    static_configs:
-      - targets:
-          - alghrest-technical:9211
-          - alghrest-fundamental:9212
-          - alghrest-patterns:9213
-          - alghrest-volatility:9214
-          - alghrest-correlation:9215
-        labels:
-          tier: "3"
-          tier_name: quantitative
-
-  # Tier 4 — Strategies (agents 16-23)
+  # Tier 4 — Strategies (with correct reassigned IDs)
   - job_name: tier4_strategies
     static_configs:
       - targets:
-          - alghrest-trend:9216
-          - alghrest-mean-rev:9217
-          - alghrest-arb:9218
-          - alghrest-stat-arb:9219
-          - alghrest-market-maker:9220
-          - alghrest-options:9221
-          - alghrest-scalper:9222
-          - alghrest-swing:9223
+          - alghrest-agent-trend-follower:9212         # ID: 12
+          - alghrest-agent-mean-reversion:9213         # ID: 13
+          - alghrest-agent-breakout-hunter:9216        # ID: 16 (was ML Predictor)
+          - alghrest-agent-momentum:9217               # ID: 17 (reassigned from 14)
+          - alghrest-agent-arb-cross-exchange:9218     # ID: 18
+          - alghrest-agent-stat-arb:9221               # ID: 21 (reassigned from 15)
+          - alghrest-agent-macro-rotator:9234          # ID: 34 (reassigned from 18)
         labels:
           tier: "4"
           tier_name: strategies
 
-  # Tier 5 — Execution (agents 24-26)
+  # Tier 5 — Execution (IDs: 20, 22-26)
   - job_name: tier5_execution
     scrape_interval: 5s
     static_configs:
       - targets:
-          - alghrest-sor:9224
-          - alghrest-exec-algos:9225
-          - alghrest-sizer:9226
+          - alghrest-agent-order-router:9220           # ID: 20
+          - alghrest-agent-slippage-minimizer:9222     # ID: 22
+          - alghrest-agent-hedge-manager:9223          # ID: 23
+          - alghrest-agent-fee-optimizer:9224          # ID: 24
+          - alghrest-agent-liquidation-guard:9225      # ID: 25
+          - alghrest-agent-exchange-executor:9226      # ID: 26
         labels:
           tier: "5"
           tier_name: execution
 
-  # Tier 6 — DeFi (agents 27-29)
-  - job_name: tier6_defi
-    static_configs:
-      - targets:
-          - alghrest-yield:9227
-          - alghrest-mev:9228
-          - alghrest-staking:9229
-        labels:
-          tier: "6"
-          tier_name: defi
-
-  # Tier 7 — Monitoring (agents 30-32)
+  # Tier 7 — Monitoring (IDs: 30-33, 36)
   - job_name: tier7_monitoring
     static_configs:
       - targets:
-          - alghrest-performance:9230
-          - alghrest-rl:9231
-          - alghrest-auxiliary:9232
+          - alghrest-agent-portfolio-tracker:9230      # ID: 30
+          - alghrest-agent-alert-manager:9231          # ID: 31
+          - alghrest-agent-compliance:9232             # ID: 32
         labels:
           tier: "7"
           tier_name: monitoring
+
+  # Missing Agents (to be implemented)
+  # - ML Predictor (ID: 16) - needs inference server
+  # - Auditor (ID: 33) - exists but may need special config
+  # - Yield Farmer (ID: 35) - DeFi agent
+  # - Copy Trading Channel (ID: 36) - Telegram integration
 
   # ─────────────────────────────────────────────────────────
   # FastAPI application

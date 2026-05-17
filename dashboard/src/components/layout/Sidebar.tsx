@@ -7,6 +7,9 @@ import {
   Shield,
   X,
   Zap,
+  ShieldCheck,
+  BarChart2,
+  Presentation,
   type LucideIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -24,6 +27,9 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/positions', label: 'Positions', Icon: TrendingUp },
   { to: '/kafka',     label: 'Kafka',     Icon: Activity },
   { to: '/risk',      label: 'Risk',      Icon: Shield },
+  { to: '/investor',  label: 'Investor',  Icon: Presentation },
+  { to: '/auditor',   label: 'Auditor',   Icon: ShieldCheck },
+  { to: '/backtest',  label: 'Backtest',  Icon: BarChart2 },
 ];
 
 interface SidebarProps {

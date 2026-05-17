@@ -1,5 +1,5 @@
 """
-Agent 15 — Statistical Arbitrage (Pairs Trading)
+Agent 21 — Statistical Arbitrage (Pairs Trading)
 Cointegrated pairs identified via ADF test.
 Entry on Z-score ±2, exit at Z-score 0. Stop at ±3.5σ.
 """
@@ -71,7 +71,7 @@ def _cointegration_hedge_ratio(y: np.ndarray, x: np.ndarray) -> Optional[float]:
 class StatArb(BaseStrategy):
     """Agent 15 — Pairs trading with ADF cointegration test."""
 
-    AGENT_ID = 15
+    AGENT_ID = 21
     strategy_id = "stat_arb_pairs"
     capital_pct = 0.08
     max_positions = 4

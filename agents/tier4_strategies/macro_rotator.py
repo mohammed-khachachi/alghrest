@@ -1,5 +1,5 @@
 """
-Agent 18 — Macro Rotator
+Agent 34 — Macro Rotator
 Risk-on / risk-off regime detection from macro signals.
 Rotates between high-beta (BTC/ETH) and defensive (stables/gold) based on regime.
 """
@@ -49,7 +49,7 @@ class MacroRotator(BaseStrategy):
     In RISK_OFF / CRISIS: closes all positions and holds cash.
     """
 
-    AGENT_ID = 18
+    AGENT_ID = 34
     strategy_id = "macro_rotator_regime"
     capital_pct = 0.10
     max_positions = 3

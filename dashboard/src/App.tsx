@@ -9,6 +9,9 @@ import { Agents } from '@/pages/Agents';
 import { Positions } from '@/pages/Positions';
 import { Kafka } from '@/pages/Kafka';
 import { Risk } from '@/pages/Risk';
+import { AuditorDashboard } from '@/pages/AuditorDashboard';
+import { BacktestSimulation } from '@/pages/BacktestSimulation';
+import { InvestorPitch } from '@/pages/InvestorPitch';
 import { wsClient } from '@/lib/websocket';
 import { useDashboardStore } from '@/store/useStore';
 
@@ -84,6 +87,30 @@ export default function App() {
               element={
                 <ErrorBoundary>
                   <Risk />
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/auditor"
+              element={
+                <ErrorBoundary>
+                  <AuditorDashboard />
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/investor"
+              element={
+                <ErrorBoundary>
+                  <InvestorPitch />
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/backtest"
+              element={
+                <ErrorBoundary>
+                  <BacktestSimulation />
                 </ErrorBoundary>
               }
             />

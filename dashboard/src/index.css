@@ -53,6 +53,42 @@
     background-size: 400px 100%;
     animation: shimmer 2s linear infinite;
   }
+
+  .investor-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 42px 42px;
+    animation: investorGrid 22s linear infinite;
+  }
+
+  .investor-packet {
+    transform: rotate(var(--angle)) translateX(0);
+    animation: investorPacket 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes investorGrid {
+  to {
+    background-position: 84px 84px;
+  }
+}
+
+@keyframes investorPacket {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(0) scale(0.8);
+  }
+
+  20%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(var(--distance)) scale(1);
+  }
 }
 
 /* Recharts custom styles */
