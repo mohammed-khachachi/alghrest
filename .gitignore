@@ -13,6 +13,10 @@ secrets/
 # ── CLAUDE CODE LOCAL SETTINGS ────────────────────────────────────────────────
 .claude/
 
+# ── CODEX LOCAL SETTINGS ─────────────────────────────────────────────────────
+.codex/sessions/
+.codex/skills/
+
 # ── PYTHON ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -25,6 +29,7 @@ dist/
 .eggs/
 .venv/
 venv/
+venv-lite/
 env/
 pip-wheel-metadata/
 .mypy_cache/
@@ -57,6 +62,16 @@ logs/
 *.csv
 *.parquet
 *.db
+
+# ── HMM_TRADING LOCAL ARTIFACTS ───────────────────────────────────────────────
+alghrest-test/HMM_Trading/outputs/
+alghrest-test/HMM_Trading/pytest-cache-files-*/
+alghrest-test/HMM_Trading/.venv/
+alghrest-test/HMM_Trading/.pytest_cache/
+alghrest-test/HMM_Trading/__pycache__/
+alghrest-test/HMM_Trading/**/__pycache__/
+alghrest-test/HMM_Trading/.codex/sessions/
+alghrest-test/HMM_Trading/.codex/skills/
 
 # ── DOCKER VOLUMES ────────────────────────────────────────────────────────────
 postgres-data/
