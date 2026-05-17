@@ -57,7 +57,7 @@ ml/training/runs/
 *.pkl
 
 # ── DATA & LOGS ───────────────────────────────────────────────────────────────
-data/
+/data/
 logs/
 *.csv
 *.parquet
