@@ -97,6 +97,12 @@ class BaseAgent(ABC):
 
         self.logger.info("agent starting", metrics_port=metrics_port)
 
+        # 🚨 DeFi Safety Override: Tier 6 DeFi agents are highly risky skeletons
+        # and must remain disabled unless enable_defi_agents is explicitly set to True
+        if self.tier == 6 and not settings.enable_defi_agents:
+            self.logger.critical("DEFI AGENTS SAFETY LOCK TRIGGERED: Tier 6 agents cannot be run with enable_defi_agents=False")
+            raise RuntimeError("Tier 6 DeFi agent execution blocked by safety settings. Set ENABLE_DEFI_AGENTS=true in .env to proceed (educational mock environment only).")
+
         try:
             await self.state.initialize()
             await self.producer.initialize()
