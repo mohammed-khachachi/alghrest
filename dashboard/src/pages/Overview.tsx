@@ -41,24 +41,26 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, sub, icon, positive }: KpiCardProps) {
   return (
-    <div className="bg-bg-surface border border-white/8 rounded-xl p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-text-muted text-xs font-medium uppercase tracking-wider">
+    <div className="glass hover:bg-bg-elevated/30 hover:border-white/12 transition-all duration-300 rounded-xl p-5 flex flex-col gap-3 group relative overflow-hidden">
+      {/* Decorative gradient radial glow */}
+      <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/2 rounded-full blur-xl group-hover:bg-white/5 transition-all duration-500 pointer-events-none" />
+      <div className="flex items-center justify-between z-10">
+        <span className="text-white/50 text-[10px] font-bold uppercase tracking-wider font-sans">
           {label}
         </span>
-        <span className="text-text-muted">{icon}</span>
+        <span className="text-white/40 group-hover:text-white/80 transition-colors duration-300">{icon}</span>
       </div>
       <div
         className={clsx(
-          'text-2xl font-bold font-mono',
-          positive === true && 'text-green-400',
-          positive === false && 'text-red-400',
+          'text-2xl font-bold font-mono tracking-tight z-10 transition-transform duration-300 group-hover:translate-x-1',
+          positive === true && 'text-profit',
+          positive === false && 'text-loss',
           positive === null && 'text-white',
         )}
       >
         {value}
       </div>
-      {sub && <div className="text-text-muted text-xs">{sub}</div>}
+      {sub && <div className="text-white/40 text-[11px] z-10 font-sans tracking-wide leading-none">{sub}</div>}
     </div>
   );
 }
@@ -104,17 +106,38 @@ export function Overview() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Symbol selector */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col">
-          <h1 className="text-lg font-semibold">Overview</h1>
-          <span className="text-xs text-text-muted">
+      {/* Premium Glassmorphic Welcome Header Banner */}
+      <div className="relative overflow-hidden rounded-2xl glass p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-bg-card to-bg-surface/90 border border-white/6">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="bg-profit/10 text-profit text-[10px] font-bold px-2 py-0.5 rounded-full border border-profit/20 flex items-center gap-1 font-mono uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
+              Live Feed
+            </span>
+            <span className="text-white/40 font-mono text-xs">v0.2.1 Stable</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+            System Overview
+          </h1>
+          <p className="text-xs text-white/50 max-w-xl font-sans tracking-wide">
             {isFiltered
-              ? `Filtering positions & exposure by ${selectedSymbols.length} symbol${selectedSymbols.length > 1 ? 's' : ''}.`
-              : 'Showing portfolio-wide metrics. Pick symbols to filter and watch live quotes.'}
-          </span>
+              ? `Filtering positions and sleeve exposures by ${selectedSymbols.length} active symbols. Dynamic quotes updating live.`
+              : 'Autonomous multi-agent portfolio dashboard. Monitor real-time performance, active strategy sleeves, and integrated risk guards.'}
+          </p>
         </div>
-        <SymbolSelector value={selectedSymbols} onChange={setSelectedSymbols} />
+        
+        <div className="flex items-center gap-3">
+          <SymbolSelector value={selectedSymbols} onChange={setSelectedSymbols} />
+          {isFiltered && (
+            <button
+              onClick={resetSelectedSymbols}
+              className="text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 border border-white/10 transition-colors font-mono"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Portfolio totals — always unfiltered */}
@@ -172,7 +195,7 @@ export function Overview() {
         <KpiCard
           label="Active Agents"
           value={`${activeAgentCount} / 32`}
-          sub="EMA & ICT logic active"
+          sub="Executive, Quant & Execution active"
           icon={<Cpu size={16} />}
           positive={activeAgentCount >= 28}
         />
@@ -180,9 +203,10 @@ export function Overview() {
 
       {/* PnL Chart */}
       <ErrorBoundary>
-        <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
-            YTD Cumulative PnL
+        <div className="glass border border-white/6 rounded-xl p-5 bg-bg-card/45 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <h2 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-4 font-sans">
+            YTD Cumulative PnL Curve
           </h2>
           <PnlChart />
         </div>
@@ -191,8 +215,8 @@ export function Overview() {
       {/* Risk Gauges Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <ErrorBoundary>
-          <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">
+          <div className="glass border border-white/6 rounded-xl p-5 bg-bg-card/45">
+            <h3 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-3">
               Dynamic Max Drawdown
             </h3>
             <DrawdownGauge
@@ -204,9 +228,9 @@ export function Overview() {
         </ErrorBoundary>
 
         <ErrorBoundary>
-          <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">
-              Daily VaR
+          <div className="glass border border-white/6 rounded-xl p-5 bg-bg-card/45">
+            <h3 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-3">
+              Daily Value at Risk (VaR)
             </h3>
             <DrawdownGauge
               value={varLimit?.current ?? 0}
@@ -219,9 +243,9 @@ export function Overview() {
         </ErrorBoundary>
 
         <ErrorBoundary>
-          <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">
-              Exposure{isFiltered ? ' (filtered)' : ''}
+          <div className="glass border border-white/6 rounded-xl p-5 bg-bg-card/45">
+            <h3 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-3">
+              Asset Class Exposure{isFiltered ? ' (filtered)' : ''}
             </h3>
             <ExposureBar long={longExposure} short={shortExposure} />
           </div>
@@ -230,3 +254,4 @@ export function Overview() {
     </div>
   );
 }
+
