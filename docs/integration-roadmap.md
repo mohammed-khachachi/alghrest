@@ -1,6 +1,6 @@
 # ALGHREST ↔ HMM_Trading Integration Roadmap
 
-This document describes how ALGHREST (the root multi-agent trading platform) and HMM_Trading (the educational/research subproject under `alghrest-test/HMM_Trading/`) should be connected over time.
+This document describes how ALGHREST (the root multi-agent trading platform) and HMM_Trading (the educational/research subproject under `HMM_Trading/`) should be connected over time.
 
 It is documentation only. No integration code exists yet, and none should be written until the design questions in this document are explicitly answered for the relevant level.
 
@@ -20,8 +20,8 @@ This roadmap stages that work in three levels, smallest first.
 
 As of branch `docs/monorepo-workflow` on 2026-05-17:
 
-- HMM_Trading lives at `alghrest-test/HMM_Trading/` and is fully self-contained.
-- HMM_Trading writes generated artifacts to `alghrest-test/HMM_Trading/outputs/` (gitignored).
+- HMM_Trading lives at `HMM_Trading/` and is fully self-contained.
+- HMM_Trading writes generated artifacts to `HMM_Trading/outputs/` (gitignored).
 - ALGHREST has **no** code that reads HMM_Trading outputs, imports HMM_Trading modules, or shells out to HMM_Trading.
 - No Kafka topic, REST endpoint, or Redis key inside ALGHREST is reserved for HMM regime data yet.
 
@@ -33,7 +33,7 @@ This is the correct state until the trigger conditions in Level 1 are met.
 
 **Why this level first.** It creates a clear contract (a file path and a column schema) without coupling either side to the other's runtime, dependencies, or Python imports. Either project can be torn out and replaced without breaking the other.
 
-**Source artifacts.** HMM_Trading already produces these under `alghrest-test/HMM_Trading/outputs/results/`:
+**Source artifacts.** HMM_Trading already produces these under `HMM_Trading/outputs/results/`:
 
 | File | Purpose |
 |---|---|
@@ -56,7 +56,7 @@ This is the correct state until the trigger conditions in Level 1 are met.
 
 - Lives **inside ALGHREST**, not inside HMM_Trading. HMM_Trading must remain unaware of ALGHREST.
 - Reads files only. Never imports `src/` from HMM_Trading. Never invokes the HMM pipeline.
-- Treats the file path as configuration (e.g., `HMM_OUTPUT_DIR` env var), with a sensible default of `alghrest-test/HMM_Trading/outputs/results/`.
+- Treats the file path as configuration (e.g., `HMM_OUTPUT_DIR` env var), with a sensible default of `HMM_Trading/outputs/results/`.
 - Validates the schema on load and fails closed (no regime signal) on schema mismatch.
 - Has its own unit tests under `tests/unit/` that read a fixture CSV checked into the test tree.
 
@@ -81,7 +81,7 @@ This is the correct state until the trigger conditions in Level 1 are met.
 
 **Design constraints.**
 
-- ALGHREST shells out to `python main.py` from inside `alghrest-test/HMM_Trading/` using HMM_Trading's own venv. It does **not** install HMM_Trading dependencies into the ALGHREST venv.
+- ALGHREST shells out to `python main.py` from inside `HMM_Trading/` using HMM_Trading's own venv. It does **not** install HMM_Trading dependencies into the ALGHREST venv.
 - Subprocess invocation, timeouts, and output capture follow the existing ALGHREST connector patterns under `connectors/`.
 - Failure modes are explicit: HMM not installed, HMM venv missing, run timed out, run failed, outputs missing. Each maps to a defined ALGHREST behavior (skip signal, fall back to last known regime, raise).
 - Still no Python imports across the boundary.
@@ -95,7 +95,7 @@ This is the correct state until the trigger conditions in Level 1 are met.
 **Trigger conditions.**
 
 - Levels 1 and 2 are demonstrably insufficient — e.g., per-tick regime updates with latency that the file/CLI contract cannot meet.
-- HMM_Trading has a **stable public API** documented in `alghrest-test/HMM_Trading/docs/` and a versioning policy.
+- HMM_Trading has a **stable public API** documented in `HMM_Trading/docs/` and a versioning policy.
 - HMM_Trading is packaged (a real `pyproject.toml` build target, importable as a single module name with a defined surface area).
 - The ALGHREST and HMM_Trading dependency graphs are compatible — same Python version, no conflicting library pins.
 
@@ -132,5 +132,5 @@ The issue must be resolved before any code under either project is touched.
 
 - Monorepo layout and workflow: `docs/monorepo-workflow.md`
 - ALGHREST top-level overview: `README.md`, `CLAUDE.md`
-- HMM_Trading overview: `alghrest-test/HMM_Trading/README.md`
-- HMM_Trading architecture (sections 9 and 11 describe the integration boundary from the HMM side): `alghrest-test/HMM_Trading/docs/architecture.md`
+- HMM_Trading overview: `HMM_Trading/README.md`
+- HMM_Trading architecture (sections 9 and 11 describe the integration boundary from the HMM side): `HMM_Trading/docs/architecture.md`

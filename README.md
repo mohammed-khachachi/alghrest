@@ -1,6 +1,6 @@
 # ALGHREST 🤖📈
 
-> **Production-grade autonomous multi-agent trading system — 36 runtime agent modules, 7 tiers**
+> **Autonomous multi-agent trading platform — 32 runtime-ready agents, 4 DeFi skeleton agents, 7 tiers**
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)](https://fastapi.tiangolo.com)
@@ -16,6 +16,7 @@
 - [Overview](#-overview)
 - [Architecture — 7-Tier Agent System](#-architecture--7-tier-agent-system)
 - [Agent Roster](#-agent-roster)
+- [Critical Safety Notes](#-critical-safety-notes)
 - [Technology Stack](#-technology-stack)
 - [Infrastructure](#-infrastructure)
 - [Project Structure](#-project-structure)
@@ -31,16 +32,16 @@
 
 ## 🌐 Overview
 
-**ALGHREST** is a fully autonomous, event-driven algorithmic trading platform built on a hierarchical multi-agent architecture. 36 runtime agent modules communicate via Apache Kafka, share real-time state through Redis, and persist time-series data in TimescaleDB. Four of those modules are Tier 6 DeFi skeletons, and `options_strategist` is still pending.
+**ALGHREST** is a fully autonomous, event-driven algorithmic trading platform built on a hierarchical multi-agent architecture. The current roster has 32 runtime-ready agents across Tiers 1-5 and Tier 7, plus 4 Tier 6 DeFi skeleton agents that must remain disabled outside protocol-integration work. Agents communicate through Apache Kafka, share real-time state through Redis, and persist time-series data in TimescaleDB. The Deribit `options_strategist` remains pending.
 
 ### Key Capabilities
 
 | Capability | Detail |
 |---|---|
-| **Markets** | Crypto (spot + perps + options), US Equities, DeFi on-chain |
+| **Markets** | Crypto (spot + perps + options), US Equities, DeFi on-chain scaffolds |
 | **Exchanges** | Binance, Bybit, Coinbase, Kraken, Alpaca, OKX, Deribit, IBKR |
 | **AI Brain** | Anthropic Claude (Opus for reasoning, Sonnet for analysis) |
-| **Strategies** | Trend-following, mean-reversion, arbitrage, RL, DeFi yield |
+| **Strategies** | Trend-following, mean-reversion, arbitrage, RL, DeFi yield scaffolds |
 | **Data Feeds** | RSS news, Twitter/X, Reddit, Glassnode, Nansen, FRED, on-chain RPCs |
 | **Environments** | `development` → `paper_trading` → `live` |
 
@@ -51,7 +52,7 @@
 This repository hosts **two distinct projects** in one tree:
 
 - **ALGHREST** — the root multi-agent trading platform documented throughout this README.
-- **HMM_Trading** — an independent educational/research subproject for HMM-based market-regime detection, located at `alghrest-test/HMM_Trading/`. It has its own dependencies, virtual environment, tests, and documentation, and is kept intentionally decoupled from the ALGHREST runtime.
+- **HMM_Trading** — an independent educational/research subproject for HMM-based market-regime detection, located at `HMM_Trading/`. It has its own dependencies, virtual environment, tests, and documentation, and is kept intentionally decoupled from the ALGHREST runtime.
 
 Before making any change that touches both projects, read:
 
@@ -61,8 +62,10 @@ Before making any change that touches both projects, read:
 ### Current Implementation Status (v0.3.0 — in progress)
 
 - ✅ **Implemented core runtime**: Tiers 1-5 + Tier 7 monitoring + the dashboard market-data REST surface (32 runtime agents)
+- ✅ **Resolved agent ID collisions**: `momentum=17`, `stat_arb=21`, `macro_rotator=34`, `yield_farmer=35`, `copy_trading_channel=36`
+- ✅ **Agent 16 ML predictor implemented**: 64-period OHLCV windows, HTTP inference-server integration, prediction caching, and fallback technical analysis
 - 🚧 **Rostered but not production-ready**: Tier 6 DeFi agents are skeleton/mock implementations; keep `ENABLE_DEFI_AGENTS=false`
-- ⏳ **Pending**: `options_strategist` (Deribit delta-neutral), real provider swap-in for `connectors/data_providers/` mocks, full DeFi protocol integration
+- ⏳ **Pending**: `options_strategist` (Deribit delta-neutral), real provider swap-in for `connectors/data_providers/` mocks, full DeFi protocol integration, ML inference startup automation
 
 ---
 
@@ -192,11 +195,20 @@ strategy → proposals.bus
 
 ---
 
+## ⚠️ Critical Safety Notes
+
+- **Do not enable Tier 6 DeFi agents in production.** `yield_farmer`, `dex_arbitrageur`, `mev_hunter`, and `bridge_strategist` still contain skeleton/mock protocol logic. Keep `ENABLE_DEFI_AGENTS=false`.
+- **Real orders require an explicit live environment.** The system refuses real order placement unless `ENVIRONMENT=live` is set.
+- **Start with paper/testnet credentials.** Use Binance/Deribit testnet keys and Alpaca paper trading first; exchange keys should be read + trade only, with no withdrawal permission.
+- **Keep the hot wallet small.** Hot wallet exposure must stay at or below 5% of capital.
+
+---
+
 ## 🛠 Technology Stack
 
 ### Core Framework
 ```
-Python 3.12+          — Runtime
+Python 3.12 (<3.13)   — Runtime
 FastAPI 0.115         — REST API + WebSocket
 Pydantic v2           — Data validation & settings
 asyncio               — Async I/O throughout
@@ -395,6 +407,7 @@ alghrest/
 │       ├── components/common/SymbolSelector.tsx  # Multi-select with offline fallback catalog
 │       └── lib/useLiveQuotes.ts     # Shared TanStack Query cache for all panels (1 fetch / 3s)
 │
+├── docs/                            # Workflow docs, lightweight-dev guide, archived audits
 ├── infra/                           # Infrastructure config
 │   ├── init/                        # DB + Kafka initialization scripts
 │   ├── prometheus/                  # Prometheus config + alerting rules
@@ -402,7 +415,9 @@ alghrest/
 │   ├── k8s/                         # Kubernetes manifests
 │   └── terraform/                   # Cloud infrastructure (IaC)
 │
+├── scripts/                         # Demo, test, lightweight-dev, and maintenance scripts
 ├── tests/                           # Test suite
+├── Makefile                         # Common dev shortcuts
 ├── docker-compose.yml               # Full infrastructure stack
 ├── pyproject.toml                   # Dependencies + tool config
 └── .env.example                     # Environment variables template
@@ -415,7 +430,7 @@ alghrest/
 ### Prerequisites
 
 - Docker Desktop + Docker Compose v2
-- Python 3.12+
+- Python 3.12 (project is pinned below 3.13)
 - Poetry (`pip install poetry`)
 - 16 GB RAM recommended (Kafka cluster + ML models)
 
@@ -432,7 +447,7 @@ Copy-Item .env.example .env
 
 ### 2 — Start Infrastructure
 
-```bash
+```powershell
 # Start all infrastructure services
 docker compose up -d
 
@@ -445,7 +460,7 @@ docker compose logs kafka-init
 
 ### 3 — Install Python Dependencies
 
-```bash
+```powershell
 poetry install
 
 # For backtesting extras
@@ -457,7 +472,7 @@ poetry shell
 
 ### 4 — Initialize Database
 
-```bash
+```powershell
 # Run Alembic migrations
 alembic upgrade head
 ```
@@ -476,6 +491,8 @@ python run_agent.py agents.tier4_strategies.trend_follower TrendFollower
 # Agent 16 also needs the ML inference server in a separate terminal
 Set-Location ml; python inference/server.py
 ```
+
+Agent 16 can run in fallback mode when the ML inference server is unavailable. For full ML predictions, the server exposes `POST /predict` on `http://localhost:8080/predict`; avoid running it at the same time as another local service bound to port 8080.
 
 ### 6 — Dashboard (Market-Data Demo)
 
@@ -555,7 +572,7 @@ All configuration is managed via environment variables loaded from `.env`. See `
 
 ### Critical Settings
 
-```bash
+```dotenv
 # Operating mode — ALWAYS start with development or paper_trading
 ENVIRONMENT=paper_trading          # development | paper_trading | live
 
@@ -712,7 +729,7 @@ Pre-provisioned dashboards:
 
 ### Running Tests
 
-```bash
+```powershell
 # Unit tests (fast, no external services)
 pytest -m unit
 
@@ -725,6 +742,8 @@ pytest -m backtest
 # Full suite with coverage
 pytest --cov=agents --cov=core --cov-report=html
 ```
+
+The coverage gate is configured in `pyproject.toml` at 70%. Integration tests require the Docker stack and cover the execution pipeline, Kafka messaging, Redis state, agent coordination, market-crash kill switch, ML failover, API/dashboard integration, and backtesting validation.
 
 ### Code Quality
 
@@ -751,14 +770,15 @@ pre-commit run --all-files
 4. Register agent ID (must be unique, range now 1–36+)
 5. Add to `docker-compose.yml` as a service
 6. Write unit tests in `tests/`
+7. If you add a Kafka topic, update both `core/data/models.py::KafkaTopic` and `infra/init/kafka-init.sh`
 
-**Note**: See CLAUDE.md for resolved agent ID conflicts and current assignments.
+Prometheus exposure is automatic through `BaseAgent.start()` on port `9200 + AGENT_ID`.
 
 ```python
 from agents.base_agent import BaseAgent
 
 class MyNewAgent(BaseAgent):
-    AGENT_ID = 33   # Next available ID
+    AGENT_ID = 37   # Choose the next unique ID; verify no collision first
 
     def __init__(self) -> None:
         super().__init__(agent_id=self.AGENT_ID, tier=2, name="my_new_agent")
@@ -822,13 +842,16 @@ class MyNewAgent(BaseAgent):
 - [ ] `options_strategist` (Deribit delta-neutral; ID not assigned while momentum uses 17)
 - [ ] Full DeFi protocol integration (Aave/Curve/Flashbots SDKs)
 - [ ] ML inference server startup automation
+- [ ] Deployment automation improvements in `scripts/`
+- [ ] Replace dead Reuters RSS feed
+- [ ] Fix PortfolioTracker Sharpe calculation
 - [ ] CNN chart pattern model training pipeline
 - [ ] Enhanced Telegram bot with copy-signal features
 
 ### v1.0.0
 - [ ] Kubernetes deployment manifests
 - [ ] Terraform cloud infrastructure (AWS/GCP)
-- [ ] Copy trading signal channel
+- [ ] Production copy-trading controls and audit hardening
 - [ ] Full audit trail & compliance reporting
 
 ---

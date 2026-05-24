@@ -9,7 +9,7 @@ It is documentation only. It does not change build, runtime, or test behavior.
 The repository at `D:\My_PTOJECT\alghrest-test\` (Git root) contains two distinct projects:
 
 1. **ALGHREST** — the root multi-agent trading platform. Source lives in `agents/`, `core/`, `api/`, `connectors/`, `dashboard/`, `ml/`, `backtesting/`, `infra/`, `scripts/`, and `tests/`. Configured by `pyproject.toml`, `docker-compose.yml`, and `.env` at the repo root.
-2. **HMM_Trading** — an independent educational/research subproject for market-regime detection with Hidden Markov Models. Lives entirely under `alghrest-test/HMM_Trading/` and has been stabilized as a standalone project.
+2. **HMM_Trading** — an independent educational/research subproject for market-regime detection with Hidden Markov Models. Lives entirely under `HMM_Trading/` and has been stabilized as a standalone project.
 
 ```text
 D:\My_PTOJECT\alghrest-test\          <- Git root (ALGHREST)
@@ -27,18 +27,17 @@ D:\My_PTOJECT\alghrest-test\          <- Git root (ALGHREST)
 ├── pyproject.toml                     <- ALGHREST deps (Poetry, Python 3.12)
 ├── docker-compose.yml
 ├── .env
-└── alghrest-test/
-    └── HMM_Trading/                   <- Independent subproject
-        ├── main.py
-        ├── pyproject.toml             <- Separate deps
-        ├── requirements.txt
-        ├── configs/
-        ├── src/
-        ├── tests/
-        ├── docs/                      <- HMM_Trading-internal docs
-        ├── references/
-        ├── outputs/                   <- Generated, gitignored
-        └── reports/
+└── HMM_Trading/                       <- Independent subproject
+    ├── main.py
+    ├── pyproject.toml                 <- Separate deps
+    ├── requirements.txt
+    ├── configs/
+    ├── src/
+    ├── tests/
+    ├── docs/                          <- HMM_Trading-internal docs
+    ├── references/
+    ├── outputs/                       <- Generated, gitignored
+    └── reports/
 ```
 
 HMM_Trading is **not** a separate Git repository and **not** a Git submodule. It is a self-contained project that lives inside the same working tree but does not share runtime, dependencies, virtual environment, or tests with the root ALGHREST application.
@@ -61,14 +60,14 @@ The root project is documented end-to-end in `README.md` and `CLAUDE.md`. The sh
 - Lint / format / type-check: `ruff check .`, `black .`, `isort .`, `mypy agents/ core/`
 - Coverage gate: `--cov-fail-under=70` is enforced
 
-Do **not** run ALGHREST tests, lint, or type checks from inside `alghrest-test/HMM_Trading/`. The ALGHREST tooling is configured at the repo root and expects to discover ALGHREST source.
+Do **not** run ALGHREST tests, lint, or type checks from inside `HMM_Trading/`. The ALGHREST tooling is configured at the repo root and expects to discover ALGHREST source.
 
 ## 4. Working in the HMM_Trading subproject
 
 When working on HMM_Trading, change directory into it first and treat it as the project root:
 
 ```powershell
-cd D:\My_PTOJECT\alghrest-test\alghrest-test\HMM_Trading
+cd D:\My_PTOJECT\alghrest-test\HMM_Trading
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -77,7 +76,7 @@ python -m pytest tests/
 python main.py
 ```
 
-Rules (also documented in `alghrest-test/HMM_Trading/README.md` and `alghrest-test/HMM_Trading/CLAUDE.md`):
+Rules (also documented in `HMM_Trading/README.md` and `HMM_Trading/CLAUDE.md`):
 
 - Always work from the HMM_Trading directory when editing this subproject.
 - Use a separate virtual environment for HMM_Trading. Do **not** use the root ALGHREST venv.
@@ -102,9 +101,9 @@ If a change genuinely spans both projects (for example, a future CSV adapter tha
 
 The current CI workflow at `.github/workflows/tests.yml` runs ALGHREST lint and tests on push and PR. HMM_Trading does **not** yet have its own CI workflow. When one is added it should:
 
-- Run only when files under `alghrest-test/HMM_Trading/**` change (path filter).
-- Use a separate Python setup and install from `alghrest-test/HMM_Trading/requirements.txt`.
-- Run `python -m pytest tests/` from inside `alghrest-test/HMM_Trading/`.
+- Run only when files under `HMM_Trading/**` change (path filter).
+- Use a separate Python setup and install from `HMM_Trading/requirements.txt`.
+- Run `python -m pytest tests/` from inside `HMM_Trading/`.
 - **Not** install ALGHREST dependencies.
 
 Keep the two CI surfaces independent so a break in one project does not block the other.
@@ -112,7 +111,7 @@ Keep the two CI surfaces independent so a break in one project does not block th
 ## 7. Dependency policy
 
 - Root ALGHREST dependencies are managed by `pyproject.toml` (Poetry) at the repo root.
-- HMM_Trading dependencies are managed by `alghrest-test/HMM_Trading/requirements.txt` and its own `pyproject.toml`.
+- HMM_Trading dependencies are managed by `HMM_Trading/requirements.txt` and its own `pyproject.toml`.
 - Do **not** add HMM_Trading-only dependencies (for example, `hmmlearn`) to the root `pyproject.toml`.
 - Do **not** add ALGHREST runtime dependencies (for example, `aiokafka`, `redis`, `web3`) to HMM_Trading.
 
@@ -121,9 +120,9 @@ If both projects end up needing the same library, they may still pin different v
 ## 8. Documentation locations
 
 - Root ALGHREST documentation: `README.md`, `CLAUDE.md`, `AGENTS.md`, and files under `docs/` at the repo root.
-- HMM_Trading documentation: `alghrest-test/HMM_Trading/README.md`, `alghrest-test/HMM_Trading/CLAUDE.md`, `alghrest-test/HMM_Trading/AGENTS.md`, and `alghrest-test/HMM_Trading/docs/`.
+- HMM_Trading documentation: `HMM_Trading/README.md`, `HMM_Trading/CLAUDE.md`, `HMM_Trading/AGENTS.md`, and `HMM_Trading/docs/`.
 
-This file (`docs/monorepo-workflow.md`) and `docs/integration-roadmap.md` are the two root-level documents that describe how the monorepo as a whole is organized and how the two projects will eventually connect. They are intentionally short. Detailed architecture for HMM_Trading lives inside the subproject at `alghrest-test/HMM_Trading/docs/architecture.md`.
+This file (`docs/monorepo-workflow.md`) and `docs/integration-roadmap.md` are the two root-level documents that describe how the monorepo as a whole is organized and how the two projects will eventually connect. They are intentionally short. Detailed architecture for HMM_Trading lives inside the subproject at `HMM_Trading/docs/architecture.md`.
 
 ## 9. Future-maintainer checklist
 

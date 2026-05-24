@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository layout — two projects under one root
+
+This monorepo contains **two independent projects**. Know which one you are in before editing:
+
+1. **ALGHREST** (the root) — the 37-service autonomous trading platform documented in the rest of this file. Lives directly under the repo root (`agents/`, `api/`, `core/`, `dashboard/`, `ml/`, `connectors/`, etc.).
+2. **HMM_Trading** at `HMM_Trading/` — a **self-contained educational** Hidden Markov Model research pipeline with its own `pyproject.toml`, `requirements.txt`, `main.py`, tests, and its own `CLAUDE.md`. It is **not** part of the ALGHREST agent fabric and does not share code, dependencies, or runtime with it.
+
+When working on HMM_Trading, treat `HMM_Trading/CLAUDE.md` as authoritative — it sets a hard scope boundary forbidding edits to the parent ALGHREST project, bans installing `pandas_ta`/`statsmodels` into that env, and forbids changing the HMM math or wrapper structure. See `docs/monorepo-workflow.md` for how the two projects are intended to coexist.
+
 ## Stack
 
 - **Python 3.12 + Poetry**, Pydantic v2, asyncio everywhere
@@ -12,6 +21,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Dashboard**: React 18 + Vite + Tailwind + Zustand (in `dashboard/`)
 
 ## Common commands
+
+A root `Makefile` wraps the most common targets — `make install`, `make docker-up`, `make test`, `make format`, `make lint`, `make mock-server`, `make dashboard-dev`, `make clean`, plus `make run-cio` / `run-risk` / `run-proposal` shortcuts for the Tier 1 agents. The raw commands below are still the source of truth; reach for `make` when you want the short form.
 
 ```powershell
 # Install (Poetry; project uses Python 3.12.x, pinned <3.13)
@@ -68,6 +79,7 @@ python scripts/mock_ml_server.py               # Lightweight stand-in for ml/inf
 python scripts/validate_agent_ids.py           # Detect AGENT_ID collisions across agents/**
 python scripts/validate_news_feeds.py          # Probe news_analyst RSS feeds (catches dead URLs)
 python scripts/run_tests.py                    # Convenience wrapper for the pytest suite
+python scripts/clean_workspace.py              # Purge __pycache__/.pytest_cache/.mypy_cache/*.log etc. across the repo (skips .venv)
 
 # Universal agent runner (used by Docker services)
 python run_agent.py <module_path> <ClassName>  # Universal entry point for all agents
@@ -201,7 +213,7 @@ When deploying, the inference server is a **separate process** from the agent. D
 - `connectors/` holds the I/O adapter layer used by execution and intelligence agents — `exchanges/` (per-venue REST/WS clients consumed by `ExchangeExecutor`), `chains/` (on-chain RPC wrappers for Tier 6), `data_providers/` (market-data quote/history/holdings layer used by the dashboard — see below). Agents never call exchange/RPC SDKs directly; they go through these adapters.
 - `mcp/claude_model_manager/` is a Model Context Protocol server scaffold for routing Claude model selection — not part of the runtime agent flow.
 - `AGENTS.md` is the Codex-targeted sibling of this file. It overlaps heavily and may lag CLAUDE.md on some details; treat CLAUDE.md as canonical for Claude Code sessions.
-- `docs/` holds non-CLAUDE.md reference material: `LIGHTWEIGHT_DEV.md` (the venv-lite path) and `kill_switch_testing_guide.md` (Arabic-language QA scenarios for `scripts/run_kill_switch_stress_test.py`).
+- `docs/` holds non-CLAUDE.md reference material: `LIGHTWEIGHT_DEV.md` (the venv-lite path), `kill_switch_testing_guide.md` (Arabic-language QA scenarios for `scripts/run_kill_switch_stress_test.py`), `monorepo-workflow.md` (how ALGHREST and the HMM_Trading subproject coexist), and `integration-roadmap.md`. Historic point-in-time reports (security audits, integration-test summaries, infrastructure validation, completion audit) were moved to `docs/archive/` in commit a553363 — treat them as snapshots, not current state.
 - `.github/workflows/tests.yml` runs lint → unit → integration on every push/PR to `main`/`develop` and nightly at 02:00 UTC. Backtest and performance jobs are **opt-in**: include `[full-test]` or `[perf-test]` in the commit message to trigger them. Coverage uploads to Codecov; CI invokes `scripts/run_tests.py` (the same wrapper used locally), so keep that script working.
 - `dashboard/src/lib/useLiveQuotes.ts` is the **single source of truth for dashboard quote polling** — one TanStack Query call every 3s, shared across `PortfolioOverview`, `HoldingsPanel`, and `MarketDataPanel`. Do not add per-panel polling to `/api/quotes`; subscribe to this hook instead so all panels stay in lockstep and the backend only sees one request.
 - Dashboard pages live in `dashboard/src/pages/`: `Overview` (default — symbol selector + portfolio + holdings + market data), `Agents`, `Positions`, `Risk`, `Kafka`, plus three newer surfaces — `AuditorDashboard`, `BacktestSimulation`, `InvestorPitch`. The sidebar in `components/layout/Sidebar.tsx` is the routing source of truth.
