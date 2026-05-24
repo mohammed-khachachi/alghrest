@@ -1079,6 +1079,11 @@ services:
     networks:
       alghrest-network:
         ipv4_address: 172.20.0.51
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --spider http://localhost:5173 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   # ═══════════════════════════════════════════════════════
   # NGINX — Reverse proxy (/ → dashboard, /api → fastapi, /ws → fastapi)
@@ -1098,3 +1103,9 @@ services:
     networks:
       alghrest-network:
         ipv4_address: 172.20.0.52
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t && wget --quiet --spider http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
