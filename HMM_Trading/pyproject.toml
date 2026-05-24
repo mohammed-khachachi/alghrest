@@ -1,0 +1,10 @@
+[project]
+name = "hmm-trading"
+version = "1.0.0"
+description = "Hidden Markov Models for Quantitative Trading — Educational Research Project"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

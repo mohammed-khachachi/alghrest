@@ -19,6 +19,7 @@ secrets/
 
 # ── PYTHON ────────────────────────────────────────────────────────────────────
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -35,6 +36,8 @@ pip-wheel-metadata/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+**/.pytest_cache/
+pytest-cache-files-*/
 .coverage
 htmlcov/
 *.log
@@ -64,14 +67,19 @@ logs/
 *.db
 
 # ── HMM_TRADING LOCAL ARTIFACTS ───────────────────────────────────────────────
-alghrest-test/HMM_Trading/outputs/
-alghrest-test/HMM_Trading/pytest-cache-files-*/
-alghrest-test/HMM_Trading/.venv/
-alghrest-test/HMM_Trading/.pytest_cache/
-alghrest-test/HMM_Trading/__pycache__/
-alghrest-test/HMM_Trading/**/__pycache__/
-alghrest-test/HMM_Trading/.codex/sessions/
-alghrest-test/HMM_Trading/.codex/skills/
+HMM_Trading/outputs/
+HMM_Trading/pytest-cache-files-*/
+HMM_Trading/.venv/
+HMM_Trading/.pytest_cache/
+HMM_Trading/__pycache__/
+HMM_Trading/**/__pycache__/
+HMM_Trading/.codex/sessions/
+HMM_Trading/.codex/skills/
+
+# ── GENERATED LOCAL REPORTS / PREVIEWS ───────────────────────────────────────
+project/outputs/
+dashboard_preview.html
+alghrest-diagnostic-report.docx
 
 # ── DOCKER VOLUMES ────────────────────────────────────────────────────────────
 postgres-data/
