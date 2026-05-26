@@ -271,6 +271,24 @@ class OrderBook(AlghrestModel):
     bids: list[OrderBookLevel] = Field(default_factory=list)
     asks: list[OrderBookLevel] = Field(default_factory=list)
 
+    @property
+    def best_bid(self) -> Decimal | None:
+        if not self.bids:
+            return None
+        return max(level.price for level in self.bids)
+
+    @property
+    def best_ask(self) -> Decimal | None:
+        if not self.asks:
+            return None
+        return min(level.price for level in self.asks)
+
+    @property
+    def mid_price(self) -> Decimal | None:
+        if self.best_bid is None or self.best_ask is None:
+            return None
+        return (self.best_bid + self.best_ask) / Decimal("2")
+
 
 class MarketState(AlghrestModel):
     symbol: str = ""
@@ -321,6 +339,7 @@ class Portfolio(AlghrestModel):
     emergency_reserve: Decimal = Decimal("0")
     positions: list[Position] = Field(default_factory=list)
     daily_pnl: Decimal = Decimal("0")
+    weekly_pnl: Decimal = Decimal("0")
     unrealized_pnl: Decimal = Decimal("0")
     metadata: dict[str, Any] = Field(default_factory=dict)
 

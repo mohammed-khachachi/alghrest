@@ -14,7 +14,11 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import structlog
-from statsmodels.tsa.stattools import adfuller
+
+try:
+    from statsmodels.tsa.stattools import adfuller
+except ImportError:
+    adfuller = None
 
 from agents.base_agent import BaseStrategy
 from core.data.models import (
@@ -53,6 +57,9 @@ _PAIRS = [
 
 def _cointegration_hedge_ratio(y: np.ndarray, x: np.ndarray) -> Optional[float]:
     """OLS hedge ratio and ADF test on residuals. Returns ratio if cointegrated."""
+    if adfuller is None:
+        return None
+
     if len(y) < _MIN_BARS or len(x) < _MIN_BARS:
         return None
     n = min(len(y), len(x))

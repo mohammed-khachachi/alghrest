@@ -13,7 +13,11 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+try:
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+except ImportError:
+    SentimentIntensityAnalyzer = None
 
 from agents.base_agent import BaseAgent
 from core.config import settings
@@ -43,7 +47,7 @@ class SentimentAnalyst(BaseAgent):
 
     def __init__(self) -> None:
         super().__init__(agent_id=self.AGENT_ID, tier=2, name="sentiment_analyst")
-        self._vader = SentimentIntensityAnalyzer()
+        self._vader = SentimentIntensityAnalyzer() if SentimentIntensityAnalyzer else None
         # Rolling windows of (timestamp, score) tuples per symbol
         self._sentiment_windows: dict[str, deque] = defaultdict(lambda: deque(maxlen=500))
         self._mention_counts: dict[str, int] = defaultdict(int)
@@ -70,6 +74,8 @@ class SentimentAnalyst(BaseAgent):
             self.logger.info("Twitter bearer token configured")
         else:
             self.logger.warning("TWITTER_BEARER_TOKEN not set — Twitter streaming disabled")
+        if self._vader is None:
+            self.logger.warning("vaderSentiment not installed — text sentiment defaults to neutral")
 
         self.logger.info("sentiment analyst ready", tracked_symbols=list(TRACKED_SYMBOLS.keys()))
 
@@ -175,8 +181,11 @@ class SentimentAnalyst(BaseAgent):
     async def _process_text(self, text: str, source: str, metadata: dict | None = None) -> None:
         """Apply VADER sentiment and route to appropriate symbol windows."""
         text_lower = text.lower()
-        scores = self._vader.polarity_scores(text)
-        compound = scores["compound"]   # -1 to +1
+        if self._vader is None:
+            compound = 0.0
+        else:
+            scores = self._vader.polarity_scores(text)
+            compound = scores["compound"]   # -1 to +1
 
         # Route to all matched symbols
         for symbol, keywords in TRACKED_SYMBOLS.items():

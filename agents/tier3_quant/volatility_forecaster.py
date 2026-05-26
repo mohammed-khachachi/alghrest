@@ -15,7 +15,11 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import structlog
-from arch import arch_model
+
+try:
+    from arch import arch_model
+except ImportError:
+    arch_model = None
 
 from agents.base_agent import BaseAgent
 from core.data.models import KafkaTopic, OHLCVBar, SignalDirection, VolatilityRegime, VolatilitySignal
@@ -166,6 +170,9 @@ class VolatilityForecaster(BaseAgent):
     @staticmethod
     def _fit_garch(returns: np.ndarray) -> Optional[float]:
         """Fit GARCH(1,1) and return 1-step-ahead annualized volatility forecast."""
+        if arch_model is None:
+            return None
+
         try:
             model = arch_model(returns, vol="Garch", p=1, q=1, dist="normal")
             result = model.fit(disp="off", show_warning=False, options={"maxiter": 100})
@@ -180,6 +187,9 @@ class VolatilityForecaster(BaseAgent):
     @staticmethod
     def _fit_egarch(returns: np.ndarray) -> Optional[float]:
         """Fit EGARCH(1,1) for asymmetric (leverage) effect."""
+        if arch_model is None:
+            return None
+
         try:
             model = arch_model(returns, vol="EGARCH", p=1, q=1, dist="normal")
             result = model.fit(disp="off", show_warning=False, options={"maxiter": 100})

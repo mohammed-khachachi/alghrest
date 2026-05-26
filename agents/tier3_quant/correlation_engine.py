@@ -14,7 +14,11 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import structlog
-from statsmodels.tsa.stattools import adfuller, coint
+
+try:
+    from statsmodels.tsa.stattools import coint
+except ImportError:
+    coint = None
 
 from agents.base_agent import BaseAgent
 from core.data.models import (
@@ -211,6 +215,9 @@ class CorrelationEngine(BaseAgent):
         Engle-Granger cointegration test.
         Returns estimated half-life in days if cointegrated, else None.
         """
+        if coint is None:
+            return None
+
         try:
             _, pvalue, _ = coint(price_a, price_b)
             if pvalue > COINTEGRATION_PVALUE_THRESHOLD:
