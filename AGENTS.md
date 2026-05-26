@@ -81,7 +81,7 @@ ALGHREST is a 37-service autonomous trading system with ~20 trading agents organ
 Tier 1 — Executive (CIO Opus, Risk Governor, ProposalApprover)
 Tier 2 — Intelligence (market data, news, sentiment, macro, geopolitics, on-chain, price publisher)
 Tier 3 — Quant (technical analyst, GARCH volatility, correlation engine)
-Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb, ml_predictor; options_strategist still pending)
+Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb, ml_predictor, **hmm_regime** [Agent 37]; options_strategist still pending)
 Tier 5 — Execution (order router, slippage minimizer, hedge mgr, fee optimizer, liquidation guard, exchange executor; position_sizer is a helper, not a runtime agent)
 Tier 6 — DeFi (yield_farmer, dex_arbitrageur, mev_hunter, bridge_strategist — ⚠️ SKELETON IMPLEMENTATIONS ONLY, NOT PRODUCTION-READY)
 Tier 7 — Monitoring (portfolio tracker, alert manager, compliance, auditor, copy-trading channel)
@@ -166,6 +166,9 @@ All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (stri
 - ID **33** — `auditor_agent.py` (outside 1–32 range, but acceptable)
 
 The system now supports 36+ agents with proper Prometheus port isolation.
+
+**New agent:**
+- ID **37** — `agents/tier4_strategies/hmm_agent.py` → `HMMAgent` (HMM Regime Detection, Tier 4, paper-only)
 
 ### ML inference subsystem (`ml/` + Agent 16)
 
@@ -291,5 +294,4 @@ live             → Real money — requires explicit ENVIRONMENT=live
 
 1. **Tier 6 DeFi agents** — skeletons exist (`yield_farmer`, `dex_arbitrageur`, `mev_hunter`, `bridge_strategist`) but need real protocol integration (Aave/Curve/Flashbots/bridge SDKs).
 2. **Agent 17 `options_strategist.py`** (Deribit delta-neutral) — not yet implemented.
-3. **Infrastructure automation** — ML inference server startup, deployment scripts in `scripts/`.
-4. **Open issues** — dead Reuters RSS feed replacement, PortfolioTracker Sharpe calculation fixes.
+3. **Infrastructure automation** — ML infe
