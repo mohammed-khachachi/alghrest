@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     environment: str = "development"    # development | paper_trading | live
     log_level: str = "INFO"
     system_capital_usd: float = 10_000.0
+
+    # ── API SECURITY ─────────────────────────────────────
+    api_auth_enabled: bool = True
+    alghrest_api_key: str = "change-me"
+    api_allowed_origins: str = "http://localhost:5173,http://localhost:8000"
 
     # ── DeFi SAFETY ──────────────────────────────────────
     # 🚨 CRITICAL: Tier 6 DeFi agents contain mock logic and are HIGH RISK
@@ -133,6 +138,28 @@ class Settings(BaseSettings):
             raise ValueError(f"environment must be one of {allowed}")
         return v
 
+    @model_validator(mode="after")
+    def validate_api_security(self) -> "Settings":
+        non_development = self.environment in {"paper_trading", "live"}
+
+        if non_development and not self.api_auth_enabled:
+            raise ValueError(
+                "API_AUTH_ENABLED cannot be false when ENVIRONMENT is paper_trading or live"
+            )
+
+        if self.api_auth_enabled and not self.alghrest_api_key.strip():
+            raise ValueError("ALGHREST_API_KEY must be set when API authentication is enabled")
+
+        if non_development and self.alghrest_api_key.strip() == "change-me":
+            raise ValueError(
+                "ALGHREST_API_KEY must be changed when ENVIRONMENT is paper_trading or live"
+            )
+
+        if non_development and "*" in self.api_allowed_origins_list:
+            raise ValueError("API_ALLOWED_ORIGINS cannot contain '*' outside development")
+
+        return self
+
     @property
     def is_live(self) -> bool:
         return self.environment == "live"
@@ -144,6 +171,14 @@ class Settings(BaseSettings):
     @property
     def kafka_servers_list(self) -> list[str]:
         return self.kafka_bootstrap_servers.split(",")
+
+    @property
+    def api_allowed_origins_list(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.api_allowed_origins.split(",")
+            if origin.strip()
+        ]
 
 
 @lru_cache(maxsize=1)

@@ -4,8 +4,9 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from api.auth import require_api_key
 from connectors.data_providers import default_router
 from connectors.data_providers.base import ANCHOR_DATE
 from connectors.data_providers.holdings import get_holdings
@@ -59,7 +60,7 @@ async def get_history(
     }
 
 
-@router.get("/holdings")
+@router.get("/holdings", dependencies=[Depends(require_api_key)])
 async def get_holdings_route() -> dict:
     """Static mock holdings. P&L is computed client-side by joining with /api/quotes."""
     holdings = await get_holdings(_router())

@@ -13,11 +13,12 @@ from typing import Any, AsyncGenerator
 
 import structlog
 import uvicorn
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from api.auth import require_api_key, require_websocket_api_key
 from core.config import settings
 from core.data.models import AgentHealth, Portfolio, RiskMetrics
 from core.orchestrator.state_manager import state_manager
@@ -110,15 +111,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",   # Next.js (if used)
-        "http://localhost:3001",
-        "http://localhost:5173",   # Vite dev server
-        "http://127.0.0.1:5173",
-        "http://localhost:80",
-        "http://localhost",        # Nginx production
-    ],
-    allow_credentials=True,
+    allow_origins=settings.api_allowed_origins_list,
+    allow_credentials="*" not in settings.api_allowed_origins_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -159,7 +153,12 @@ async def prometheus_metrics() -> Response:
 
 # ── PORTFOLIO ENDPOINTS ───────────────────────────────────────────────────────
 
-@app.get("/api/v1/portfolio", response_model=None, tags=["Portfolio"])
+@app.get(
+    "/api/v1/portfolio",
+    response_model=None,
+    tags=["Portfolio"],
+    dependencies=[Depends(require_api_key)],
+)
 async def get_portfolio() -> dict:
     """Current portfolio state — positions, capital, PnL."""
     portfolio = await state_manager.get_portfolio()
@@ -171,7 +170,11 @@ async def get_portfolio() -> dict:
     return portfolio.model_dump(mode="json")
 
 
-@app.get("/api/v1/portfolio/positions", tags=["Portfolio"])
+@app.get(
+    "/api/v1/portfolio/positions",
+    tags=["Portfolio"],
+    dependencies=[Depends(require_api_key)],
+)
 async def get_positions() -> dict:
     portfolio = await state_manager.get_portfolio()
     if not portfolio:
@@ -185,7 +188,12 @@ async def get_positions() -> dict:
 
 # ── RISK ENDPOINTS ────────────────────────────────────────────────────────────
 
-@app.get("/api/v1/risk", response_model=None, tags=["Risk"])
+@app.get(
+    "/api/v1/risk",
+    response_model=None,
+    tags=["Risk"],
+    dependencies=[Depends(require_api_key)],
+)
 async def get_risk_metrics() -> dict:
     """Current risk metrics snapshot from CRO agent."""
     metrics = await state_manager.get_risk_metrics()
@@ -194,7 +202,11 @@ async def get_risk_metrics() -> dict:
     return metrics.model_dump(mode="json")
 
 
-@app.get("/api/v1/risk/kill-switch", tags=["Risk"])
+@app.get(
+    "/api/v1/risk/kill-switch",
+    tags=["Risk"],
+    dependencies=[Depends(require_api_key)],
+)
 async def get_kill_switch_status() -> dict:
     active = await state_manager.is_kill_switch_active()
     reason = await state_manager.get_kill_switch_reason() if active else None
@@ -203,7 +215,7 @@ async def get_kill_switch_status() -> dict:
 
 # ── AGENT ENDPOINTS ───────────────────────────────────────────────────────────
 
-@app.get("/api/v1/agents", tags=["Agents"])
+@app.get("/api/v1/agents", tags=["Agents"], dependencies=[Depends(require_api_key)])
 async def get_all_agents() -> dict:
     """Health status of all 32 agents."""
     healths = await state_manager.get_all_agent_healths()
@@ -215,7 +227,7 @@ async def get_all_agents() -> dict:
     }
 
 
-@app.get("/api/v1/agents/{agent_id}", tags=["Agents"])
+@app.get("/api/v1/agents/{agent_id}", tags=["Agents"], dependencies=[Depends(require_api_key)])
 async def get_agent_health(agent_id: int) -> dict:
     health = await state_manager.get_agent_health(agent_id)
     if not health:
@@ -247,6 +259,8 @@ async def get_macro_regime() -> dict:
 
 @app.websocket("/ws/dashboard")
 async def websocket_dashboard(websocket: WebSocket) -> None:
+    if not await require_websocket_api_key(websocket):
+        return
     await dashboard_websocket_endpoint(websocket)
 
 @app.websocket("/ws/live")
@@ -255,6 +269,9 @@ async def websocket_live_feed(websocket: WebSocket) -> None:
     Real-time dashboard feed.
     Pushes portfolio + risk updates every 5 seconds.
     """
+    if not await require_websocket_api_key(websocket):
+        return
+
     await ws_manager.connect(websocket)
     logger.info("WebSocket client connected", client=str(websocket.client))
 
