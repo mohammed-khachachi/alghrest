@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # ALGHREST — Kafka Topic Initialization Script
-# Creates all 16 system topics with production-grade configurations.
+# Creates all 24 system topics with production-grade configurations.
 # Idempotent: --if-not-exists prevents errors on re-runs.
 # =============================================================================
 
@@ -115,6 +115,10 @@ echo "────────────────────────�
 create_topic "proposals.bus"       6  7776000000  \
     "--config max.message.bytes=1048576"
 
+# DLQ for proposals that cannot be safely processed after bounded retries
+create_topic "proposals.bus.dlq"   6  31536000000  \
+    "--config max.message.bytes=2097152"
+
 echo ""
 echo "Creating Tier 1 → Tier 5: Approved Proposal & Order Topics"
 echo "──────────────────────────────────────────────────────────"
@@ -122,8 +126,16 @@ echo "────────────────────────�
 # Proposals approved by gateway (Tier 1 ProposalApprover) — 90-day audit
 create_topic "proposals.approved"  6  7776000000
 
+# DLQ for approved proposals rejected by downstream consumers
+create_topic "proposals.approved.dlq"  6  31536000000  \
+    "--config max.message.bytes=2097152"
+
 # Orders pending exchange placement (post-routing/optimisation)
 create_topic "orders.pending"      6  7776000000
+
+# DLQ for routed/optimised orders that cannot be processed safely
+create_topic "orders.pending.dlq"  6  31536000000  \
+    "--config max.message.bytes=2097152"
 
 # Legacy alias kept for backwards compatibility (not used by new pipeline)
 create_topic "orders.approved"     6  7776000000
@@ -135,9 +147,17 @@ echo "────────────────────────�
 # Execution confirmations — compliance retention (90 days)
 create_topic "orders.executed"     6  7776000000
 
+# DLQ for execution confirmations that cannot be consumed safely
+create_topic "orders.executed.dlq" 6  31536000000  \
+    "--config max.message.bytes=2097152"
+
 # Exchange fills — long retention (1 year) for audit/tax
 create_topic "fills.confirmed"     6  31536000000  \
     "--config max.message.bytes=524288"
+
+# DLQ for fill confirmations that fail bounded processing
+create_topic "fills.confirmed.dlq" 6  31536000000  \
+    "--config max.message.bytes=2097152"
 
 echo ""
 echo "Creating Tier 7 → All: Portfolio State Topic"
@@ -155,6 +175,10 @@ echo "────────────────────────�
 # Risk alerts — compliance retention (1 year), immutable audit log
 create_topic "risk.alerts"         3  31536000000  \
     "--config max.message.bytes=524288"
+
+# DLQ for risk alerts / kill-switch events that cannot be processed safely
+create_topic "risk.alerts.dlq"     3  31536000000  \
+    "--config max.message.bytes=2097152"
 
 echo ""
 echo "Creating Tier 7 (RL) → Tier 4: Parameter Update Topics"
@@ -182,13 +206,19 @@ EXPECTED_TOPICS=(
     "volatility.forecast"
     "correlation.matrix"
     "proposals.bus"
+    "proposals.bus.dlq"
     "proposals.approved"
+    "proposals.approved.dlq"
     "orders.pending"
+    "orders.pending.dlq"
     "orders.approved"
     "orders.executed"
+    "orders.executed.dlq"
     "fills.confirmed"
+    "fills.confirmed.dlq"
     "portfolio.state"
     "risk.alerts"
+    "risk.alerts.dlq"
     "rl.param.updates"
 )
 
@@ -207,5 +237,5 @@ fi
 
 echo ""
 echo "========================================================"
-echo " All 18 Kafka topics initialized successfully."
+echo " All 24 Kafka topics initialized successfully."
 echo "========================================================"

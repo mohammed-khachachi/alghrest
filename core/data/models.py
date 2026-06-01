@@ -44,6 +44,12 @@ class KafkaTopic(str, Enum):
     PORTFOLIO_STATE = "portfolio.state"
     RISK_ALERTS = "risk.alerts"
     RL_PARAM_UPDATES = "rl.param.updates"
+    PROPOSALS_BUS_DLQ = "proposals.bus.dlq"
+    PROPOSALS_APPROVED_DLQ = "proposals.approved.dlq"
+    ORDERS_PENDING_DLQ = "orders.pending.dlq"
+    ORDERS_EXECUTED_DLQ = "orders.executed.dlq"
+    FILLS_CONFIRMED_DLQ = "fills.confirmed.dlq"
+    RISK_ALERTS_DLQ = "risk.alerts.dlq"
 
 
 class AgentStatus(str, Enum):
