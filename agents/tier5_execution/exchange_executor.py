@@ -63,6 +63,13 @@ _FILL_POLL_INTERVAL = 5         # seconds between fill polling sweeps
 _LOCK_TIMEOUT = 30.0
 _PLACED_TTL = 86_400            # 24h dedup window for client_order_id
 
+# Durable tracking of open orders — the source of truth for fill polling and
+# kill-switch cancellation. Written WITHOUT a TTL on purpose: a resting limit
+# order may outlive any TTL, so entries are removed only when the order reaches
+# a terminal status. The in-process `_tracked_orders` dict is a cache mirror.
+_NS_TRACKED = "alghrest:exec:tracked:{ex_id}"
+_TRACKED_PATTERN = "alghrest:exec:tracked:*"
+
 _TERMINAL_STATUSES = {
     OrderStatus.FILLED,
     OrderStatus.CANCELLED,
@@ -108,9 +115,11 @@ class ExchangeExecutor(BaseAgent):
 
     async def initialize(self) -> None:
         await self._connector.connect_all(_SUPPORTED_EXCHANGES)
+        await self._recover_tracked_orders()
         log.info(
             "exchange_executor.initialized",
             exchanges=[e.value for e in _SUPPORTED_EXCHANGES],
+            tracked_recovered=len(self._tracked_orders),
         )
 
     async def run(self) -> None:
@@ -202,16 +211,21 @@ class ExchangeExecutor(BaseAgent):
             return
 
     async def _cancel_all_tracked_orders(self, reason: str) -> None:
-        """Best-effort cancellation of every order currently tracked."""
-        if not self._tracked_orders:
+        """
+        Best-effort cancellation of every open order across all executor
+        replicas. The set is read from Redis (authoritative) rather than the
+        local cache, so a restarted or second-replica executor cancels orders
+        it never placed locally.
+        """
+        snapshot = await self._authoritative_tracked()
+        if not snapshot:
             log.info("exchange_executor.kill_cancel_nothing_to_do")
             return
 
-        snapshot = list(self._tracked_orders.items())
         cancelled = 0
         failed = 0
 
-        for ex_order_id, (order, _) in snapshot:
+        for ex_order_id, order in snapshot:
             try:
                 connector = self._connector.get(order.exchange)
             except KeyError:
@@ -251,7 +265,7 @@ class ExchangeExecutor(BaseAgent):
                         "exchange_executor.kill_cancel_publish_failed",
                         error=str(exc),
                     )
-                self._tracked_orders.pop(ex_order_id, None)
+                await self._remove_tracked(ex_order_id)
             else:
                 failed += 1
                 # Leave in tracked dict; the fill polling loop will continue
@@ -264,6 +278,99 @@ class ExchangeExecutor(BaseAgent):
             failed=failed,
             still_tracked=len(self._tracked_orders),
         )
+
+    # ── Durable order tracking (Redis = source of truth, dict = cache) ───────────
+
+    async def _track(self, order: Order, polled_at: datetime) -> None:
+        """
+        Record an open order as the durable source of truth in Redis and mirror
+        it into the local cache. Redis write failures are logged but never abort
+        execution — the local mirror keeps this process working, and a restart
+        recovers whatever did persist.
+        """
+        if order.exchange_order_id is None:
+            return
+        self._tracked_orders[order.exchange_order_id] = (order, polled_at)
+        key = _NS_TRACKED.format(ex_id=order.exchange_order_id)
+        try:
+            await self.state.set_json(
+                key,
+                {
+                    "order": order.model_dump(mode="json"),
+                    "last_poll": polled_at.isoformat(),
+                },
+            )
+        except Exception as exc:
+            log.warning(
+                "exchange_executor.tracked_persist_failed",
+                exchange_order_id=order.exchange_order_id,
+                error=str(exc),
+            )
+
+    async def _remove_tracked(self, exchange_order_id: str) -> None:
+        """Drop an order from both the durable set and the local cache."""
+        self._tracked_orders.pop(exchange_order_id, None)
+        try:
+            await self.state.delete_key(_NS_TRACKED.format(ex_id=exchange_order_id))
+        except Exception as exc:
+            log.warning(
+                "exchange_executor.tracked_delete_failed",
+                exchange_order_id=exchange_order_id,
+                error=str(exc),
+            )
+
+    async def _authoritative_tracked(self) -> list[tuple[str, Order]]:
+        """
+        Return every open order across ALL executor replicas by scanning Redis.
+        Used by the kill switch so a restarted or second-replica executor cancels
+        orders it never placed locally. If Redis is unreachable, fall back to the
+        local mirror (over-cancelling is fail-safe; under-cancelling is not).
+        """
+        try:
+            keys = await self.state.scan_keys(_TRACKED_PATTERN)
+        except Exception as exc:
+            log.error(
+                "exchange_executor.tracked_scan_failed_fallback_local",
+                error=str(exc),
+            )
+            return [(ex_id, o) for ex_id, (o, _) in self._tracked_orders.items()]
+
+        result: list[tuple[str, Order]] = []
+        for key in keys:
+            try:
+                data = await self.state.get_json(key)
+                if not data:
+                    continue
+                order = Order.model_validate(data["order"])
+            except Exception as exc:
+                log.warning("exchange_executor.tracked_load_skip", key=key, error=str(exc))
+                continue
+            if order.exchange_order_id:
+                result.append((order.exchange_order_id, order))
+        return result
+
+    async def _recover_tracked_orders(self) -> None:
+        """Repopulate the local cache from durable Redis state on startup."""
+        try:
+            keys = await self.state.scan_keys(_TRACKED_PATTERN)
+        except Exception as exc:
+            log.error("exchange_executor.tracked_recover_failed", error=str(exc))
+            return
+        recovered = 0
+        for key in keys:
+            try:
+                data = await self.state.get_json(key)
+                if not data:
+                    continue
+                order = Order.model_validate(data["order"])
+            except Exception as exc:
+                log.warning("exchange_executor.tracked_recover_skip", key=key, error=str(exc))
+                continue
+            if order.exchange_order_id and order.status not in _TERMINAL_STATUSES:
+                self._tracked_orders[order.exchange_order_id] = (order, datetime.utcnow())
+                recovered += 1
+        if recovered:
+            log.info("exchange_executor.tracked_recovered", count=recovered)
 
     # ── Order placement ────────────────────────────────────────────────────────
 
@@ -382,10 +489,7 @@ class ExchangeExecutor(BaseAgent):
             executed.status not in _TERMINAL_STATUSES
             and executed.exchange_order_id
         ):
-            self._tracked_orders[executed.exchange_order_id] = (
-                executed,
-                datetime.utcnow(),
-            )
+            await self._track(executed, datetime.utcnow())
 
         return True
 
@@ -463,7 +567,7 @@ class ExchangeExecutor(BaseAgent):
                 "avg_fill_price": latest.avg_fill_price,
                 "updated_at": datetime.utcnow(),
             })
-            self._tracked_orders[exchange_order_id] = (updated, datetime.utcnow())
+            await self._track(updated, datetime.utcnow())
 
             await self.publish(
                 KafkaTopic.ORDERS_EXECUTED,
@@ -473,7 +577,7 @@ class ExchangeExecutor(BaseAgent):
             await self._fetch_and_publish_fills(updated)
 
             if latest.status in _TERMINAL_STATUSES:
-                self._tracked_orders.pop(exchange_order_id, None)
+                await self._remove_tracked(exchange_order_id)
                 log.info(
                     "exchange_executor.order_terminal",
                     exchange_order_id=exchange_order_id,

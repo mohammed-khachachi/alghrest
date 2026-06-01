@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
-from uuid import uuid4
+from uuid import NAMESPACE_DNS, uuid5
 
 import structlog
 
@@ -39,6 +39,19 @@ _TAKER_FEES: dict[Exchange, float] = {
 
 _LARGE_ORDER_USD = Decimal("5000")   # Above this, use TWAP instead of MARKET
 _PROPOSAL_TTL_SECONDS = 60            # Proposals older than 60s are stale
+
+# Deterministic identifier derivation: a given proposal_id always maps to the
+# SAME order_id / client_order_id, on any replica and on Kafka redelivery. This
+# makes routing idempotent WITHOUT a read-then-write race — the downstream
+# ExchangeExecutor dedups on client_order_id, so every duplicate collapses to a
+# single placement even if two router replicas pick different venues.
+_CLIENT_ID_NS = uuid5(NAMESPACE_DNS, "alghrest.execution.client_order_id")
+_ORDER_ID_NS = uuid5(NAMESPACE_DNS, "alghrest.execution.order_id")
+
+# Routing decision record — for audit and restart recovery only; correctness
+# does not depend on reading it back.
+_NS_ROUTE_DECISION = "routing:order:{proposal_id}:decision"
+_ROUTE_DECISION_TTL = 3600           # 1h: covers redelivery + restart, not forever
 
 
 class OrderRouter(BaseAgent):
@@ -98,10 +111,11 @@ class OrderRouter(BaseAgent):
             log.warning("order_router.stale_proposal", proposal_id=str(proposal.proposal_id), age_s=round(age))
             return
 
-        exchange = await self._select_exchange(proposal.symbol, proposal.size_usd)
-        order_type = self._select_order_type(proposal)
+        exchange, order_type = await self._routing_decision(proposal)
 
         order = Order(
+            order_id=uuid5(_ORDER_ID_NS, str(proposal.proposal_id)),
+            client_order_id=uuid5(_CLIENT_ID_NS, str(proposal.proposal_id)),
             proposal_id=proposal.proposal_id,
             symbol=proposal.symbol,
             exchange=exchange,
@@ -129,6 +143,46 @@ class OrderRouter(BaseAgent):
             order_type=order_type.value,
             size_usd=float(proposal.size_usd),
         )
+
+    async def _routing_decision(
+        self, proposal: TradeProposal
+    ) -> tuple[Exchange, OrderType]:
+        """
+        Resolve (exchange, order_type) for a proposal, reusing a previously
+        recorded decision when one exists so redelivery / restart yields the
+        same route. If Redis is unavailable we still route — identifiers are
+        deterministic, so duplicate placement is prevented downstream
+        regardless of which venue each replica computes.
+        """
+        decision_key = _NS_ROUTE_DECISION.format(proposal_id=proposal.proposal_id)
+        try:
+            existing = await self.state.get_json(decision_key)
+        except Exception as exc:
+            existing = None
+            log.warning("order_router.decision_read_failed", error=str(exc))
+
+        if existing:
+            try:
+                return Exchange(existing["exchange"]), OrderType(existing["order_type"])
+            except Exception:
+                pass  # malformed record → recompute below
+
+        exchange = await self._select_exchange(proposal.symbol, proposal.size_usd)
+        order_type = self._select_order_type(proposal)
+        try:
+            await self.state.set_json_nx(
+                decision_key,
+                {
+                    "exchange": exchange.value,
+                    "order_type": order_type.value,
+                    "symbol": proposal.symbol,
+                    "ts": datetime.utcnow().isoformat(),
+                },
+                ttl=_ROUTE_DECISION_TTL,
+            )
+        except Exception as exc:
+            log.warning("order_router.decision_persist_failed", error=str(exc))
+        return exchange, order_type
 
     async def _select_exchange(self, symbol: str, size_usd: Decimal) -> Exchange:
         # Cache hit

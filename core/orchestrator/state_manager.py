@@ -191,6 +191,34 @@ class StateManager:
         raw = await self.redis.get(key)
         return orjson.loads(raw) if raw else None
 
+    async def set_json_nx(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        """
+        Set `key` to JSON `value` only if it does not already exist (SET NX).
+        Returns True if the key was written (did not exist), False otherwise.
+        Used for idempotent decision records (e.g. routing decisions).
+        """
+        data = orjson.dumps(value)
+        if ttl:
+            result = await self.redis.set(key, data, ex=ttl, nx=True)
+        else:
+            result = await self.redis.set(key, data, nx=True)
+        return result is not None
+
+    async def delete_key(self, key: str) -> None:
+        """Delete a key (no-op if it does not exist)."""
+        await self.redis.delete(key)
+
+    async def scan_keys(self, pattern: str) -> list[str]:
+        """
+        Non-blocking enumeration of keys matching `pattern` using SCAN
+        (never the blocking KEYS command). Returns decoded string keys.
+        Used to recover durable execution state on startup.
+        """
+        keys: list[str] = []
+        async for raw in self.redis.scan_iter(match=pattern, count=100):
+            keys.append(raw.decode() if isinstance(raw, (bytes, bytearray)) else raw)
+        return keys
+
     # ── LIFECYCLE ────────────────────────────────────────────────────────────
 
     async def shutdown(self) -> None:
