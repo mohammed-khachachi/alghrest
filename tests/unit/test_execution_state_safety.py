@@ -27,7 +27,11 @@ from uuid import uuid4
 import orjson
 import pytest
 
-from agents.tier5_execution.exchange_executor import _TRACKED_PATTERN, ExchangeExecutor
+from agents.tier5_execution.exchange_executor import (
+    _NS_POLL_LEASE,
+    _TRACKED_PATTERN,
+    ExchangeExecutor,
+)
 from agents.tier5_execution.order_router import OrderRouter
 from core.data.models import (
     Exchange,
@@ -51,7 +55,9 @@ class FakeState:
         self.store: dict[str, bytes] = {}
         self._dedup: set[str] = set()
         self._locks: dict[str, asyncio.Lock] = {}
+        self._leases: dict[str, str] = {}
         self.fail_lock = False  # flip on to simulate Redis being unavailable
+        self.fail_lease = False  # flip on to simulate Redis down during leasing
 
     async def set_json(self, key, value, ttl=None) -> None:
         self.store[key] = orjson.dumps(value)
@@ -78,6 +84,23 @@ class FakeState:
             return True
         self._dedup.add(key)
         return False
+
+    async def acquire_lease(self, key, owner, ttl_seconds) -> bool:
+        if self.fail_lease:
+            raise ConnectionError("redis unavailable")
+        current = self._leases.get(key)
+        if current is None or current == owner:
+            self._leases[key] = owner
+            return True
+        return False
+
+    async def release_lease(self, key, owner) -> None:
+        if self._leases.get(key) == owner:
+            self._leases.pop(key, None)
+
+    def expire_lease(self, key) -> None:
+        """Test helper: simulate the lease TTL elapsing (e.g. owner died)."""
+        self._leases.pop(key, None)
 
     @asynccontextmanager
     async def lock(self, name, timeout=30.0):
@@ -357,3 +380,89 @@ async def test_placement_fails_closed_when_redis_lock_unavailable():
 
     # Critically: the order was NOT placed (no silent duplicate execution).
     conn.place_limit_order.assert_not_awaited()
+
+
+# ── 8. Phase 5.1: per-order fill-polling ownership lease ─────────────────────
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_two_replicas_do_not_poll_same_order_concurrently():
+    state = FakeState()  # shared Redis
+    placed = _open_limit_order(ex_id="EX-LEASE")
+    ex_a, conn_a = _make_executor(state, returned_order=placed)
+    ex_b, conn_b = _make_executor(state, returned_order=placed)
+
+    open_order = placed.model_copy()
+    still_open = open_order.model_copy()
+    conn_a.fetch_order = AsyncMock(return_value=still_open)
+    conn_b.fetch_order = AsyncMock(return_value=still_open)
+
+    # Both replicas attempt to lease + poll the same order in the same tick.
+    a_leased = await ex_a._acquire_poll_lease("EX-LEASE")
+    b_leased = await ex_b._acquire_poll_lease("EX-LEASE")
+
+    # Exactly one replica owns the lease.
+    assert a_leased != b_leased
+    # The non-owner must not poll the exchange.
+    if a_leased:
+        await ex_a._poll_one("EX-LEASE", open_order)
+        assert conn_b.fetch_order.await_count == 0
+    else:
+        await ex_b._poll_one("EX-LEASE", open_order)
+        assert conn_a.fetch_order.await_count == 0
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_lease_expiry_allows_another_executor_to_resume():
+    state = FakeState()
+    ex_a, _ = _make_executor(state)
+    ex_b, _ = _make_executor(state)
+
+    assert await ex_a._acquire_poll_lease("EX-RESUME") is True
+    # While A holds it, B is locked out.
+    assert await ex_b._acquire_poll_lease("EX-RESUME") is False
+
+    # A dies → its lease TTL elapses.
+    state.expire_lease(_NS_POLL_LEASE.format(ex_id="EX-RESUME"))
+
+    # B can now take over polling.
+    assert await ex_b._acquire_poll_lease("EX-RESUME") is True
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_lease_failure_fails_safe_and_skips_polling():
+    state = FakeState()
+    state.fail_lease = True  # Redis down during leasing
+    placed = _open_limit_order(ex_id="EX-NOPOLL")
+    ex, conn = _make_executor(state, returned_order=placed)
+    conn.fetch_order = AsyncMock(return_value=placed)
+
+    # Lease cannot be acquired → must skip (never poll without ownership), and
+    # certainly must not place anything.
+    assert await ex._acquire_poll_lease("EX-NOPOLL") is False
+    conn.place_limit_order.assert_not_awaited()
+    conn.place_market_order.assert_not_awaited()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_kill_switch_cancels_even_when_lease_held_by_another():
+    state = FakeState()
+    placed = _open_limit_order(ex_id="EX-KILL")
+    ex_a, _ = _make_executor(state, returned_order=placed)
+    await ex_a._place_order(_incoming_limit_order())
+
+    # A second replica owns the polling lease for this order.
+    ex_b, conn_b = _make_executor(state, returned_order=placed)
+    assert await ex_b._acquire_poll_lease("EX-KILL") is True
+
+    # Kill switch on ex_b must still cancel from the authoritative tracked set,
+    # independent of who holds the polling lease.
+    await ex_b._cancel_all_tracked_orders(reason="halt")
+
+    conn_b.cancel_order.assert_awaited_once_with("EX-KILL", "BTC/USDT")
+    assert ex_b._cancelled_by_kill_switch == 1
+    assert await state.scan_keys(_TRACKED_PATTERN) == []

@@ -37,8 +37,10 @@ Kill switch behaviour:
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 import structlog
 
@@ -69,6 +71,15 @@ _PLACED_TTL = 86_400            # 24h dedup window for client_order_id
 # a terminal status. The in-process `_tracked_orders` dict is a cache mirror.
 _NS_TRACKED = "alghrest:exec:tracked:{ex_id}"
 _TRACKED_PATTERN = "alghrest:exec:tracked:*"
+
+# Per-order fill-polling ownership lease. With multiple executor replicas, only
+# the lease holder polls a given order, so duplicate ORDERS_EXECUTED status
+# updates are avoided. The TTL is short and > _FILL_POLL_INTERVAL so the holder
+# keeps the lease across sweeps, but a dead replica's lease expires and another
+# replica takes over. The lease is an optimisation only — it never gates
+# placement or kill-switch cancellation.
+_NS_POLL_LEASE = "alghrest:exec:poll_lease:{ex_id}"
+_POLL_LEASE_TTL = 15
 
 _TERMINAL_STATUSES = {
     OrderStatus.FILLED,
@@ -102,6 +113,9 @@ class ExchangeExecutor(BaseAgent):
             config=config,
         )
         self._connector = MultiExchangeConnector()
+        # Unique identity for this executor process, used as the fill-polling
+        # lease owner so replicas can tell each other's leases apart.
+        self._owner_id = f"{self.name}:{os.getpid()}:{uuid4().hex[:6]}"
         # exchange_order_id → (Order, last_polled_at)
         self._tracked_orders: dict[str, tuple[Order, datetime]] = {}
         self._placed_count = 0
@@ -530,6 +544,24 @@ class ExchangeExecutor(BaseAgent):
 
     # ── Fill polling ───────────────────────────────────────────────────────────
 
+    async def _acquire_poll_lease(self, exchange_order_id: str) -> bool:
+        """
+        Try to take (or renew) this order's polling lease for this replica.
+        Returns False — skip polling — if another replica owns it OR if Redis
+        is unreachable. Failing closed here only delays a status update; it
+        never places an order, so it is always the safe choice.
+        """
+        key = _NS_POLL_LEASE.format(ex_id=exchange_order_id)
+        try:
+            return await self.state.acquire_lease(key, self._owner_id, _POLL_LEASE_TTL)
+        except Exception as exc:
+            log.debug(
+                "exchange_executor.poll_lease_error_skip",
+                exchange_order_id=exchange_order_id,
+                error=str(exc),
+            )
+            return False
+
     async def _fill_polling_loop(self) -> None:
         """Poll fetch_order for each tracked order; detect fills/cancels."""
         while True:
@@ -541,6 +573,12 @@ class ExchangeExecutor(BaseAgent):
                 tracked = list(self._tracked_orders.items())
                 for ex_order_id, (order, _) in tracked:
                     try:
+                        # Only the lease holder polls this order, so multiple
+                        # replicas don't emit duplicate status updates. If the
+                        # lease is held elsewhere (or Redis is unreachable) we
+                        # skip — never poll without ownership.
+                        if not await self._acquire_poll_lease(ex_order_id):
+                            continue
                         await self._poll_one(ex_order_id, order)
                     except Exception as exc:
                         log.debug(

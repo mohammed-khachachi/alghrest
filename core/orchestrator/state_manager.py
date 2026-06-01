@@ -208,6 +208,31 @@ class StateManager:
         """Delete a key (no-op if it does not exist)."""
         await self.redis.delete(key)
 
+    async def acquire_lease(self, key: str, owner: str, ttl_seconds: int) -> bool:
+        """
+        Acquire a short-lived ownership lease, or renew it if we already own it.
+
+        Returns True if `owner` now holds the lease, False if another owner does.
+        The lease auto-expires after `ttl_seconds`, so a dead owner is released
+        without manual cleanup. Used to give one executor replica exclusive fill
+        polling of an order without blocking the others permanently.
+        """
+        acquired = await self.redis.set(key, owner.encode(), ex=ttl_seconds, nx=True)
+        if acquired:
+            return True
+        current = await self.redis.get(key)
+        if current is not None and current.decode() == owner:
+            # Renew our own lease so we keep polling across sweeps.
+            await self.redis.set(key, owner.encode(), ex=ttl_seconds)
+            return True
+        return False
+
+    async def release_lease(self, key: str, owner: str) -> None:
+        """Release a lease only if we still own it (avoids dropping another's)."""
+        current = await self.redis.get(key)
+        if current is not None and current.decode() == owner:
+            await self.redis.delete(key)
+
     async def scan_keys(self, pattern: str) -> list[str]:
         """
         Non-blocking enumeration of keys matching `pattern` using SCAN
