@@ -42,7 +42,7 @@ jobs:
 
     - name: Run linting
       run: |
-        python scripts/run_tests.py lint --skip-mypy
+        poetry run python scripts/run_tests.py lint --skip-mypy
 
     - name: Run type checking
       run: |
