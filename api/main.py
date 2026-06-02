@@ -237,7 +237,11 @@ async def get_agent_health(agent_id: int) -> dict:
 
 # ── SIGNALS ENDPOINTS ─────────────────────────────────────────────────────────
 
-@app.get("/api/v1/signals/sentiment/{symbol}", tags=["Signals"])
+@app.get(
+    "/api/v1/signals/sentiment/{symbol}",
+    tags=["Signals"],
+    dependencies=[Depends(require_api_key)],
+)
 async def get_sentiment(symbol: str) -> dict:
     """Latest sentiment signal for a symbol."""
     cached = await state_manager.get_cached_signal(symbol.upper(), "sentiment")
@@ -246,7 +250,11 @@ async def get_sentiment(symbol: str) -> dict:
     return {"symbol": symbol, **cached}
 
 
-@app.get("/api/v1/signals/macro", tags=["Signals"])
+@app.get(
+    "/api/v1/signals/macro",
+    tags=["Signals"],
+    dependencies=[Depends(require_api_key)],
+)
 async def get_macro_regime() -> dict:
     """Current macro regime classification."""
     cached = await state_manager.get_cached_signal("GLOBAL", "macro_regime")
@@ -317,6 +325,8 @@ async def websocket_live_feed(websocket: WebSocket) -> None:
 @app.websocket("/ws/prices")
 async def websocket_prices(websocket: WebSocket) -> None:
     """Real-time price feed proxy (subscribe to Redis pub/sub)."""
+    if not await require_websocket_api_key(websocket):
+        return
     await ws_manager.connect(websocket)
     try:
         pubsub = state_manager.redis.pubsub()

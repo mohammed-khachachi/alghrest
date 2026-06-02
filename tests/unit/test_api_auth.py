@@ -16,10 +16,11 @@ os.environ.update(
 
 import pytest
 from fastapi.testclient import TestClient
+from fastapi.websockets import WebSocketDisconnect
 from pydantic import ValidationError
 
 from api import main as api_main
-from api.auth import API_KEY_HEADER
+from api.auth import API_KEY_HEADER, API_KEY_QUERY_PARAM
 from core.config import Settings
 
 for key, value in _ORIGINAL_ENV.items():
@@ -36,7 +37,16 @@ def _client(monkeypatch: pytest.MonkeyPatch, *, auth_enabled: bool = True) -> Te
     monkeypatch.setattr(api_main.settings, "api_auth_enabled", auth_enabled)
     monkeypatch.setattr(api_main.settings, "alghrest_api_key", API_KEY)
     monkeypatch.setattr(api_main.state_manager, "get_portfolio", AsyncMock(return_value=None))
+    monkeypatch.setattr(api_main.state_manager, "get_cached_signal", AsyncMock(return_value=None))
     return TestClient(api_main.app)
+
+
+# Protected HTTP endpoints whose auth guard was added in this phase, paired with
+# a substring expected in the (Redis-mocked) success-path response body.
+_PROTECTED_SIGNAL_ENDPOINTS = (
+    ("/api/v1/signals/sentiment/BTC", "No sentiment data available"),
+    ("/api/v1/signals/macro", "Macro regime not yet computed"),
+)
 
 
 def test_unauthenticated_request_fails(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -97,3 +107,61 @@ def test_non_development_rejects_wildcard_origins(environment: str) -> None:
             alghrest_api_key=API_KEY,
             api_allowed_origins="*",
         )
+
+
+# ── Phase 1: signals endpoints now require an API key ────────────────────────
+
+
+@pytest.mark.parametrize("path,_body", _PROTECTED_SIGNAL_ENDPOINTS)
+def test_signal_endpoint_requires_api_key(
+    monkeypatch: pytest.MonkeyPatch, path: str, _body: str
+) -> None:
+    client = _client(monkeypatch)
+
+    response = client.get(path)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Missing API key"
+
+
+@pytest.mark.parametrize("path,_body", _PROTECTED_SIGNAL_ENDPOINTS)
+def test_signal_endpoint_rejects_invalid_api_key(
+    monkeypatch: pytest.MonkeyPatch, path: str, _body: str
+) -> None:
+    client = _client(monkeypatch)
+
+    response = client.get(path, headers={API_KEY_HEADER: "wrong-key"})
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid API key"
+
+
+@pytest.mark.parametrize("path,body", _PROTECTED_SIGNAL_ENDPOINTS)
+def test_signal_endpoint_succeeds_with_valid_api_key(
+    monkeypatch: pytest.MonkeyPatch, path: str, body: str
+) -> None:
+    client = _client(monkeypatch)
+
+    response = client.get(path, headers={API_KEY_HEADER: API_KEY})
+
+    assert response.status_code == 200
+    assert body in response.text
+
+
+# ── Phase 1: /ws/prices now rejects missing/invalid API keys ─────────────────
+
+
+def test_ws_prices_rejects_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client(monkeypatch)
+
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/ws/prices"):
+            pass
+
+
+def test_ws_prices_rejects_invalid_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client(monkeypatch)
+
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect(f"/ws/prices?{API_KEY_QUERY_PARAM}=wrong-key"):
+            pass
