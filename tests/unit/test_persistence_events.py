@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from core.data.models import (
+    AgentMessage,
     AssetClass,
     Exchange,
     Fill,
@@ -181,3 +182,42 @@ def test_kill_switch_event_routes_to_kill_switch_table():
     assert stmt.params["trigger_reason"] == "drawdown halt"
     assert stmt.params["triggered_by_agent"] == 2
     assert stmt.params["drawdown_pct"] == Decimal("0.27")
+
+
+@pytest.mark.unit
+def test_real_agent_message_envelope_maps_through_persistence():
+    """Lock the wire contract between AlghrestConsumer.stream() output and the mapper.
+
+    The producer serialises ``AgentMessage.model_dump(mode="json")`` and the
+    consumer yields that dict verbatim (it does not merge ``record.topic``). The
+    persistence mapper therefore depends on ``AgentMessage`` exposing ``topic`` /
+    ``payload`` / ``message_type`` at the top level. If that envelope ever changes
+    shape this test fails loudly instead of the writer silently skipping every
+    real message in production.
+    """
+    fill = Fill(
+        order_id=uuid4(),
+        exchange_order_id="EX-9",
+        symbol="BTC/USDT",
+        exchange=Exchange.BINANCE,
+        side=OrderSide.BUY,
+        fill_size=Decimal("0.02"),
+        fill_price=Decimal("45200"),
+        fee=Decimal("0.6"),
+    )
+    envelope = AgentMessage(
+        source_agent_id=26,
+        topic=KafkaTopic.FILLS_CONFIRMED,
+        message_type="Fill",
+        payload=fill.model_dump(mode="json"),
+    ).model_dump(mode="json")
+
+    # The keys the mapper reads must be present at the top level of the envelope.
+    assert {"topic", "payload", "message_type", "source_agent_id"} <= set(envelope)
+
+    statements = build_persistence_statements(envelope)
+
+    assert len(statements) == 1
+    assert statements[0].table == "trading.fills"
+    assert statements[0].params["symbol"] == "BTC/USDT"
+    assert statements[0].params["fill_price"] == Decimal("45200")

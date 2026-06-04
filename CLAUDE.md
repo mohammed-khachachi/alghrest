@@ -11,6 +11,8 @@ This monorepo contains **two independent projects**. Know which one you are in b
 
 When working on HMM_Trading, treat `HMM_Trading/CLAUDE.md` as authoritative — it sets a hard scope boundary forbidding edits to the parent ALGHREST project, bans installing `pandas_ta`/`statsmodels` into that env, and forbids changing the HMM math or wrapper structure. See `docs/monorepo-workflow.md` for how the two projects are intended to coexist.
 
+**One runtime bridge exists:** the Tier 4 `hmm_regime` agent (Agent 37, `agents/tier4_strategies/hmm/agent.py::HMMAgent`) consumes the HMM_Trading research code at runtime — it lazy-loads the GaussianHMM helpers and reads `HMM_Trading/configs/default.json` through an adapter to emit regime-aware proposals. It is paper/simulation-only (no connector calls, no API keys). This is the single point where the two projects touch; everywhere else the boundary holds.
+
 ## Stack
 
 - **Python 3.12 + Poetry**, Pydantic v2, asyncio everywhere
@@ -33,7 +35,7 @@ poetry install --with nlp            # add spaCy for news_analyst NER (optional;
 # Run the full infra stack + agent containers
 docker compose up -d
 docker compose ps
-docker compose logs kafka-init       # confirm 18 topics created
+docker compose logs kafka-init       # confirm 24 topics created (incl. 6 *.dlq)
 
 # Run a single agent locally — uses run_agent.py as universal entry
 python run_agent.py agents.tier1_executive.cio_agent CIOAgent
@@ -112,10 +114,10 @@ ALGHREST is a 37-service autonomous trading system with ~20 trading agents organ
 Tier 1 — Executive (CIO Opus, Risk Governor, ProposalApprover)
 Tier 2 — Intelligence (market data, news, sentiment, macro, geopolitics, on-chain, price publisher)
 Tier 3 — Quant (technical analyst, GARCH volatility, correlation engine)
-Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb, ml_predictor; options_strategist still pending)
+Tier 4 — Strategies (trend, mean-rev, momentum, stat-arb, breakout, macro rotator, cross-ex arb, ml_predictor, hmm_regime; options_strategist still pending)
 Tier 5 — Execution (order router, slippage minimizer, hedge mgr, fee optimizer, liquidation guard, exchange executor; position_sizer is a helper, not a runtime agent)
 Tier 6 — DeFi (yield_farmer, dex_arbitrageur, mev_hunter, bridge_strategist — ⚠️ SKELETON IMPLEMENTATIONS ONLY, NOT PRODUCTION-READY)
-Tier 7 — Monitoring (portfolio tracker, alert manager, compliance, auditor, copy-trading channel)
+Tier 7 — Monitoring (portfolio tracker, alert manager, compliance, auditor, copy-trading channel, persistence writer)
 ```
 
 ### The trade execution pipeline (memorise this — it spans many files)
@@ -136,6 +138,8 @@ Two non-obvious flags piggyback on `ORDERS_PENDING` messages:
 - `_child=True` — SlippageMinimizer marks its TWAP/VWAP child orders so it won't re-split them.
 
 Kill switch path: `RISK_ALERTS` carries `KillSwitchEvent` / `HaltAllStrategies`. `ExchangeExecutor` listens and calls `connector.cancel_order` for every tracked order; failed cancels stay tracked for fill-poll retry.
+
+`ExchangeExecutor` order tracking is restart- and replica-safe via Redis: tracked orders persist in Redis (survive restarts), and fill polling is guarded by a Redis ownership **lease** so only one replica polls a given order at a time. Don't reintroduce in-memory-only order tracking.
 
 ## ⚠️ CRITICAL: Tier 6 DeFi Safety Warning
 
@@ -167,18 +171,18 @@ async def run(self) -> None:
 
 ### Topics
 
-All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (string enum). Kafka topics are created up front by `infra/init/kafka-init.sh` (19 `create_topic` calls including the legacy `orders.approved` alias) — auto-create is **off**. If you add a topic, update both the enum and the init script.
+All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (string enum). Kafka topics are created up front by `infra/init/kafka-init.sh` (24 topics including the legacy `orders.approved` alias and 6 `*.dlq` dead-letter topics, e.g. `proposals.bus.dlq`) — auto-create is **off**. If you add a topic, update both the enum and the init script.
 
 ### State & messaging primitives
 
-- `core/orchestrator/message_bus.py::AlghrestProducer` / `AlghrestConsumer` wrap aiokafka. Use `BaseAgent.publish(topic, payload)` and `self.make_consumer([topics])` rather than instantiating these directly.
+- `core/orchestrator/message_bus.py::AlghrestProducer` / `AlghrestConsumer` wrap aiokafka. Use `BaseAgent.publish(topic, payload)` and `self.make_consumer([topics])` rather than instantiating these directly. The consumer retries transient errors (`tenacity.AsyncRetrying`) and routes poison messages to a dead-letter topic via `DLQ_TOPIC_BY_SOURCE` (`<topic>` → `<topic>.dlq`); DLQ is on by default (`dlq_enabled=True`).
 - `core/orchestrator/state_manager.py::StateManager` is the singleton Redis client (`self.state` on every agent). Carries kill switch, agent health, and `prices:{symbol}` JSON (60s TTL, written by `PricePublisher`).
 - `core/risk/kill_switch.py`, `core/risk/position_limits.py`, `core/risk/risk_engine.py` — risk plumbing used by Risk Governor and ProposalApprover.
 
 ### Adding a new agent
 
 1. File under the correct `agents/tierN_*/` directory.
-2. Inherit `BaseAgent` (or `BaseStrategy` for Tier 4). Set unique `AGENT_ID` (range now 1–36+).
+2. Inherit `BaseAgent` (or `BaseStrategy` for Tier 4). Set unique `AGENT_ID` (range now 1–37+; `hmm_regime` is Agent 37).
 3. Implement `initialize() / run() / shutdown()`. Always include the kill-switch guard in `run()`.
 4. Test locally: `python run_agent.py agents.tierN_category.agent_file AgentClass`
 5. Add a service to `docker-compose.yml` using the same `run_agent.py` pattern.
@@ -208,6 +212,8 @@ When deploying, the inference server is a **separate process** from the agent. D
 ### Other moving parts worth knowing
 
 - `api/main.py` is the production FastAPI app (REST + WebSocket dashboard feed). `api/mock_server.py` is a **separate dev-only mock** that fakes all 36+ agents and live data — use this for dashboard development when you don't want to spin up the full infrastructure stack. They both bind a FastAPI app named `app`; don't run them on the same port.
+- **API-key auth** lives in `api/auth.py`. Sensitive REST endpoints depend on `require_api_key` (header `X-API-Key`); the WebSocket feed uses `require_websocket_api_key` (header `X-API-Key` or `?api_key=` query param). Auth is **enforced automatically** whenever `ENVIRONMENT` is `paper_trading` or `live`, or when `api_auth_enabled=True` (default). The expected key is `ALGHREST_API_KEY` (`core/config.py`); its default `"change-me"` is **rejected** outside `development`, so set a real key before paper/live.
+- **Persistence sink** (`core/persistence/` + Agent 38 `agents/tier7_monitoring/persistence_writer.py::PersistenceWriter`) is the Kafka → TimescaleDB writer. It subscribes to `PERSISTED_TOPICS` (defined in `core/persistence/events.py`), normalises each `AgentMessage` envelope (`build_persistence_statements`), and writes one transaction per event via `TimescalePersistenceRepository` into tables already provisioned by `infra/init/timescale-init.sql` (`market_data.*`, `trading.*`, `risk.*`, `intelligence.*`, `performance.portfolio_snapshots`). The mapper depends on the consumer yielding the full `AgentMessage` dict (top-level `topic`/`payload`/`message_type`) — `tests/unit/test_persistence_events.py::test_real_agent_message_envelope_maps_through_persistence` locks that contract. Unknown topics are ignored; invalid payloads on known topics raise `PersistenceMappingError` (the offset is not committed). Prometheus port `9238`; compose service `agent-persistence-writer`. Note: `kafka_offset` is not carried in the envelope so it persists as `NULL`. End-to-end verification needs the stack: `docker compose up -d timescaledb kafka-1 redis` then `pytest -m integration` (unit tests use a fake session and never touch a real DB).
 - `core/telegram/bot.py` + `bot_manager.py` back the Tier 7 alert manager and copy-trading channel. Telegram credentials (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`) come from `core/config.py` settings. The bot broadcasts formatted trade signals with Arabic UI support.
 - `infra/k8s/` and `infra/terraform/` exist but are scaffold-only (a few manifests / `main.tf` + `variables.tf`). Don't treat them as production-ready deploy targets without filling them in.
 - `connectors/` holds the I/O adapter layer used by execution and intelligence agents — `exchanges/` (per-venue REST/WS clients consumed by `ExchangeExecutor`), `chains/` (on-chain RPC wrappers for Tier 6), `data_providers/` (market-data quote/history/holdings layer used by the dashboard — see below). Agents never call exchange/RPC SDKs directly; they go through these adapters.

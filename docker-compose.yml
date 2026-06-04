@@ -1025,6 +1025,30 @@ services:
         limits:
           memory: 128M
 
+  # Agent 38 — Kafka → TimescaleDB persistence sink (Tier 7)
+  agent-persistence-writer:
+    build: .
+    container_name: alghrest-agent-persistence-writer
+    restart: unless-stopped
+    command: python run_agent.py agents.tier7_monitoring.persistence_writer PersistenceWriter
+    env_file: .env
+    ports:
+      - "9238:9238"
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    networks:
+      alghrest-network:
+        ipv4_address: 172.20.7.38
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   # ═══════════════════════════════════════════════════════
   # API — FastAPI REST + WebSocket
   # ═══════════════════════════════════════════════════════
