@@ -41,7 +41,9 @@ class FakeDlqProducer:
         self.fail = fail
         self.sent: list[dict[str, Any]] = []
 
-    async def send_and_wait(self, topic: str, value: dict[str, Any], key: str | None = None) -> None:
+    async def send_and_wait(
+        self, topic: str, value: dict[str, Any], key: str | None = None
+    ) -> None:
         self.events.append("dlq_publish")
         if self.fail:
             raise RuntimeError("DLQ unavailable")

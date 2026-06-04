@@ -430,16 +430,16 @@ def _build_signal_statement(message: NormalizedKafkaMessage) -> PersistenceState
             )
         """,
         params={
-            "created_at": _parse_datetime(payload.get("timestamp") or payload.get("created_at"), message.timestamp),
+            "created_at": _parse_datetime(
+                payload.get("timestamp") or payload.get("created_at"), message.timestamp
+            ),
             "signal_type": _SIGNAL_TYPES_BY_TOPIC[message.topic],
             "source_agent": _int_or_zero(
                 payload.get("source_agent_id") or payload.get("agent_id") or message.source_agent_id
             ),
             "symbol": payload.get("symbol"),
             "direction": _enum_value(
-                payload.get("direction")
-                or payload.get("signal")
-                or payload.get("regime")
+                payload.get("direction") or payload.get("signal") or payload.get("regime")
             ),
             "confidence": Decimal(str(confidence)) if confidence is not None else None,
             "expires_at": _parse_datetime(payload.get("expires_at"), None),
@@ -477,7 +477,9 @@ def _build_news_statement(message: NormalizedKafkaMessage) -> PersistenceStateme
             "impact_score": _decimal_or_none(payload.get("impact_score")),
             "categories": list(payload.get("categories") or []),
             "entities": list(payload.get("entities") or []),
-            "affected_syms": list(payload.get("affected_symbols") or payload.get("affected_syms") or []),
+            "affected_syms": list(
+                payload.get("affected_symbols") or payload.get("affected_syms") or []
+            ),
             "finbert_label": payload.get("finbert_label"),
             "finbert_conf": _decimal_or_none(payload.get("finbert_conf")),
             "url": payload.get("url"),
@@ -523,7 +525,9 @@ def _build_portfolio_statement(message: NormalizedKafkaMessage) -> PersistenceSt
             "total_capital": total_capital,
             "available_capital": available_capital,
             "unrealized_pnl": _decimal_or_zero(payload.get("unrealized_pnl")),
-            "realized_pnl_day": _decimal_or_zero(payload.get("realized_pnl_day") or payload.get("daily_pnl")),
+            "realized_pnl_day": _decimal_or_zero(
+                payload.get("realized_pnl_day") or payload.get("daily_pnl")
+            ),
             "realized_pnl_total": _decimal_or_zero(payload.get("realized_pnl_total")),
             "open_positions": _int_or_zero(open_positions),
             "exposure_pct": _decimal_or_none(payload.get("exposure_pct")),
@@ -548,17 +552,24 @@ def _build_risk_alert_statement(message: NormalizedKafkaMessage) -> PersistenceS
             ON CONFLICT (alert_id, triggered_at) DO NOTHING
         """,
         params={
-            "alert_id": _coerce_uuid(alert_id, f"risk-alert:{message.topic}:{message.timestamp.isoformat()}"),
-            "triggered_at": _parse_datetime(payload.get("timestamp") or payload.get("triggered_at"), message.timestamp),
+            "alert_id": _coerce_uuid(
+                alert_id, f"risk-alert:{message.topic}:{message.timestamp.isoformat()}"
+            ),
+            "triggered_at": _parse_datetime(
+                payload.get("timestamp") or payload.get("triggered_at"), message.timestamp
+            ),
             "alert_type": _enum_value(payload.get("alert_type") or message.message_type),
-            "risk_level": _enum_value(payload.get("risk_level") or payload.get("severity") or "MEDIUM"),
+            "risk_level": _enum_value(
+                payload.get("risk_level") or payload.get("severity") or "MEDIUM"
+            ),
             "source_agent_id": _int_or_zero(
                 payload.get("source_agent_id") or payload.get("agent_id") or message.source_agent_id
             ),
             "message": str(payload.get("message") or payload.get("reason") or message.message_type),
             "triggered_value": _decimal_or_zero(payload.get("triggered_value")),
             "threshold_value": _decimal_or_zero(payload.get("threshold_value")),
-            "auto_action_taken": payload.get("auto_action_taken") or payload.get("recommended_action"),
+            "auto_action_taken": payload.get("auto_action_taken")
+            or payload.get("recommended_action"),
         },
     )
 
@@ -582,7 +593,9 @@ def _build_kill_switch_statement(message: NormalizedKafkaMessage) -> Persistence
         """,
         params={
             "event_id": _coerce_uuid(event_id, f"kill-switch:{message.timestamp.isoformat()}"),
-            "triggered_at": _parse_datetime(payload.get("timestamp") or payload.get("triggered_at"), message.timestamp),
+            "triggered_at": _parse_datetime(
+                payload.get("timestamp") or payload.get("triggered_at"), message.timestamp
+            ),
             "resolved_at": _parse_datetime(payload.get("resolved_at"), None),
             "triggered_by_agent": _int_or_zero(
                 payload.get("triggered_by_agent")
@@ -590,7 +603,9 @@ def _build_kill_switch_statement(message: NormalizedKafkaMessage) -> Persistence
                 or payload.get("agent_id")
                 or message.source_agent_id
             ),
-            "trigger_reason": str(payload.get("trigger_reason") or payload.get("reason") or message.message_type),
+            "trigger_reason": str(
+                payload.get("trigger_reason") or payload.get("reason") or message.message_type
+            ),
             "drawdown_pct": _decimal_or_zero(payload.get("drawdown_pct")),
             "scope": str(payload.get("scope") or "system"),
             "positions_closed": _int_or_zero(payload.get("positions_closed")),

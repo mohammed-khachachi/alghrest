@@ -288,10 +288,12 @@ async def test_fill_polling_can_resume_after_recovery():
     await ex_b._recover_tracked_orders()
     recovered, _ = ex_b._tracked_orders["EX-POLL"]
 
-    filled = recovered.model_copy(update={
-        "status": OrderStatus.FILLED,
-        "filled_size": Decimal("0.01"),
-    })
+    filled = recovered.model_copy(
+        update={
+            "status": OrderStatus.FILLED,
+            "filled_size": Decimal("0.01"),
+        }
+    )
     conn_b.fetch_order = AsyncMock(return_value=filled)
 
     await ex_b._poll_one("EX-POLL", recovered)
@@ -323,9 +325,7 @@ async def test_router_same_proposal_yields_same_identifiers_across_replicas():
     assert order1["client_order_id"] == order2["client_order_id"]
     assert order1["order_id"] == order2["order_id"]
     # Decision record persisted for audit / recovery.
-    decision = await state.get_json(
-        f"routing:order:{proposal.proposal_id}:decision"
-    )
+    decision = await state.get_json(f"routing:order:{proposal.proposal_id}:decision")
     assert decision is not None
     assert decision["exchange"] == order1["exchange"]
 

@@ -1,4 +1,5 @@
 """API-key authentication helpers for REST and WebSocket routes."""
+
 from __future__ import annotations
 
 import secrets
@@ -47,7 +48,9 @@ async def require_websocket_api_key(websocket: WebSocket) -> bool:
     if not is_api_auth_required():
         return True
 
-    api_key = websocket.headers.get(API_KEY_HEADER) or websocket.query_params.get(API_KEY_QUERY_PARAM)
+    api_key = websocket.headers.get(API_KEY_HEADER) or websocket.query_params.get(
+        API_KEY_QUERY_PARAM
+    )
     if not api_key:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing API key")
         return False

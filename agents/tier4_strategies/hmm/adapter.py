@@ -29,9 +29,8 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -77,13 +76,13 @@ def _load_hmm_trading_functions():
     """
     try:
         with _hmm_trading_on_path():
-            from src.data.loader import load_data                          # noqa: PLC0415
-            from src.models.features import compute_features, get_feature_matrix  # noqa: PLC0415
-            from src.models.hmm import train_hmm, decode_states            # noqa: PLC0415
-            from src.analysis.regime import (                              # noqa: PLC0415
-                compute_regime_stats,
+            from src.analysis.regime import (
                 assign_regime_labels,
+                compute_regime_stats,
             )
+            from src.data.loader import load_data
+            from src.models.features import compute_features, get_feature_matrix
+            from src.models.hmm import decode_states, train_hmm
         return {
             "load_data": load_data,
             "compute_features": compute_features,
@@ -104,7 +103,8 @@ def _load_hmm_trading_functions():
 # Regime → ALGHREST signal helpers
 # ---------------------------------------------------------------------------
 
-def _parse_regime_label(label: str) -> Tuple[str, str]:
+
+def _parse_regime_label(label: str) -> tuple[str, str]:
     """
     Split a composite HMM_Trading label such as 'Bullish / Low-Vol'
     into (direction, vol_level).
@@ -151,9 +151,9 @@ def regime_to_confidence(label: str) -> float:
         return 0.30
 
     vol_confidence = {
-        "Low-Vol":      0.75,
+        "Low-Vol": 0.75,
         "Moderate-Vol": 0.60,
-        "High-Vol":     0.45,
+        "High-Vol": 0.45,
     }
     return vol_confidence.get(vol_level, 0.55)
 
@@ -161,6 +161,7 @@ def regime_to_confidence(label: str) -> float:
 # ---------------------------------------------------------------------------
 # HMMAdapter
 # ---------------------------------------------------------------------------
+
 
 class HMMAdapter:
     """
@@ -178,13 +179,13 @@ class HMMAdapter:
 
     def __init__(
         self,
-        config_path: Optional[Path] = None,
-        hmm_trading_root: Optional[Path] = None,
+        config_path: Path | None = None,
+        hmm_trading_root: Path | None = None,
     ) -> None:
         self._hmm_root = Path(hmm_trading_root) if hmm_trading_root else _HMM_TRADING_ROOT
         self._config_path = Path(config_path) if config_path else _DEFAULT_CONFIG
         self._config: dict[str, Any] = self._load_config()
-        self._fns: Optional[dict] = None  # lazy-loaded
+        self._fns: dict | None = None  # lazy-loaded
 
     # ── Config ────────────────────────────────────────────────────────────────
 
@@ -244,9 +245,9 @@ class HMMAdapter:
 
     def load_data(
         self,
-        ticker: Optional[str] = None,
-        start: Optional[str] = None,
-        end: Optional[str] = None,
+        ticker: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
     ) -> pd.DataFrame:
         """
         Download or generate OHLCV data via HMM_Trading's loader.
@@ -276,7 +277,7 @@ class HMMAdapter:
         except Exception as exc:
             raise HMMAdapterError(f"Data loading failed: {exc}") from exc
 
-    def train(self, df: pd.DataFrame) -> Tuple[Any, dict[str, Any]]:
+    def train(self, df: pd.DataFrame) -> tuple[Any, dict[str, Any]]:
         """
         Compute features and train the GaussianHMM on OHLCV data.
 
@@ -288,21 +289,21 @@ class HMMAdapter:
         try:
             fns = self._get_fns()
             with _hmm_trading_on_path():
-                X, dates, _scaler = fns["get_feature_matrix"](
+                feature_matrix, dates, _scaler = fns["get_feature_matrix"](
                     df,
                     feature_cols=self._config.get("feature_cols"),
                     verbose=False,
                     config=self._config,
                 )
                 model = fns["train_hmm"](
-                    X,
+                    feature_matrix,
                     n_states=self._config.get("n_states", 3),
                     covariance_type=self._config.get("covariance_type", "full"),
                     n_iter=self._config.get("n_iter", 200),
                     random_state=self._config.get("random_state", 42),
                     verbose=False,
                 )
-                states = fns["decode_states"](model, X, verbose=False)
+                states = fns["decode_states"](model, feature_matrix, verbose=False)
                 feat_df = fns["compute_features"](df, verbose=False, config=self._config).loc[dates]
                 stats_df = fns["compute_regime_stats"](feat_df, states, df)
                 labels = fns["assign_regime_labels"](stats_df, config=self._config)
@@ -310,7 +311,7 @@ class HMMAdapter:
             logger.info(
                 "HMM trained: %d states, %d observations. Regimes: %s",
                 self._config.get("n_states", 3),
-                len(X),
+                len(feature_matrix),
                 labels,
             )
             return model, {
@@ -320,7 +321,7 @@ class HMMAdapter:
                 "stats_df": stats_df,
                 "feature_cols": self._config.get("feature_cols"),
                 "scaler": _scaler,
-                "X": X,
+                "X": feature_matrix,
             }
         except HMMAdapterError:
             raise
@@ -332,7 +333,7 @@ class HMMAdapter:
         model: Any,
         df: pd.DataFrame,
         labels: dict[int, str],
-    ) -> Tuple[str, float, int]:
+    ) -> tuple[str, float, int]:
         """
         Infer the *current* market regime from the latest OHLCV window.
 
@@ -351,18 +352,18 @@ class HMMAdapter:
         try:
             fns = self._get_fns()
             with _hmm_trading_on_path():
-                X, _, _ = fns["get_feature_matrix"](
+                feature_matrix, _, _ = fns["get_feature_matrix"](
                     df,
                     feature_cols=self._config.get("feature_cols"),
                     verbose=False,
                     config=self._config,
                 )
-                if len(X) == 0:
+                if len(feature_matrix) == 0:
                     raise HMMAdapterError("No valid feature rows after warm-up — need more data.")
 
                 # Use model.predict for the current-regime assignment
                 # (posterior decoding; lighter than full Viterbi on a long sequence)
-                current_state = int(model.predict(X)[-1])
+                current_state = int(model.predict(feature_matrix)[-1])
 
             regime_label = labels.get(current_state, "Unknown")
             confidence = regime_to_confidence(regime_label)
@@ -392,11 +393,11 @@ class HMMAdapter:
 
         records = [
             {
-                "time":   b.time,
-                "open":   float(b.open),
-                "high":   float(b.high),
-                "low":    float(b.low),
-                "close":  float(b.close),
+                "time": b.time,
+                "open": float(b.open),
+                "high": float(b.high),
+                "low": float(b.low),
+                "close": float(b.close),
                 "volume": float(b.volume),
             }
             for b in bars

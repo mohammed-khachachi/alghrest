@@ -13,13 +13,15 @@ Every agent gets:
   - Heartbeat reporting
   - Kill switch awareness
 """
+
 from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
+import pandas as pd
 import psutil
 import structlog
 
@@ -42,9 +44,10 @@ from core.utils.metrics import (
     agent_memory_mb,
     agent_messages_failed,
     agent_messages_processed,
-    agent_processing_latency,
-    agent_status as agent_status_metric,
     start_metrics_server,
+)
+from core.utils.metrics import (
+    agent_status as agent_status_metric,
 )
 
 
@@ -54,7 +57,9 @@ class BaseAgent(ABC):
     Subclasses implement initialize(), run(), and shutdown().
     """
 
-    def __init__(self, agent_id: int, tier: int, name: str, config: Optional[AgentConfig] = None) -> None:
+    def __init__(
+        self, agent_id: int, tier: int, name: str, config: AgentConfig | None = None
+    ) -> None:
         self.agent_id = agent_id
         self.tier = tier
         self.name = name
@@ -64,9 +69,7 @@ class BaseAgent(ABC):
         self._messages_processed = 0
         self._messages_failed = 0
 
-        self.logger = structlog.get_logger(name).bind(
-            agent_id=agent_id, tier=tier, agent=name
-        )
+        self.logger = structlog.get_logger(name).bind(agent_id=agent_id, tier=tier, agent=name)
         self.producer = AlghrestProducer()
         self.state = state_manager
 
@@ -100,8 +103,12 @@ class BaseAgent(ABC):
         # 🚨 DeFi Safety Override: Tier 6 DeFi agents are highly risky skeletons
         # and must remain disabled unless enable_defi_agents is explicitly set to True
         if self.tier == 6 and not settings.enable_defi_agents:
-            self.logger.critical("DEFI AGENTS SAFETY LOCK TRIGGERED: Tier 6 agents cannot be run with enable_defi_agents=False")
-            raise RuntimeError("Tier 6 DeFi agent execution blocked by safety settings. Set ENABLE_DEFI_AGENTS=true in .env to proceed (educational mock environment only).")
+            self.logger.critical(
+                "DEFI AGENTS SAFETY LOCK TRIGGERED: Tier 6 agents cannot be run with enable_defi_agents=False"
+            )
+            raise RuntimeError(
+                "Tier 6 DeFi agent execution blocked by safety settings. Set ENABLE_DEFI_AGENTS=true in .env to proceed (educational mock environment only)."
+            )
 
         try:
             await self.state.initialize()
@@ -159,9 +166,9 @@ class BaseAgent(ABC):
                 try:
                     proc = psutil.Process()
                     mem_mb = proc.memory_info().rss / 1_048_576
-                    agent_memory_mb.labels(
-                        agent_id=str(self.agent_id), agent_name=self.name
-                    ).set(mem_mb)
+                    agent_memory_mb.labels(agent_id=str(self.agent_id), agent_name=self.name).set(
+                        mem_mb
+                    )
                 except Exception:
                     pass
 
@@ -172,7 +179,9 @@ class BaseAgent(ABC):
 
     # ── MESSAGING ─────────────────────────────────────────────────────────────
 
-    async def publish(self, topic: KafkaTopic, payload: dict[str, Any], message_type: str = "") -> None:
+    async def publish(
+        self, topic: KafkaTopic, payload: dict[str, Any], message_type: str = ""
+    ) -> None:
         """Publish an AgentMessage to a Kafka topic."""
         msg = AgentMessage(
             source_agent_id=self.agent_id,
@@ -236,8 +245,6 @@ class BaseAgent(ABC):
 # BASE STRATEGY — Tier 4 agents
 # =============================================================================
 
-import pandas as pd
-
 
 class BaseStrategy(BaseAgent, ABC):
     """
@@ -253,11 +260,11 @@ class BaseStrategy(BaseAgent, ABC):
         capital_pct: float,
         max_positions: int = 5,
         risk_per_trade: float = 0.01,
-        config: Optional[AgentConfig] = None,
+        config: AgentConfig | None = None,
     ) -> None:
         super().__init__(agent_id=agent_id, tier=4, name=name, config=config)
         self.strategy_id = strategy_id
-        self.capital_pct = capital_pct        # Fraction of total capital for this sleeve
+        self.capital_pct = capital_pct  # Fraction of total capital for this sleeve
         self.max_positions = max_positions
         self.risk_per_trade = min(risk_per_trade, 0.01)  # Never more than 1%
         self._consecutive_losses = 0
@@ -266,7 +273,7 @@ class BaseStrategy(BaseAgent, ABC):
     # ── ABSTRACT STRATEGY INTERFACE ───────────────────────────────────────────
 
     @abstractmethod
-    async def generate_signal(self, market_state: MarketState) -> Optional[TradeProposal]:
+    async def generate_signal(self, market_state: MarketState) -> TradeProposal | None:
         """
         Core strategy logic. Returns a TradeProposal or None.
         Called by the run() loop every time MarketState is updated.

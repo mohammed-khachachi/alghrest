@@ -3,12 +3,11 @@ Agent 20 — Order Router
 Smart order routing: selects the best exchange per symbol based on
 spread, liquidity, fees, and latency. Converts TradeProposals → Orders.
 """
+
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Optional
 from uuid import NAMESPACE_DNS, uuid5
 
 import structlog
@@ -30,15 +29,15 @@ log = structlog.get_logger(__name__)
 
 # Taker fee in basis points per exchange
 _TAKER_FEES: dict[Exchange, float] = {
-    Exchange.BINANCE:  7.5,
-    Exchange.BYBIT:   10.0,
+    Exchange.BINANCE: 7.5,
+    Exchange.BYBIT: 10.0,
     Exchange.COINBASE: 20.0,
-    Exchange.OKX:      8.0,
-    Exchange.KRAKEN:  16.0,
+    Exchange.OKX: 8.0,
+    Exchange.KRAKEN: 16.0,
 }
 
-_LARGE_ORDER_USD = Decimal("5000")   # Above this, use TWAP instead of MARKET
-_PROPOSAL_TTL_SECONDS = 60            # Proposals older than 60s are stale
+_LARGE_ORDER_USD = Decimal("5000")  # Above this, use TWAP instead of MARKET
+_PROPOSAL_TTL_SECONDS = 60  # Proposals older than 60s are stale
 
 # Deterministic identifier derivation: a given proposal_id always maps to the
 # SAME order_id / client_order_id, on any replica and on Kafka redelivery. This
@@ -51,7 +50,7 @@ _ORDER_ID_NS = uuid5(NAMESPACE_DNS, "alghrest.execution.order_id")
 # Routing decision record — for audit and restart recovery only; correctness
 # does not depend on reading it back.
 _NS_ROUTE_DECISION = "routing:order:{proposal_id}:decision"
-_ROUTE_DECISION_TTL = 3600           # 1h: covers redelivery + restart, not forever
+_ROUTE_DECISION_TTL = 3600  # 1h: covers redelivery + restart, not forever
 
 
 class OrderRouter(BaseAgent):
@@ -63,7 +62,7 @@ class OrderRouter(BaseAgent):
 
     AGENT_ID = 20
 
-    def __init__(self, config: Optional[AgentConfig] = None) -> None:
+    def __init__(self, config: AgentConfig | None = None) -> None:
         super().__init__(
             agent_id=self.AGENT_ID,
             tier=5,
@@ -71,7 +70,9 @@ class OrderRouter(BaseAgent):
             config=config,
         )
         self._connector = MultiExchangeConnector()
-        self._routing_cache: dict[str, tuple[Exchange, datetime]] = {}  # symbol → (exchange, cached_at)
+        self._routing_cache: dict[str, tuple[Exchange, datetime]] = (
+            {}
+        )  # symbol → (exchange, cached_at)
         self._cache_ttl = timedelta(seconds=30)
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -91,7 +92,9 @@ class OrderRouter(BaseAgent):
                 await self._route(payload)
             except Exception as exc:
                 log.error("order_router.route_error", error=str(exc))
-                self.record_processing_error(KafkaTopic.PROPOSALS_APPROVED.value, type(exc).__name__)
+                self.record_processing_error(
+                    KafkaTopic.PROPOSALS_APPROVED.value, type(exc).__name__
+                )
 
     async def shutdown(self) -> None:
         await self._connector.close_all()
@@ -108,7 +111,11 @@ class OrderRouter(BaseAgent):
         # Stale check
         age = (datetime.utcnow() - proposal.created_at).total_seconds()
         if age > _PROPOSAL_TTL_SECONDS:
-            log.warning("order_router.stale_proposal", proposal_id=str(proposal.proposal_id), age_s=round(age))
+            log.warning(
+                "order_router.stale_proposal",
+                proposal_id=str(proposal.proposal_id),
+                age_s=round(age),
+            )
             return
 
         exchange, order_type = await self._routing_decision(proposal)
@@ -144,9 +151,7 @@ class OrderRouter(BaseAgent):
             size_usd=float(proposal.size_usd),
         )
 
-    async def _routing_decision(
-        self, proposal: TradeProposal
-    ) -> tuple[Exchange, OrderType]:
+    async def _routing_decision(self, proposal: TradeProposal) -> tuple[Exchange, OrderType]:
         """
         Resolve (exchange, order_type) for a proposal, reusing a previously
         recorded decision when one exists so redelivery / restart yields the
@@ -190,7 +195,7 @@ class OrderRouter(BaseAgent):
         if cached and (datetime.utcnow() - cached[1]) < self._cache_ttl:
             return cached[0]
 
-        best_exchange = Exchange.BINANCE   # Default fallback
+        best_exchange = Exchange.BINANCE  # Default fallback
         best_score = float("inf")
 
         try:

@@ -4,16 +4,15 @@ Fits GARCH/EGARCH models on realized returns to forecast 1d/7d/30d volatility.
 Classifies volatility regime: Calm / Normal / Volatile / Crisis.
 Publishes VolatilitySignal to volatility.forecast Kafka topic.
 """
+
 from __future__ import annotations
 
 import asyncio
 import warnings
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
 
 import numpy as np
-import pandas as pd
 import structlog
 
 try:
@@ -22,20 +21,26 @@ except ImportError:
     arch_model = None
 
 from agents.base_agent import BaseAgent
-from core.data.models import KafkaTopic, OHLCVBar, SignalDirection, VolatilityRegime, VolatilitySignal
+from core.data.models import (
+    KafkaTopic,
+    OHLCVBar,
+    SignalDirection,
+    VolatilityRegime,
+    VolatilitySignal,
+)
 
 logger = structlog.get_logger(__name__)
 warnings.filterwarnings("ignore", category=UserWarning)  # Suppress ARCH convergence warnings
 
-MIN_BARS_FOR_GARCH = 60    # Minimum observations for reliable GARCH fit
+MIN_BARS_FOR_GARCH = 60  # Minimum observations for reliable GARCH fit
 MAX_BARS = 500
 
 # Volatility regime thresholds (annualized %)
 VOL_THRESHOLDS = {
-    VolatilityRegime.CALM:     (0, 10),
-    VolatilityRegime.NORMAL:   (10, 25),
+    VolatilityRegime.CALM: (0, 10),
+    VolatilityRegime.NORMAL: (10, 25),
     VolatilityRegime.VOLATILE: (25, 50),
-    VolatilityRegime.CRISIS:   (50, float("inf")),
+    VolatilityRegime.CRISIS: (50, float("inf")),
 }
 
 
@@ -112,22 +117,24 @@ class VolatilityForecaster(BaseAgent):
                 self.record_processing_error("prices.realtime", type(e).__name__)
                 self.logger.warning("vol computation failed", error=str(e))
 
-    def _compute_volatility_signal(self, symbol: str, closes: list[float]) -> Optional[VolatilitySignal]:
+    def _compute_volatility_signal(
+        self, symbol: str, closes: list[float]
+    ) -> VolatilitySignal | None:
         """
         CPU-bound: fit GARCH model and generate volatility forecasts.
         Runs in thread executor so it doesn't block the event loop.
         """
         try:
             prices = np.array(closes)
-            # Log returns × 100 for numerical stability in GARCH
+            # Log returns x 100 for numerical stability in GARCH
             returns = np.diff(np.log(prices)) * 100
             if len(returns) < MIN_BARS_FOR_GARCH:
                 return None
 
             # ── Realized volatility ───────────────────────────────────────────
-            rv_1d = float(returns[-1:].std() * np.sqrt(252))     # Last day (annualized)
-            rv_7d = float(returns[-7:].std() * np.sqrt(252))     # 7-day
-            rv_30d = float(returns[-30:].std() * np.sqrt(252))   # 30-day
+            rv_1d = float(returns[-1:].std() * np.sqrt(252))  # Last day (annualized)
+            rv_7d = float(returns[-7:].std() * np.sqrt(252))  # 7-day
+            rv_30d = float(returns[-30:].std() * np.sqrt(252))  # 30-day
 
             # ── GARCH(1,1) fit ────────────────────────────────────────────────
             garch_forecast = self._fit_garch(returns)
@@ -135,8 +142,12 @@ class VolatilityForecaster(BaseAgent):
             # ── EGARCH for asymmetric volatility ──────────────────────────────
             egarch_forecast = self._fit_egarch(returns)
 
-            # Use GARCH as primary, EGARCH as robustness check
-            forecast_1d = garch_forecast if garch_forecast else rv_1d
+            # Use GARCH as primary, then EGARCH, then realized volatility.
+            forecast_1d = (
+                garch_forecast
+                if garch_forecast is not None
+                else egarch_forecast if egarch_forecast is not None else rv_1d
+            )
             forecast_7d = forecast_1d * np.sqrt(7) / np.sqrt(252) * np.sqrt(252)
             forecast_30d = forecast_1d * np.sqrt(30) / np.sqrt(252) * np.sqrt(252)
 
@@ -168,7 +179,7 @@ class VolatilityForecaster(BaseAgent):
             return None
 
     @staticmethod
-    def _fit_garch(returns: np.ndarray) -> Optional[float]:
+    def _fit_garch(returns: np.ndarray) -> float | None:
         """Fit GARCH(1,1) and return 1-step-ahead annualized volatility forecast."""
         if arch_model is None:
             return None
@@ -185,7 +196,7 @@ class VolatilityForecaster(BaseAgent):
             return None
 
     @staticmethod
-    def _fit_egarch(returns: np.ndarray) -> Optional[float]:
+    def _fit_egarch(returns: np.ndarray) -> float | None:
         """Fit EGARCH(1,1) for asymmetric (leverage) effect."""
         if arch_model is None:
             return None
@@ -200,7 +211,7 @@ class VolatilityForecaster(BaseAgent):
             return None
 
     @staticmethod
-    def _hurst_exponent(returns: np.ndarray, lags: int = 20) -> Optional[float]:
+    def _hurst_exponent(returns: np.ndarray, lags: int = 20) -> float | None:
         """
         Estimate Hurst exponent via R/S analysis.
         H < 0.5: mean-reverting, H = 0.5: random walk, H > 0.5: trending.
@@ -212,7 +223,7 @@ class VolatilityForecaster(BaseAgent):
             rs_list = []
             lag_list = []
             for lag in range(2, min(lags, len(ts) // 4)):
-                chunks = [ts[i:i+lag] for i in range(0, len(ts) - lag, lag)]
+                chunks = [ts[i : i + lag] for i in range(0, len(ts) - lag, lag)]
                 rs_values = []
                 for chunk in chunks:
                     if len(chunk) < 2:

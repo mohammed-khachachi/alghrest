@@ -1,4 +1,5 @@
 """Market-data REST surface used by the dashboard symbol selector + market panel."""
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -37,10 +38,7 @@ async def get_quotes(
     quotes = await _router().quote_many(requested)
     return {
         "as_of": ANCHOR_DATE.isoformat(),
-        "quotes": [
-            {**asdict(q), "asset_class": q.asset_class.value}
-            for q in quotes
-        ],
+        "quotes": [{**asdict(q), "asset_class": q.asset_class.value} for q in quotes],
     }
 
 
@@ -52,7 +50,7 @@ async def get_history(
     try:
         bars = await _router().history(symbol, days)
     except UnknownSymbolError:
-        raise HTTPException(status_code=404, detail=f"Unknown symbol: {symbol}")
+        raise HTTPException(status_code=404, detail=f"Unknown symbol: {symbol}") from None
     return {
         "symbol": symbol.upper(),
         "as_of": ANCHOR_DATE.isoformat(),

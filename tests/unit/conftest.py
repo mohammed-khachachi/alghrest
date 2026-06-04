@@ -24,12 +24,12 @@ from __future__ import annotations
 import json as _json
 import sys
 import types
-from unittest.mock import AsyncMock, MagicMock
-
+from unittest.mock import MagicMock
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _mod(name: str) -> types.ModuleType:
     """Create a stub module, register it, and return it."""
@@ -42,14 +42,15 @@ def _ensure(name: str) -> bool:
     """Return True if the module was NOT already present (i.e. we need to stub it)."""
     try:
         __import__(name)
-        return False          # real package available — don't stub
+        return False  # real package available — don't stub
     except (ImportError, ModuleNotFoundError):
-        return True           # absent — stub needed
+        return True  # absent — stub needed
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stub definitions
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _stub_tenacity() -> None:
     if not _ensure("tenacity"):
@@ -67,12 +68,23 @@ def _stub_tenacity() -> None:
 
     # AsyncRetrying must be usable as `async with AsyncRetrying(...) as r:`
     class _AsyncRetrying:
-        def __init__(self, *a, **kw): pass
-        async def __aenter__(self): return self
-        async def __aexit__(self, *a): pass
-        def __call__(self, *a, **kw): return self
-        def __aiter__(self): return self
-        async def __anext__(self): raise StopAsyncIteration
+        def __init__(self, *a, **kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            pass
+
+        def __call__(self, *a, **kw):
+            return self
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise StopAsyncIteration
 
     ten.AsyncRetrying = _AsyncRetrying
     ten.RetryError = type("RetryError", (Exception,), {})
@@ -114,11 +126,11 @@ def _stub_redis() -> None:
     # redis.asyncio  — must expose Redis, ConnectionPool
     if _ensure("redis.asyncio"):
         ra = _mod("redis.asyncio")
-        _FakeConnectionPool = MagicMock
-        _FakeRedis = MagicMock
-        ra.Redis = _FakeRedis
-        ra.ConnectionPool = _FakeConnectionPool
-        ra.StrictRedis = _FakeRedis
+        _fake_connection_pool = MagicMock
+        _fake_redis = MagicMock
+        ra.Redis = _fake_redis
+        ra.ConnectionPool = _fake_connection_pool
+        ra.StrictRedis = _fake_redis
 
     # redis.asyncio.lock  — must expose Lock
     if _ensure("redis.asyncio.lock"):
@@ -170,6 +182,7 @@ def _stub_pydantic_settings() -> None:
 
     class _BaseSettings:
         """Minimal stand-in so core/config.py::Settings inherits from something."""
+
         model_config: dict = {}
 
         def __init_subclass__(cls, **kw):
@@ -194,6 +207,7 @@ def _stub_misc() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def inject_stubs() -> None:
     """

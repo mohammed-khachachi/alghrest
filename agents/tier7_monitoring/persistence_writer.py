@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 import structlog
 
@@ -24,7 +23,7 @@ class PersistenceWriter(BaseAgent):
 
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
+        config: AgentConfig | None = None,
         repository: TimescalePersistenceRepository | None = None,
     ) -> None:
         super().__init__(

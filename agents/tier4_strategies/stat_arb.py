@@ -1,15 +1,15 @@
 """
 Agent 21 — Statistical Arbitrage (Pairs Trading)
 Cointegrated pairs identified via ADF test.
-Entry on Z-score ±2, exit at Z-score 0. Stop at ±3.5σ.
+Entry on Z-score +/-2, exit at Z-score 0. Stop at +/-3.5 sigma.
 """
+
 from __future__ import annotations
 
 import asyncio
 from collections import defaultdict, deque
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -32,19 +32,18 @@ from core.data.models import (
     OrderSide,
     OrderType,
     Position,
-    SignalDirection,
     Timeframe,
     TradeProposal,
 )
 
 log = structlog.get_logger(__name__)
 
-_ADF_PVALUE = 0.05       # Cointegration significance
+_ADF_PVALUE = 0.05  # Cointegration significance
 _ZSCORE_ENTRY = 2.0
 _ZSCORE_EXIT = 0.3
 _ZSCORE_STOP = 3.5
 _MIN_BARS = 120
-_RESCAN_HOURS = 24       # Re-scan pairs every 24 h
+_RESCAN_HOURS = 24  # Re-scan pairs every 24 h
 _SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "LINK/USDT"]
 _PAIRS = [
     ("BTC/USDT", "ETH/USDT"),
@@ -55,7 +54,7 @@ _PAIRS = [
 ]
 
 
-def _cointegration_hedge_ratio(y: np.ndarray, x: np.ndarray) -> Optional[float]:
+def _cointegration_hedge_ratio(y: np.ndarray, x: np.ndarray) -> float | None:
     """OLS hedge ratio and ADF test on residuals. Returns ratio if cointegrated."""
     if adfuller is None:
         return None
@@ -67,7 +66,7 @@ def _cointegration_hedge_ratio(y: np.ndarray, x: np.ndarray) -> Optional[float]:
     hedge = np.cov(y, x)[0, 1] / np.var(x)
     spread = y - hedge * x
     try:
-        adf_stat, p_value, *_ = adfuller(spread, maxlag=1, autolag=None)
+        _adf_stat, p_value, *_ = adfuller(spread, maxlag=1, autolag=None)
         if p_value < _ADF_PVALUE:
             return float(hedge)
     except Exception:
@@ -84,7 +83,7 @@ class StatArb(BaseStrategy):
     max_positions = 4
     risk_per_trade = 0.006
 
-    def __init__(self, config: Optional[AgentConfig] = None) -> None:
+    def __init__(self, config: AgentConfig | None = None) -> None:
         super().__init__(
             agent_id=self.AGENT_ID,
             name="StatArb",
@@ -97,7 +96,7 @@ class StatArb(BaseStrategy):
         self._bars: dict[str, deque[OHLCVBar]] = defaultdict(lambda: deque(maxlen=300))
         self._hedge_ratios: dict[tuple[str, str], float] = {}
         self._active_pairs: dict[tuple[str, str], float] = {}  # pair → entry z-score
-        self._last_scan: Optional[datetime] = None
+        self._last_scan: datetime | None = None
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -129,7 +128,10 @@ class StatArb(BaseStrategy):
     async def _scan_pairs(self) -> None:
         # Re-fit hedge ratios once per day
         now = datetime.utcnow()
-        if self._last_scan is None or (now - self._last_scan).total_seconds() > _RESCAN_HOURS * 3600:
+        if (
+            self._last_scan is None
+            or (now - self._last_scan).total_seconds() > _RESCAN_HOURS * 3600
+        ):
             await self._fit_pairs()
             self._last_scan = now
 
@@ -185,7 +187,6 @@ class StatArb(BaseStrategy):
             elif z >= _ZSCORE_ENTRY:
                 await self._enter_pair(pair, "short_spread", z, bars_y[-1], bars_x[-1], hedge, std)
         else:
-            entry_z = self._active_pairs[pair]
             if abs(z) <= _ZSCORE_EXIT:
                 await self._exit_pair(pair, "reversion", z)
             elif abs(z) >= _ZSCORE_STOP:
@@ -207,7 +208,9 @@ class StatArb(BaseStrategy):
             return
 
         sleeve = portfolio.total_capital * Decimal(str(self.capital_pct))
-        size_usd = min(sleeve / Decimal(str(self.max_positions)), portfolio.total_capital * Decimal("0.04"))
+        size_usd = min(
+            sleeve / Decimal(str(self.max_positions)), portfolio.total_capital * Decimal("0.04")
+        )
         if size_usd < Decimal("20"):
             return
 
@@ -223,13 +226,10 @@ class StatArb(BaseStrategy):
         qty_x = qty_y * Decimal(str(abs(hedge)))
         size_usd_x = qty_x * Decimal(str(price_x))
 
-        sig_dir = SignalDirection.BULLISH if direction == "long_spread" else SignalDirection.BEARISH
-
         for sym, side, qty, sz_usd, price in [
             (sym_y, side_y, qty_y, size_usd, price_y),
             (sym_x, side_x, qty_x, size_usd_x, price_x),
         ]:
-            stop_usd = spread_std * _ZSCORE_STOP
             proposal = TradeProposal(
                 strategy_id=self.strategy_id,
                 agent_id=self.AGENT_ID,
@@ -246,7 +246,9 @@ class StatArb(BaseStrategy):
                 confidence_score=min(0.85, abs(z) / _ZSCORE_STOP),
                 rationale=f"StatArb {sym_y}/{sym_x} z={z:.2f} direction={direction}",
             )
-            await self.publish(KafkaTopic.PROPOSALS_BUS, proposal.model_dump(mode="json"), "TradeProposal")
+            await self.publish(
+                KafkaTopic.PROPOSALS_BUS, proposal.model_dump(mode="json"), "TradeProposal"
+            )
 
         self._active_pairs[pair] = z
         log.info("stat_arb.entry", pair=f"{sym_y}/{sym_x}", z=round(z, 3), direction=direction)
@@ -259,7 +261,7 @@ class StatArb(BaseStrategy):
 
     # ── Strategy interface ─────────────────────────────────────────────────────
 
-    async def generate_signal(self, market_state: MarketState) -> Optional[TradeProposal]:
+    async def generate_signal(self, market_state: MarketState) -> TradeProposal | None:
         return None
 
     async def should_exit(self, position: Position, market_state: MarketState) -> bool:
@@ -267,6 +269,7 @@ class StatArb(BaseStrategy):
 
     def backtest(self, data: pd.DataFrame, params: dict) -> BacktestResult:
         from backtesting.engine import BacktestEngine
+
         engine = BacktestEngine()
         signals = pd.Series(0, index=data.index)
         return engine.run(data, signals, self.strategy_id)

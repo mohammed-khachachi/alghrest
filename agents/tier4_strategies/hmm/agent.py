@@ -40,7 +40,7 @@ import asyncio
 from collections import deque
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import structlog
@@ -62,7 +62,6 @@ from core.data.models import (
     OrderSide,
     OrderType,
     Position,
-    SignalDirection,
     Timeframe,
     TradeProposal,
 )
@@ -70,11 +69,11 @@ from core.data.models import (
 log = structlog.get_logger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
-_MIN_BARS = 100              # Need at least ~5 months of daily data for warm-up
-_MAX_BARS = 1500             # Rolling window cap (≈ 6 years of daily bars)
-_INFERENCE_INTERVAL = 3600   # Re-infer regime every 60 minutes (in seconds)
-_TRAIN_TIMEOUT_S = 300       # Max seconds allowed for the initial training step
-_SYMBOL = "BTC/USDT"        # Primary symbol for regime-driven proposals
+_MIN_BARS = 100  # Need at least ~5 months of daily data for warm-up
+_MAX_BARS = 1500  # Rolling window cap (≈ 6 years of daily bars)
+_INFERENCE_INTERVAL = 3600  # Re-infer regime every 60 minutes (in seconds)
+_TRAIN_TIMEOUT_S = 300  # Max seconds allowed for the initial training step
+_SYMBOL = "BTC/USDT"  # Primary symbol for regime-driven proposals
 
 
 class HMMAgent(BaseStrategy):
@@ -88,11 +87,11 @@ class HMMAgent(BaseStrategy):
 
     AGENT_ID = 37
     strategy_id = "hmm_regime_detection"
-    capital_pct = 0.08        # 8% capital sleeve
+    capital_pct = 0.08  # 8% capital sleeve
     max_positions = 2
-    risk_per_trade = 0.008    # 0.8% per trade (below the 1% hard limit)
+    risk_per_trade = 0.008  # 0.8% per trade (below the 1% hard limit)
 
-    def __init__(self, config: Optional[AgentConfig] = None) -> None:
+    def __init__(self, config: AgentConfig | None = None) -> None:
         super().__init__(
             agent_id=self.AGENT_ID,
             name="HMMAgent",
@@ -106,10 +105,10 @@ class HMMAgent(BaseStrategy):
         self._adapter = HMMAdapter()
 
         # State (set during initialize)
-        self._hmm_model: Optional[Any] = None
+        self._hmm_model: Any | None = None
         self._regime_labels: dict[int, str] = {}
-        self._last_inference_ts: Optional[datetime] = None
-        self._last_regime: Optional[str] = None
+        self._last_inference_ts: datetime | None = None
+        self._last_regime: str | None = None
         self._last_confidence: float = 0.0
         self._last_state_id: int = -1
 
@@ -184,7 +183,7 @@ class HMMAgent(BaseStrategy):
                 n_states=len(self._regime_labels),
                 regime_labels=self._regime_labels,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning(
                 "hmm_agent.training_timeout",
                 timeout_s=_TRAIN_TIMEOUT_S,
@@ -285,7 +284,7 @@ class HMMAgent(BaseStrategy):
         regime_label: str,
         signal_direction: str,
         confidence: float,
-    ) -> Optional[TradeProposal]:
+    ) -> TradeProposal | None:
         """
         Convert an HMM regime signal into an ALGHREST TradeProposal.
 
@@ -305,17 +304,19 @@ class HMMAgent(BaseStrategy):
             side = OrderSide.BUY if signal_direction == "BULLISH" else OrderSide.SELL
 
             # Conservative sizing: symbolic placeholder — real sizing done by PositionSizer
-            size_usd = Decimal("0.00")   # ProposalApprover / position sizer overrides this
-            size = Decimal("0.001")      # Symbolic minimum lot
+            size_usd = Decimal("0.00")  # ProposalApprover / position sizer overrides this
+            size = Decimal("0.001")  # Symbolic minimum lot
 
             # Stop/take-profit: use a 5% trailing stop, 10% target (regime-level logic)
             stop_distance = current_price * 0.05
             stop_loss = (
-                current_price - stop_distance if side == OrderSide.BUY
+                current_price - stop_distance
+                if side == OrderSide.BUY
                 else current_price + stop_distance
             )
             take_profit = (
-                current_price + 2 * stop_distance if side == OrderSide.BUY
+                current_price + 2 * stop_distance
+                if side == OrderSide.BUY
                 else current_price - 2 * stop_distance
             )
 
@@ -359,7 +360,7 @@ class HMMAgent(BaseStrategy):
 
     # ── BaseStrategy abstract interface ───────────────────────────────────────
 
-    async def generate_signal(self, market_state: MarketState) -> Optional[TradeProposal]:
+    async def generate_signal(self, market_state: MarketState) -> TradeProposal | None:
         """
         On-demand signal generation (called by the base class if integrated
         into a polling loop). The HMM agent is reactive (bar-driven) so this
@@ -372,9 +373,7 @@ class HMMAgent(BaseStrategy):
         if signal_direction == "NEUTRAL":
             return None
 
-        return self._build_proposal(
-            self._last_regime, signal_direction, self._last_confidence
-        )
+        return self._build_proposal(self._last_regime, signal_direction, self._last_confidence)
 
     async def should_exit(self, position: Position, market_state: MarketState) -> bool:
         """

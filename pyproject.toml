@@ -145,12 +145,15 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 ignore = ["E501", "B008", "RUF012"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ANN"]
 "ml/training/*" = ["T201"]  # Allow print in training scripts
+"core/data/models.py" = ["UP042"]  # Keep str+Enum compatibility for Pydantic models
 
 [tool.black]
 target-version = ["py312"]

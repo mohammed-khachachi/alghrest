@@ -4,12 +4,12 @@ Computes rolling correlation matrices (30d/90d/180d) and tests for cointegration
 Identifies pairs suitable for statistical arbitrage (Kalman spread trading).
 Publishes CorrelationUpdate to correlation.matrix Kafka topic.
 """
+
 from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -22,16 +22,15 @@ except ImportError:
 
 from agents.base_agent import BaseAgent
 from core.data.models import (
+    RISK_LIMITS,
     CorrelationUpdate,
     KafkaTopic,
     OHLCVBar,
-    SignalDirection,
-    RISK_LIMITS,
 )
 
 logger = structlog.get_logger(__name__)
 
-WINDOWS = [30, 90, 180]   # Rolling windows in days
+WINDOWS = [30, 90, 180]  # Rolling windows in days
 MIN_BARS_FOR_CORR = 30
 COINTEGRATION_PVALUE_THRESHOLD = 0.05
 HIGH_CORRELATION_THRESHOLD = RISK_LIMITS.max_correlation_allowed  # 0.85
@@ -58,7 +57,7 @@ class CorrelationEngine(BaseAgent):
         # Daily closing prices per symbol
         self._daily_prices: dict[str, list[tuple[datetime, float]]] = defaultdict(list)
         self._consumer = None
-        self._last_published: Optional[datetime] = None
+        self._last_published: datetime | None = None
 
     async def initialize(self) -> None:
         self._consumer = self.make_consumer(
@@ -136,11 +135,12 @@ class CorrelationEngine(BaseAgent):
             except Exception as e:
                 self.logger.error("correlation computation failed", error=str(e))
 
-    def _compute_all_correlations(self) -> Optional[CorrelationUpdate]:
+    def _compute_all_correlations(self) -> CorrelationUpdate | None:
         """CPU-bound computation: correlations, cointegration, effective N."""
         # Get symbols with at least 30 days of data
         eligible = {
-            sym: prices for sym, prices in self._daily_prices.items()
+            sym: prices
+            for sym, prices in self._daily_prices.items()
             if len(prices) >= MIN_BARS_FOR_CORR
         }
         if len(eligible) < 2:
@@ -166,17 +166,13 @@ class CorrelationEngine(BaseAgent):
         # Build nested dict for serialization
         symbols = list(corr_90d.columns)
         corr_matrix = {
-            sym1: {
-                sym2: float(corr_90d.loc[sym1, sym2])
-                for sym2 in symbols
-            }
-            for sym1 in symbols
+            sym1: {sym2: float(corr_90d.loc[sym1, sym2]) for sym2 in symbols} for sym1 in symbols
         }
 
         # ── High correlation pairs ─────────────────────────────────────────
         high_corr_pairs = []
         for i, s1 in enumerate(symbols):
-            for s2 in symbols[i+1:]:
+            for s2 in symbols[i + 1 :]:
                 corr_val = corr_90d.loc[s1, s2]
                 if abs(corr_val) >= HIGH_CORRELATION_THRESHOLD:
                     high_corr_pairs.append((s1, s2, float(corr_val)))
@@ -210,7 +206,7 @@ class CorrelationEngine(BaseAgent):
         )
 
     @staticmethod
-    def _test_cointegration(price_a: np.ndarray, price_b: np.ndarray) -> Optional[float]:
+    def _test_cointegration(price_a: np.ndarray, price_b: np.ndarray) -> float | None:
         """
         Engle-Granger cointegration test.
         Returns estimated half-life in days if cointegrated, else None.

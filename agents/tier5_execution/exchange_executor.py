@@ -34,12 +34,12 @@ Kill switch behaviour:
   - When `is_halted()` is true, no new orders are placed; in-flight tracked
     orders are NOT cancelled here (that is the job of `core/risk/kill_switch`).
 """
+
 from __future__ import annotations
 
 import asyncio
 import os
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 import structlog
@@ -50,7 +50,6 @@ from core.data.models import (
     AgentConfig,
     AlertType,
     Exchange,
-    Fill,
     KafkaTopic,
     Order,
     OrderStatus,
@@ -61,9 +60,9 @@ from core.data.models import (
 
 log = structlog.get_logger(__name__)
 
-_FILL_POLL_INTERVAL = 5         # seconds between fill polling sweeps
+_FILL_POLL_INTERVAL = 5  # seconds between fill polling sweeps
 _LOCK_TIMEOUT = 30.0
-_PLACED_TTL = 86_400            # 24h dedup window for client_order_id
+_PLACED_TTL = 86_400  # 24h dedup window for client_order_id
 
 # Durable tracking of open orders — the source of truth for fill polling and
 # kill-switch cancellation. Written WITHOUT a TTL on purpose: a resting limit
@@ -105,7 +104,7 @@ class ExchangeExecutor(BaseAgent):
 
     AGENT_ID = 26
 
-    def __init__(self, config: Optional[AgentConfig] = None) -> None:
+    def __init__(self, config: AgentConfig | None = None) -> None:
         super().__init__(
             agent_id=self.AGENT_ID,
             tier=5,
@@ -195,9 +194,7 @@ class ExchangeExecutor(BaseAgent):
         guard already prevents new orders from being placed during an active halt.
         """
         try:
-            consumer = self.make_consumer(
-                [KafkaTopic.RISK_ALERTS], auto_offset_reset="latest"
-            )
+            consumer = self.make_consumer([KafkaTopic.RISK_ALERTS], auto_offset_reset="latest")
             await consumer.initialize()
         except Exception as exc:
             log.error("exchange_executor.kill_listener_init_failed", error=str(exc))
@@ -209,11 +206,7 @@ class ExchangeExecutor(BaseAgent):
                 if msg_type not in self._kill_event_types:
                     continue
                 payload = msg.get("payload", {})
-                reason = (
-                    payload.get("trigger_reason")
-                    or payload.get("reason")
-                    or msg_type
-                )
+                reason = payload.get("trigger_reason") or payload.get("reason") or msg_type
                 log.critical(
                     "exchange_executor.kill_switch_received",
                     msg_type=msg_type,
@@ -264,10 +257,12 @@ class ExchangeExecutor(BaseAgent):
             if ok:
                 cancelled += 1
                 self._cancelled_by_kill_switch += 1
-                cancelled_order = order.model_copy(update={
-                    "status": OrderStatus.CANCELLED,
-                    "updated_at": datetime.utcnow(),
-                })
+                cancelled_order = order.model_copy(
+                    update={
+                        "status": OrderStatus.CANCELLED,
+                        "updated_at": datetime.utcnow(),
+                    }
+                )
                 try:
                     await self.publish(
                         KafkaTopic.ORDERS_EXECUTED,
@@ -462,20 +457,20 @@ class ExchangeExecutor(BaseAgent):
                 )
                 return False
         except Exception as exc:
-            await self._reject(
-                order, f"exchange error: {type(exc).__name__}: {exc}"
-            )
+            await self._reject(order, f"exchange error: {type(exc).__name__}: {exc}")
             return False
 
         # Merge connector response into our internal Order (preserving order_id,
         # client_order_id, strategy_id, agent_id, proposal_id from the original).
-        executed = order.model_copy(update={
-            "exchange_order_id": placed.exchange_order_id,
-            "status": placed.status,
-            "filled_size": placed.filled_size,
-            "avg_fill_price": placed.avg_fill_price,
-            "updated_at": datetime.utcnow(),
-        })
+        executed = order.model_copy(
+            update={
+                "exchange_order_id": placed.exchange_order_id,
+                "status": placed.status,
+                "filled_size": placed.filled_size,
+                "avg_fill_price": placed.avg_fill_price,
+                "updated_at": datetime.utcnow(),
+            }
+        )
 
         await self.publish(
             KafkaTopic.ORDERS_EXECUTED,
@@ -499,19 +494,18 @@ class ExchangeExecutor(BaseAgent):
         # MARKET orders typically fill instantly — fetch fills now.
         if executed.status == OrderStatus.FILLED:
             await self._fetch_and_publish_fills(executed)
-        elif (
-            executed.status not in _TERMINAL_STATUSES
-            and executed.exchange_order_id
-        ):
+        elif executed.status not in _TERMINAL_STATUSES and executed.exchange_order_id:
             await self._track(executed, datetime.utcnow())
 
         return True
 
     async def _reject(self, order: Order, reason: str) -> None:
-        rejected = order.model_copy(update={
-            "status": OrderStatus.REJECTED,
-            "updated_at": datetime.utcnow(),
-        })
+        rejected = order.model_copy(
+            update={
+                "status": OrderStatus.REJECTED,
+                "updated_at": datetime.utcnow(),
+            }
+        )
         await self.publish(
             KafkaTopic.ORDERS_EXECUTED,
             payload=rejected.model_dump(mode="json"),
@@ -599,12 +593,14 @@ class ExchangeExecutor(BaseAgent):
         fill_changed = latest.filled_size != order.filled_size
 
         if status_changed or fill_changed:
-            updated = order.model_copy(update={
-                "status": latest.status,
-                "filled_size": latest.filled_size,
-                "avg_fill_price": latest.avg_fill_price,
-                "updated_at": datetime.utcnow(),
-            })
+            updated = order.model_copy(
+                update={
+                    "status": latest.status,
+                    "filled_size": latest.filled_size,
+                    "avg_fill_price": latest.avg_fill_price,
+                    "updated_at": datetime.utcnow(),
+                }
+            )
             await self._track(updated, datetime.utcnow())
 
             await self.publish(
@@ -641,10 +637,12 @@ class ExchangeExecutor(BaseAgent):
                 continue
 
             # Inject internal linkage (connector only knows exchange ids)
-            fill_internal = fill.model_copy(update={
-                "order_id": order.order_id,
-                "strategy_id": order.strategy_id,
-            })
+            fill_internal = fill.model_copy(
+                update={
+                    "order_id": order.order_id,
+                    "strategy_id": order.strategy_id,
+                }
+            )
             await self.publish(
                 KafkaTopic.FILLS_CONFIRMED,
                 payload=fill_internal.model_dump(mode="json"),

@@ -28,6 +28,11 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+ROOT_LINT_EXCLUDED_PREFIXES = (
+    "HMM_Trading/",
+    "alghrest-test/HMM_Trading/",
+)
+
 
 class Colors:
     """ANSI color codes for terminal output."""
@@ -120,10 +125,13 @@ class TestRunner:
         files = []
         for line in diff_output.splitlines():
             rel_path = line.strip()
-            if not rel_path or Path(rel_path).suffix != ".py":
+            normalized_path = rel_path.replace("\\", "/")
+            if not normalized_path or Path(normalized_path).suffix != ".py":
                 continue
-            if (self.project_root / rel_path).is_file():
-                files.append(rel_path.replace("\\", "/"))
+            if normalized_path.startswith(ROOT_LINT_EXCLUDED_PREFIXES):
+                continue
+            if (self.project_root / normalized_path).is_file():
+                files.append(normalized_path)
         return sorted(set(files))
 
     def changed_python_files(self, args) -> list[str] | None:
@@ -211,7 +219,7 @@ class TestRunner:
     ) -> list[str]:
         """Build pytest command with various options."""
 
-        cmd = ["python", "-m", "pytest"]
+        cmd = [sys.executable, "-m", "pytest"]
 
         # Add test paths
         cmd.extend(test_paths)
@@ -464,7 +472,7 @@ class TestRunner:
         if lint_targets:
             self.print_info("Running Ruff (linting)")
             success, _, _ = self.run_command(
-                ["python", "-m", "ruff", "check", *lint_targets],
+                [sys.executable, "-m", "ruff", "check", *lint_targets],
                 "Ruff Linting",
             )
             checks.append(("ruff", success))
@@ -473,7 +481,7 @@ class TestRunner:
         if lint_targets and not args.skip_format:
             self.print_info("Running Black (format check)")
             success, _, _ = self.run_command(
-                ["python", "-m", "black", "--check", *lint_targets],
+                [sys.executable, "-m", "black", "--check", *lint_targets],
                 "Black Format Check",
             )
             checks.append(("black", success))
@@ -482,7 +490,7 @@ class TestRunner:
         if not args.skip_mypy:
             self.print_info("Running MyPy (type checking)")
             success, _, _ = self.run_command(
-                ["python", "-m", "mypy", "agents/", "core/"],
+                [sys.executable, "-m", "mypy", "agents/", "core/"],
                 "MyPy Type Checking",
             )
             checks.append(("mypy", success))

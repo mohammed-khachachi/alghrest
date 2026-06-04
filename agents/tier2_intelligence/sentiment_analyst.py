@@ -4,13 +4,12 @@ Streams Twitter/X mentions and Reddit posts for tracked crypto assets.
 Applies VADER sentiment + custom Fear & Greed calculation.
 Publishes per-asset SentimentSignal to sentiment.scored Kafka topic.
 """
+
 from __future__ import annotations
 
 import asyncio
-import re
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
-from typing import Any
 
 import structlog
 
@@ -21,7 +20,7 @@ except ImportError:
 
 from agents.base_agent import BaseAgent
 from core.config import settings
-from core.data.models import KafkaTopic, SentimentScore, SentimentSignal, SignalDirection
+from core.data.models import KafkaTopic, SentimentSignal, SignalDirection
 
 logger = structlog.get_logger(__name__)
 
@@ -35,8 +34,13 @@ TRACKED_SYMBOLS = {
 }
 
 CRYPTO_SUBREDDITS = [
-    "CryptoCurrency", "Bitcoin", "ethereum", "solana",
-    "defi", "CryptoMarkets", "BitcoinMarkets",
+    "CryptoCurrency",
+    "Bitcoin",
+    "ethereum",
+    "solana",
+    "defi",
+    "CryptoMarkets",
+    "BitcoinMarkets",
 ]
 
 
@@ -59,6 +63,7 @@ class SentimentAnalyst(BaseAgent):
         if settings.reddit_client_id and settings.reddit_client_secret:
             try:
                 import asyncpraw
+
                 self._reddit = asyncpraw.Reddit(
                     client_id=settings.reddit_client_id,
                     client_secret=settings.reddit_client_secret,
@@ -111,7 +116,9 @@ class SentimentAnalyst(BaseAgent):
                 subreddit = await self._reddit.subreddit(subreddit_name)
                 async for submission in subreddit.hot(limit=25):
                     text = f"{submission.title} {submission.selftext}"
-                    await self._process_text(text, source="reddit", metadata={"subreddit": subreddit_name})
+                    await self._process_text(
+                        text, source="reddit", metadata={"subreddit": subreddit_name}
+                    )
             except Exception as e:
                 self.logger.debug("reddit subreddit error", sub=subreddit_name, error=str(e))
 
@@ -123,7 +130,6 @@ class SentimentAnalyst(BaseAgent):
             self.logger.warning("Twitter disabled — no bearer token")
             return
 
-        import httpx
         query = " OR ".join([kw for kws in TRACKED_SYMBOLS.values() for kw in kws[:2]])
         # Twitter filtered stream is complex — use search API in 15-min windows
         while True:
@@ -141,6 +147,7 @@ class SentimentAnalyst(BaseAgent):
     async def _poll_twitter_recent(self, query: str) -> None:
         """Search recent tweets (last 15 min)."""
         import httpx
+
         now = datetime.utcnow()
         start = (now - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -155,7 +162,8 @@ class SentimentAnalyst(BaseAgent):
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.get(
                 "https://api.twitter.com/2/tweets/search/recent",
-                headers=headers, params=params,
+                headers=headers,
+                params=params,
             )
             if r.status_code == 429:
                 self.logger.warning("Twitter rate limited — backing off")
@@ -167,13 +175,14 @@ class SentimentAnalyst(BaseAgent):
         for tweet in data.get("data", []):
             metrics = tweet.get("public_metrics", {})
             engagement = (
-                metrics.get("like_count", 0) +
-                metrics.get("retweet_count", 0) * 3 +
-                metrics.get("reply_count", 0)
+                metrics.get("like_count", 0)
+                + metrics.get("retweet_count", 0) * 3
+                + metrics.get("reply_count", 0)
             )
             await self._process_text(
-                tweet["text"], source="twitter",
-                metadata={"engagement": engagement, "tweet_id": tweet["id"]}
+                tweet["text"],
+                source="twitter",
+                metadata={"engagement": engagement, "tweet_id": tweet["id"]},
             )
 
     # ── SENTIMENT PROCESSING ──────────────────────────────────────────────────
@@ -185,7 +194,7 @@ class SentimentAnalyst(BaseAgent):
             compound = 0.0
         else:
             scores = self._vader.polarity_scores(text)
-            compound = scores["compound"]   # -1 to +1
+            compound = scores["compound"]  # -1 to +1
 
         # Route to all matched symbols
         for symbol, keywords in TRACKED_SYMBOLS.items():
@@ -230,17 +239,6 @@ class SentimentAnalyst(BaseAgent):
             volume = self._mention_counts[symbol]
 
             direction = self._score_to_direction(avg_score)
-
-            score_model = SentimentScore(
-                symbol=symbol,
-                timestamp=now,
-                source="aggregate",
-                score=avg_score,
-                volume=volume,
-                positive_count=sum(1 for s in scores if s > 0.05),
-                negative_count=sum(1 for s in scores if s < -0.05),
-                neutral_count=sum(1 for s in scores if abs(s) <= 0.05),
-            )
 
             signal = SentimentSignal(
                 source_agent_id=self.agent_id,

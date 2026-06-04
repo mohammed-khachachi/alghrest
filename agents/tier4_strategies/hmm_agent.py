@@ -17,6 +17,6 @@ TODO: Add HMMAgent to the central agent registry (agents/registry.py)
       once one is created, following the same pattern as other Tier 4 agents.
 """
 
-from agents.tier4_strategies.hmm.agent import HMMAgent  # noqa: F401
+from agents.tier4_strategies.hmm.agent import HMMAgent
 
 __all__ = ["HMMAgent"]

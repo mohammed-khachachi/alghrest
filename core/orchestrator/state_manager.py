@@ -3,16 +3,16 @@ ALGHREST — Redis State Manager
 Shared state across all agents: portfolio snapshot, agent health,
 risk metrics, and distributed coordination primitives.
 """
+
 from __future__ import annotations
 
-import asyncio
-from contextlib import asynccontextmanager
-from datetime import timedelta
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
+from typing import Any
 
 import orjson
 import structlog
-from redis.asyncio import Redis, ConnectionPool
+from redis.asyncio import ConnectionPool, Redis
 from redis.asyncio.lock import Lock
 
 from core.config import settings
@@ -23,12 +23,12 @@ logger = structlog.get_logger(__name__)
 # Redis key namespaces
 _NS_AGENT_HEALTH = "alghrest:agent:health:{agent_id}"
 _NS_AGENT_STATUS = "alghrest:agent:status:{agent_id}"
-_NS_PORTFOLIO    = "alghrest:portfolio:current"
-_NS_RISK         = "alghrest:risk:current"
-_NS_DEDUP        = "alghrest:dedup:{key}"
-_NS_LOCK         = "alghrest:lock:{name}"
-_NS_SIGNAL       = "alghrest:signal:latest:{symbol}:{signal_type}"
-_NS_KILL_SWITCH  = "alghrest:kill_switch:active"
+_NS_PORTFOLIO = "alghrest:portfolio:current"
+_NS_RISK = "alghrest:risk:current"
+_NS_DEDUP = "alghrest:dedup:{key}"
+_NS_LOCK = "alghrest:lock:{name}"
+_NS_SIGNAL = "alghrest:signal:latest:{symbol}:{signal_type}"
+_NS_KILL_SWITCH = "alghrest:kill_switch:active"
 
 
 class StateManager:
@@ -38,8 +38,8 @@ class StateManager:
     """
 
     def __init__(self) -> None:
-        self._pool: Optional[ConnectionPool] = None
-        self._redis: Optional[Redis] = None
+        self._pool: ConnectionPool | None = None
+        self._redis: Redis | None = None
         self._log = logger.bind(component="state_manager")
 
     async def initialize(self) -> None:
@@ -69,7 +69,7 @@ class StateManager:
         data = orjson.dumps(health.model_dump(mode="json"))
         await self.redis.setex(key, ttl_seconds, data)
 
-    async def get_agent_health(self, agent_id: int) -> Optional[AgentHealth]:
+    async def get_agent_health(self, agent_id: int) -> AgentHealth | None:
         key = _NS_AGENT_HEALTH.format(agent_id=agent_id)
         raw = await self.redis.get(key)
         if raw:
@@ -81,11 +81,7 @@ class StateManager:
         if not keys:
             return []
         values = await self.redis.mget(keys)
-        return [
-            AgentHealth.model_validate(orjson.loads(v))
-            for v in values
-            if v is not None
-        ]
+        return [AgentHealth.model_validate(orjson.loads(v)) for v in values if v is not None]
 
     async def set_agent_status(self, agent_id: int, status: AgentStatus) -> None:
         key = _NS_AGENT_STATUS.format(agent_id=agent_id)
@@ -97,7 +93,7 @@ class StateManager:
         data = orjson.dumps(portfolio.model_dump(mode="json"))
         await self.redis.set(_NS_PORTFOLIO, data, ex=300)
 
-    async def get_portfolio(self) -> Optional[Portfolio]:
+    async def get_portfolio(self) -> Portfolio | None:
         raw = await self.redis.get(_NS_PORTFOLIO)
         if raw:
             return Portfolio.model_validate(orjson.loads(raw))
@@ -109,7 +105,7 @@ class StateManager:
         data = orjson.dumps(metrics.model_dump(mode="json"))
         await self.redis.set(_NS_RISK, data, ex=120)
 
-    async def get_risk_metrics(self) -> Optional[RiskMetrics]:
+    async def get_risk_metrics(self) -> RiskMetrics | None:
         raw = await self.redis.get(_NS_RISK)
         if raw:
             return RiskMetrics.model_validate(orjson.loads(raw))
@@ -128,7 +124,7 @@ class StateManager:
         await self.redis.delete(_NS_KILL_SWITCH)
         self._log.warning("kill switch deactivated")
 
-    async def get_kill_switch_reason(self) -> Optional[str]:
+    async def get_kill_switch_reason(self) -> str | None:
         raw = await self.redis.get(_NS_KILL_SWITCH)
         return raw.decode() if raw else None
 
@@ -157,18 +153,18 @@ class StateManager:
         try:
             yield lock
         finally:
-            try:
+            with suppress(Exception):
                 await lock.release()
-            except Exception:
-                pass
 
     # ── LATEST SIGNAL CACHE ───────────────────────────────────────────────────
 
-    async def cache_signal(self, symbol: str, signal_type: str, data: dict[str, Any], ttl: int = 3600) -> None:
+    async def cache_signal(
+        self, symbol: str, signal_type: str, data: dict[str, Any], ttl: int = 3600
+    ) -> None:
         key = _NS_SIGNAL.format(symbol=symbol, signal_type=signal_type)
         await self.redis.setex(key, ttl, orjson.dumps(data))
 
-    async def get_cached_signal(self, symbol: str, signal_type: str) -> Optional[dict[str, Any]]:
+    async def get_cached_signal(self, symbol: str, signal_type: str) -> dict[str, Any] | None:
         key = _NS_SIGNAL.format(symbol=symbol, signal_type=signal_type)
         raw = await self.redis.get(key)
         return orjson.loads(raw) if raw else None
@@ -180,18 +176,18 @@ class StateManager:
 
     # ── GENERIC K/V ──────────────────────────────────────────────────────────
 
-    async def set_json(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set_json(self, key: str, value: Any, ttl: int | None = None) -> None:
         data = orjson.dumps(value)
         if ttl:
             await self.redis.setex(key, ttl, data)
         else:
             await self.redis.set(key, data)
 
-    async def get_json(self, key: str) -> Optional[Any]:
+    async def get_json(self, key: str) -> Any | None:
         raw = await self.redis.get(key)
         return orjson.loads(raw) if raw else None
 
-    async def set_json_nx(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set_json_nx(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """
         Set `key` to JSON `value` only if it does not already exist (SET NX).
         Returns True if the key was written (did not exist), False otherwise.
@@ -241,7 +237,7 @@ class StateManager:
         """
         keys: list[str] = []
         async for raw in self.redis.scan_iter(match=pattern, count=100):
-            keys.append(raw.decode() if isinstance(raw, (bytes, bytearray)) else raw)
+            keys.append(raw.decode() if isinstance(raw, bytes | bytearray) else raw)
         return keys
 
     # ── LIFECYCLE ────────────────────────────────────────────────────────────

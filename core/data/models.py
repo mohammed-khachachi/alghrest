@@ -436,7 +436,9 @@ class TradeProposal(AlghrestModel):
             data["size"] = data.pop("quantity")
         if "side" not in data and "direction" in data:
             direction = str(data.pop("direction")).upper()
-            data["side"] = OrderSide.SELL if direction in {"SELL", "SHORT", "BEARISH"} else OrderSide.BUY
+            data["side"] = (
+                OrderSide.SELL if direction in {"SELL", "SHORT", "BEARISH"} else OrderSide.BUY
+            )
         return data
 
 

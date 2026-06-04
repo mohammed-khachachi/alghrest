@@ -3,6 +3,11 @@ from __future__ import annotations
 import os
 from unittest.mock import AsyncMock
 
+import pytest
+from fastapi.testclient import TestClient
+from fastapi.websockets import WebSocketDisconnect
+from pydantic import ValidationError
+
 _ENV_KEYS = ("ENVIRONMENT", "API_AUTH_ENABLED", "ALGHREST_API_KEY", "API_ALLOWED_ORIGINS")
 _ORIGINAL_ENV = {key: os.environ.get(key) for key in _ENV_KEYS}
 os.environ.update(
@@ -14,14 +19,9 @@ os.environ.update(
     }
 )
 
-import pytest
-from fastapi.testclient import TestClient
-from fastapi.websockets import WebSocketDisconnect
-from pydantic import ValidationError
-
-from api import main as api_main
-from api.auth import API_KEY_HEADER, API_KEY_QUERY_PARAM
-from core.config import Settings
+from api import main as api_main  # noqa: E402
+from api.auth import API_KEY_HEADER, API_KEY_QUERY_PARAM  # noqa: E402
+from core.config import Settings  # noqa: E402
 
 for key, value in _ORIGINAL_ENV.items():
     if value is None:
@@ -154,14 +154,15 @@ def test_signal_endpoint_succeeds_with_valid_api_key(
 def test_ws_prices_rejects_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client(monkeypatch)
 
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/prices"):
-            pass
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/prices"):
+        pass
 
 
 def test_ws_prices_rejects_invalid_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client(monkeypatch)
 
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(f"/ws/prices?{API_KEY_QUERY_PARAM}=wrong-key"):
-            pass
+    with (
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect(f"/ws/prices?{API_KEY_QUERY_PARAM}=wrong-key"),
+    ):
+        pass
