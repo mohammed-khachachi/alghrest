@@ -92,7 +92,7 @@ jobs:
         name: codecov-umbrella
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results
@@ -189,7 +189,7 @@ jobs:
         poetry run python scripts/run_tests.py integration --coverage --junit-xml --parallel
 
     - name: Upload integration test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
@@ -222,7 +222,7 @@ jobs:
         poetry run python scripts/run_tests.py backtest --junit-xml
 
     - name: Upload backtest results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: backtest-results
@@ -252,7 +252,7 @@ jobs:
         safety check --json --output safety-report.json || true
 
     - name: Upload security scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-scan-results
@@ -285,7 +285,7 @@ jobs:
         poetry run pytest tests/ -m "benchmark" --benchmark-json=benchmark-results.json
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results
