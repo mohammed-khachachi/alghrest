@@ -11,6 +11,7 @@ Design:
 - Consumer: manual commits + Redis dedup for idempotent processing
 - Each consumer group is named {prefix}.{agent_name} for isolation
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -18,7 +19,7 @@ import traceback
 from collections import namedtuple
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from datetime import UTC, datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 import orjson
@@ -62,12 +63,13 @@ DLQ_TOPIC_BY_SOURCE: dict[str, str] = {
 
 def _serialize(obj: Any) -> bytes:
     """orjson serializer that handles Pydantic models, UUIDs, Decimals, datetimes."""
+
     def _default(v: Any) -> Any:
         if isinstance(v, UUID):
             return str(v)
-        if hasattr(v, "model_dump"):      # Pydantic v2
+        if hasattr(v, "model_dump"):  # Pydantic v2
             return v.model_dump(mode="json")
-        if hasattr(v, "__float__"):       # Decimal
+        if hasattr(v, "__float__"):  # Decimal
             return float(v)
         if isinstance(v, datetime):
             return v.isoformat()
@@ -89,7 +91,7 @@ def _decode_key(key: Any) -> str | None:
 
 
 def _json_safe(value: Any) -> Any:
-    if isinstance(value, (bytes, bytearray)):
+    if isinstance(value, bytes | bytearray):
         try:
             return _deserialize(bytes(value))
         except Exception:
@@ -111,7 +113,7 @@ class AlghrestProducer:
     """
 
     def __init__(self) -> None:
-        self._producer: Optional[AIOKafkaProducer] = None
+        self._producer: AIOKafkaProducer | None = None
         self._log = logger.bind(component="producer")
 
     async def initialize(self) -> None:
@@ -120,9 +122,9 @@ class AlghrestProducer:
             value_serializer=_serialize,
             key_serializer=lambda k: k.encode() if k else None,
             acks="all",
-            enable_idempotence=True,        # Exactly-once producer semantics
+            enable_idempotence=True,  # Exactly-once producer semantics
             compression_type="lz4",
-            max_request_size=10_485_760,    # 10 MB
+            max_request_size=10_485_760,  # 10 MB
             request_timeout_ms=30_000,
             retry_backoff_ms=500,
         )
@@ -140,7 +142,7 @@ class AlghrestProducer:
         self,
         topic: KafkaTopic | str,
         message: AgentMessage,
-        key: Optional[str] = None,
+        key: str | None = None,
     ) -> None:
         """Publish an AgentMessage. Retries on transient failures."""
         if self._producer is None:
@@ -165,9 +167,7 @@ class AlghrestProducer:
             ).inc()
 
         except Exception as e:
-            kafka_produce_errors.labels(
-                topic=topic_str, error_type=type(e).__name__
-            ).inc()
+            kafka_produce_errors.labels(topic=topic_str, error_type=type(e).__name__).inc()
             self._log.error(
                 "failed to produce message",
                 topic=topic_str,
@@ -176,7 +176,7 @@ class AlghrestProducer:
             )
             raise
 
-    async def send_raw(self, topic: str, payload: dict[str, Any], key: Optional[str] = None) -> None:
+    async def send_raw(self, topic: str, payload: dict[str, Any], key: str | None = None) -> None:
         """Publish raw dict — use for non-AgentMessage data."""
         if self._producer is None:
             raise RuntimeError("Producer not initialized")
@@ -222,7 +222,7 @@ class AlghrestConsumer:
         self.retry_backoff_seconds = retry_backoff_seconds
         self.dlq_enabled = dlq_enabled
         self.dlq_topic_map = dict(dlq_topic_map or DLQ_TOPIC_BY_SOURCE)
-        self._consumer: Optional[AIOKafkaConsumer] = None
+        self._consumer: AIOKafkaConsumer | None = None
         self._dlq_producer: Any | None = dlq_producer
         self._owns_dlq_producer = False
         self._log = logger.bind(component="consumer", agent=agent_name, group=self.group_id)
@@ -233,7 +233,7 @@ class AlghrestConsumer:
             bootstrap_servers=settings.kafka_servers_list,
             group_id=self.group_id,
             auto_offset_reset=self.auto_offset_reset,
-            enable_auto_commit=False,    # Manual commits for reliability
+            enable_auto_commit=False,  # Manual commits for reliability
             key_deserializer=lambda k: k.decode() if k else None,
             max_poll_records=self.max_poll_records,
             session_timeout_ms=30_000,
@@ -349,13 +349,31 @@ class AlghrestConsumer:
 
     def _decode_record_value(self, record: Any) -> dict[str, Any]:
         value = getattr(record, "value", None)
-        if isinstance(value, (bytes, bytearray)):
-            decoded = _deserialize(bytes(value))
-        else:
-            decoded = value
+        decoded = _deserialize(bytes(value)) if isinstance(value, bytes | bytearray) else value
         if not isinstance(decoded, dict):
-            raise TypeError(f"Kafka record value must deserialize to dict, got {type(decoded).__name__}")
+            raise TypeError(
+                f"Kafka record value must deserialize to dict, got {type(decoded).__name__}"
+            )
+        self._annotate_kafka_offset(decoded, record)
         return decoded
+
+    @staticmethod
+    def _annotate_kafka_offset(decoded: dict[str, Any], record: Any) -> None:
+        """Stamp the source Kafka offset onto AgentMessage envelopes.
+
+        Only envelopes (dicts carrying a top-level ``topic``) are annotated so
+        the persistence mapper can write a real ``kafka_offset`` instead of NULL.
+        Bare payload dicts are not persistence targets and are left untouched so
+        existing consumers that compare payloads by value are unaffected. Uses
+        ``setdefault`` so an offset already present on the envelope wins (the
+        consumer never overwrites an upstream value).
+        """
+        if "topic" not in decoded:
+            return
+        offset = getattr(record, "offset", None)
+        if offset is None:
+            return
+        decoded.setdefault("kafka_offset", offset)
 
     def _has_dlq_topics(self) -> bool:
         return self.dlq_enabled and any(topic in self.dlq_topic_map for topic in self.topics)
@@ -471,10 +489,7 @@ class AlghrestConsumer:
             partitions = self._consumer.assignment()
             end_offsets = await self._consumer.end_offsets(partitions)
             committed = {p: await self._consumer.committed(p) or 0 for p in partitions}
-            return {
-                f"{p.topic}:{p.partition}": end_offsets[p] - committed[p]
-                for p in partitions
-            }
+            return {f"{p.topic}:{p.partition}": end_offsets[p] - committed[p] for p in partitions}
         except Exception:
             return {}
 

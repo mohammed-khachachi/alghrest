@@ -1,8 +1,9 @@
 """Symbol → provider routing + static catalog used by the dashboard."""
+
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from connectors.data_providers.base import AssetClass, HistoricalBar, Quote, QuoteProvider
 from connectors.data_providers.crypto_provider import MockCryptoProvider
@@ -93,11 +94,45 @@ class QuoteRouter:
 
 
 def _build_default_router() -> QuoteRouter:
+    """Build the dashboard router.
+
+    Defaults to the deterministic mock providers. When
+    ``settings.enable_real_market_data`` is on, each asset class is upgraded to a
+    real provider **only if** its API key is present; the real providers still
+    fall back to the mock on any upstream error, so the dashboard never breaks
+    and no API key is ever required.
+    """
+    from core.config import settings
+
+    crypto: QuoteProvider = MockCryptoProvider()
+    forex: QuoteProvider = MockForexProvider()
+    equity: QuoteProvider = MockEquityProvider()
+
+    if settings.enable_real_market_data:
+        from connectors.data_providers.real_provider import (
+            AlpacaEquityProvider,
+            AlphaVantageForexProvider,
+            CoinGeckoCryptoProvider,
+        )
+
+        if settings.coingecko_api_key:
+            crypto = CoinGeckoCryptoProvider(api_key=settings.coingecko_api_key, fallback=crypto)
+        if settings.alpha_vantage_api_key:
+            forex = AlphaVantageForexProvider(
+                api_key=settings.alpha_vantage_api_key, fallback=forex
+            )
+        if settings.alpaca_api_key and settings.alpaca_secret:
+            equity = AlpacaEquityProvider(
+                api_key=settings.alpaca_api_key,
+                api_secret=settings.alpaca_secret,
+                fallback=equity,
+            )
+
     return QuoteRouter(
         providers={
-            AssetClass.CRYPTO: MockCryptoProvider(),
-            AssetClass.FOREX: MockForexProvider(),
-            AssetClass.EQUITY: MockEquityProvider(),
+            AssetClass.CRYPTO: crypto,
+            AssetClass.FOREX: forex,
+            AssetClass.EQUITY: equity,
         },
         catalog=_CATALOG,
     )

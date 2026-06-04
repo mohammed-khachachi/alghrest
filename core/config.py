@@ -2,6 +2,7 @@
 ALGHREST — Central Configuration
 Single source of truth for all environment settings across all 32 agents.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     )
 
     # ── SYSTEM ────────────────────────────────────────────
-    environment: str = "development"    # development | paper_trading | live
+    environment: str = "development"  # development | paper_trading | live
     log_level: str = "INFO"
     system_capital_usd: float = 10_000.0
 
@@ -31,7 +32,7 @@ class Settings(BaseSettings):
     # ── DeFi SAFETY ──────────────────────────────────────
     # 🚨 CRITICAL: Tier 6 DeFi agents contain mock logic and are HIGH RISK
     # Only enable after implementing proper protocol integrations
-    enable_defi_agents: bool = False   # Force disable DeFi agents (safety override)
+    enable_defi_agents: bool = False  # Force disable DeFi agents (safety override)
 
     # ── AI ────────────────────────────────────────────────
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
@@ -66,7 +67,7 @@ class Settings(BaseSettings):
     deribit_testnet: bool = True
 
     ibkr_host: str = "127.0.0.1"
-    ibkr_port: int = 7497        # 7497=paper, 7496=live
+    ibkr_port: int = 7497  # 7497=paper, 7496=live
     ibkr_client_id: int = 1
 
     # ── DATA PROVIDERS ────────────────────────────────────
@@ -75,6 +76,13 @@ class Settings(BaseSettings):
     fred_api_key: str = ""
     dune_api_key: str = ""
     coingecko_api_key: str = ""
+    alpha_vantage_api_key: str = ""
+
+    # Dashboard market-data: real upstream providers are OFF by default so the
+    # deterministic mock fallback stays the default and tests need no API keys.
+    # Real calls are attempted only when this flag is true AND the relevant key
+    # is present; any missing key or upstream error falls back to the mock.
+    enable_real_market_data: bool = False
 
     twitter_bearer_token: str = ""
     twitter_api_key: str = ""
@@ -108,7 +116,9 @@ class Settings(BaseSettings):
     redis_db_celery: int = 1
     redis_db_state: int = 2
 
-    database_url: str = "postgresql+asyncpg://alghrest:alghrest_secure_pass_2024@localhost:5432/alghrest"
+    database_url: str = (
+        "postgresql+asyncpg://alghrest:alghrest_secure_pass_2024@localhost:5432/alghrest"
+    )
 
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
@@ -117,17 +127,17 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     sentry_dsn: str = ""
     pagerduty_api_key: str = ""
-    pagerduty_integration_key: str = ""   # PagerDuty Events API v2 integration key
+    pagerduty_integration_key: str = ""  # PagerDuty Events API v2 integration key
 
     # ── TELEGRAM ─────────────────────────────────────────
     telegram_bot_token: str = ""
     telegram_channel_id: str = ""
-    telegram_chat_id: str = ""            # Chat ID for bot alerts
+    telegram_chat_id: str = ""  # Chat ID for bot alerts
     telegram_admin_id: str = ""
 
     # ── ML ───────────────────────────────────────────────
     model_checkpoint_dir: str = "./ml/checkpoints"
-    cuda_device: int = -1     # -1 = CPU
+    cuda_device: int = -1  # -1 = CPU
 
     # ── COMPUTED PROPERTIES ───────────────────────────────
     @field_validator("environment")
@@ -139,7 +149,7 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def validate_api_security(self) -> "Settings":
+    def validate_api_security(self) -> Settings:
         non_development = self.environment in {"paper_trading", "live"}
 
         if non_development and not self.api_auth_enabled:
@@ -174,11 +184,7 @@ class Settings(BaseSettings):
 
     @property
     def api_allowed_origins_list(self) -> list[str]:
-        return [
-            origin.strip()
-            for origin in self.api_allowed_origins.split(",")
-            if origin.strip()
-        ]
+        return [origin.strip() for origin in self.api_allowed_origins.split(",") if origin.strip()]
 
 
 @lru_cache(maxsize=1)
