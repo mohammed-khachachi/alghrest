@@ -1,82 +1,50 @@
-# Git
+# Local credentials and tooling must never enter a runtime build context.
+.env*
+secrets/
+*.pem
+*.key
 .git
-.gitignore
-
-# Python
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-.pytest_cache
-.mypy_cache
-.coverage
-htmlcov
-
-# Node.js
-node_modules
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build artifacts
-dist
-build
-*.egg-info
-
-# Documentation
-docs/_build
-*.md
-README.md
-deployment_guide.md
-infrastructure_validation_report.md
-
-# IDE
+.github
+.agents
+.codex
+.claude
 .vscode
 .idea
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs
+.venv
+**/.venv
+venv*
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+.coverage*
+htmlcov/
+coverage.xml
 *.log
+logs/
+**/node_modules
+**/dist
+**/build
+**/*.egg-info
 
-# Environment
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Temporary files
-.tmp
-tmp
-temp
-
-# ML artifacts
-ml/weights/*.pth
-ml/weights/*.zip
-ml/checkpoints
-
-# Docker
-.dockerignore
-Dockerfile*
+# Independently developed applications, research, assets, and documentation.
+dashboard/
+research/
+examples/
+artifacts/
+docs/
+tests/
+mcp/
+AGENTS.md
+CLAUDE.md
+skills-lock.json
 docker-compose*.yml
+Dockerfile*
+.dockerignore
+infra/k8s/
+infra/terraform/
+infra/prometheus/
 
-# Tests
-tests
-*_test.py
-test_*.py
-
-# Infra
-infra/k8s
-infra/terraform
-infra/prometheus
-
-# Dashboard (built separately)
-dashboard
+# Generated local access credentials
+.secrets/

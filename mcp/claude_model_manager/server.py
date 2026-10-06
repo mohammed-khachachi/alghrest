@@ -11,11 +11,11 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Allow running from project root
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import anthropic
 from dotenv import load_dotenv
@@ -62,17 +62,31 @@ MODELS: dict[str, dict] = {
 TIERS: dict[str, list[str]] = {
     "Tier 1 — Executive": ["cio_agent", "risk_governor"],
     "Tier 2 — Intelligence": [
-        "market_data_hub", "news_analyst", "sentiment_analyst",
-        "macro_economist", "geopolitical_watcher", "onchain_sleuth",
+        "market_data_hub",
+        "news_analyst",
+        "sentiment_analyst",
+        "macro_economist",
+        "geopolitical_watcher",
+        "onchain_sleuth",
     ],
     "Tier 3 — Quant": ["technical_analyst", "volatility_forecaster", "correlation_engine"],
     "Tier 4 — Strategies": [
-        "trend_follower", "mean_reversion", "momentum", "stat_arb",
-        "ml_predictor", "options_strategist", "arb_cross_exchange", "breakout_hunter",
+        "trend_follower",
+        "mean_reversion",
+        "momentum",
+        "stat_arb",
+        "ml_predictor",
+        "options_strategist",
+        "arb_cross_exchange",
+        "breakout_hunter",
     ],
     "Tier 5 — Execution": [
-        "order_router", "position_sizer", "slippage_minimizer",
-        "hedge_manager", "fee_optimizer", "liquidation_guard",
+        "order_router",
+        "position_sizer",
+        "slippage_minimizer",
+        "hedge_manager",
+        "fee_optimizer",
+        "liquidation_guard",
     ],
     "Tier 6 — DeFi": ["yield_farmer", "dex_arb", "mev_hunter", "bridge_strategist"],
     "Tier 7 — Monitoring": ["portfolio_tracker", "alert_manager", "compliance_agent"],
@@ -81,6 +95,7 @@ TIERS: dict[str, list[str]] = {
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
+
 def _load_config() -> dict:
     if not CONFIG_PATH.exists():
         return {"version": "1.0", "updated_at": "", "assignments": {}}
@@ -88,7 +103,7 @@ def _load_config() -> dict:
 
 
 def _save_config(config: dict) -> None:
-    config["updated_at"] = datetime.now(timezone.utc).isoformat()
+    config["updated_at"] = datetime.now(UTC).isoformat()
     CONFIG_PATH.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -108,6 +123,7 @@ def _cost(model_id: str, input_tok: int, output_tok: int) -> float:
 
 
 # ── tools ──────────────────────────────────────────────────────────────────────
+
 
 @mcp.tool()
 def list_models() -> str:
@@ -162,8 +178,7 @@ def set_agent_model(agent_name: str, model_id: str) -> str:
     """
     if model_id not in MODELS:
         return (
-            f"Unknown model '{model_id}'.\n"
-            f"Valid options: {', '.join(f'`{m}`' for m in MODELS)}"
+            f"Unknown model '{model_id}'.\n" f"Valid options: {', '.join(f'`{m}`' for m in MODELS)}"
         )
 
     config = _load_config()
@@ -193,11 +208,10 @@ def set_tier_model(tier: str, model_id: str) -> str:
     tier_map = {str(i + 1): label for i, label in enumerate(TIERS)}
     tier_label = tier_map.get(tier)
     if not tier_label:
-        return f"Unknown tier '{tier}'. Valid values: 1 – 7."
+        return f"Unknown tier '{tier}'. Valid values: 1 - 7."
     if model_id not in MODELS:
         return (
-            f"Unknown model '{model_id}'.\n"
-            f"Valid options: {', '.join(f'`{m}`' for m in MODELS)}"
+            f"Unknown model '{model_id}'.\n" f"Valid options: {', '.join(f'`{m}`' for m in MODELS)}"
         )
 
     agents = TIERS[tier_label]
@@ -335,8 +349,7 @@ def compare_models(prompt: str, max_tokens: int = 256) -> str:
     return (
         f"# Model Comparison\n\n"
         f"**Prompt:** {prompt[:120]}{'…' if len(prompt) > 120 else ''}\n"
-        f"**Total cost:** ${total_cost:.6f}\n\n"
-        + "\n\n---\n\n".join(sections)
+        f"**Total cost:** ${total_cost:.6f}\n\n" + "\n\n---\n\n".join(sections)
     )
 
 

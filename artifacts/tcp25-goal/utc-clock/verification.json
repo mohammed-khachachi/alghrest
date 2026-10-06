@@ -1,0 +1,32 @@
+{
+  "full_mocked_passed": 1000,
+  "full_mocked_skipped": 53,
+  "focused_passed": 170,
+  "clock_cases": 14,
+  "clock_property_examples": 100,
+  "aggregate_coverage_percent": 73.99397269987591,
+  "critical_coverage": {
+    "src/core/advisory/account.py": 100.0,
+    "src/core/advisory/evaluation.py": 100.0,
+    "src/core/advisory/data.py": 100.0,
+    "src/connectors/advisory/replay.py": 100.0,
+    "src/api/services/advisory.py": 100.0
+  },
+  "utc_instant_function": {
+    "source": "src/core/advisory/models.py",
+    "start": 20,
+    "end": 24,
+    "missing_lines": [],
+    "missing_branches": []
+  },
+  "checks": [
+    "repository ruff",
+    "changed-file black",
+    "changed-file isort",
+    "architecture",
+    "strict mypy:104 sources"
+  ],
+  "runtime_financial_state_changed": false,
+  "market_data_guard_complete": false,
+  "goal_complete": false
+}

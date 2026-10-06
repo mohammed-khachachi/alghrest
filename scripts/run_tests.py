@@ -16,31 +16,31 @@ Usage:
 """
 
 import argparse
-import asyncio
-import os
-import sys
-import subprocess
-import time
-from pathlib import Path
-from typing import List, Optional, Dict, Tuple
 import json
+import os
+import subprocess
+import sys
+import time
+from importlib.util import find_spec
+from pathlib import Path
 
 # Add project root to path for imports
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 class Colors:
     """ANSI color codes for terminal output."""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    MAGENTA = '\033[95m'
-    CYAN = '\033[96m'
-    WHITE = '\033[97m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    RESET = '\033[0m'
+
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    MAGENTA = "\033[95m"
+    CYAN = "\033[96m"
+    WHITE = "\033[97m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    RESET = "\033[0m"
 
 
 class TestRunner:
@@ -71,22 +71,22 @@ class TestRunner:
 
     def print_info(self, text: str):
         """Print info message."""
-        print(f"{Colors.BLUE}ℹ {text}{Colors.RESET}")
+        print(f"{Colors.BLUE}INFO {text}{Colors.RESET}")
 
     def build_pytest_command(
         self,
-        test_paths: List[str],
-        markers: Optional[List[str]] = None,
+        test_paths: list[str],
+        markers: list[str] | None = None,
         coverage: bool = True,
         parallel: bool = False,
         verbose: bool = False,
         html_report: bool = False,
         junit_xml: bool = False,
         fast: bool = False,
-    ) -> List[str]:
+    ) -> list[str]:
         """Build pytest command with various options."""
 
-        cmd = ["python", "-m", "pytest"]
+        cmd = [sys.executable, "-m", "pytest", "-c", str(PROJECT_ROOT / "pyproject.toml")]
 
         # Add test paths
         cmd.extend(test_paths)
@@ -106,22 +106,26 @@ class TestRunner:
 
         # Coverage options
         if coverage and not fast:
-            cmd.extend([
-                "--cov=agents",
-                "--cov=core",
-                "--cov=connectors",
-                "--cov-report=term-missing",
-            ])
+            cmd.extend(
+                [
+                    "--cov=agents",
+                    "--cov=core",
+                    "--cov=connectors",
+                    "--cov-report=term-missing",
+                ]
+            )
 
             if html_report:
                 cmd.append("--cov-report=html:htmlcov")
 
+        if not coverage and not fast:
+            cmd.append("--no-cov")
+
         # Parallel execution
         if parallel:
-            try:
-                import pytest_xdist
+            if find_spec("xdist") is not None:
                 cmd.extend(["-n", "auto"])
-            except ImportError:
+            else:
                 self.print_warning("pytest-xdist not installed, running sequentially")
 
         # JUnit XML for CI
@@ -130,20 +134,22 @@ class TestRunner:
 
         # Fast mode optimizations
         if fast:
-            cmd.extend([
-                "--tb=short",
-                "--no-cov",
-                "--disable-warnings",
-            ])
+            cmd.extend(
+                [
+                    "--tb=short",
+                    "--no-cov",
+                    "--disable-warnings",
+                ]
+            )
 
         return cmd
 
     def run_command(
         self,
-        cmd: List[str],
+        cmd: list[str],
         description: str,
-        cwd: Optional[Path] = None,
-    ) -> Tuple[bool, float, str]:
+        cwd: Path | None = None,
+    ) -> tuple[bool, float, str]:
         """Run a command and return success status, duration, and output."""
 
         if cwd is None:
@@ -176,7 +182,9 @@ class TestRunner:
             if success:
                 self.print_success(f"{description} completed in {duration:.1f}s")
             else:
-                self.print_error(f"{description} failed after {duration:.1f}s (exit code {result.returncode})")
+                self.print_error(
+                    f"{description} failed after {duration:.1f}s (exit code {result.returncode})"
+                )
 
             return success, duration, result.stdout + result.stderr
 
@@ -325,8 +333,7 @@ class TestRunner:
         # Ruff
         self.print_info("Running Ruff (linting)")
         success, duration, output = self.run_command(
-            ["python", "-m", "ruff", "check", "."],
-            "Ruff Linting"
+            [sys.executable, "-m", "ruff", "check", "."], "Ruff Linting"
         )
         checks.append(("ruff", success))
 
@@ -334,8 +341,7 @@ class TestRunner:
         if not args.skip_format:
             self.print_info("Running Black (format check)")
             success, duration, output = self.run_command(
-                ["python", "-m", "black", "--check", "."],
-                "Black Format Check"
+                [sys.executable, "-m", "black", "--check", "."], "Black Format Check"
             )
             checks.append(("black", success))
 
@@ -343,8 +349,8 @@ class TestRunner:
         if not args.skip_mypy:
             self.print_info("Running MyPy (type checking)")
             success, duration, output = self.run_command(
-                ["python", "-m", "mypy", "agents/", "core/"],
-                "MyPy Type Checking"
+                [sys.executable, "-m", "mypy", "src/agents/", "src/core/", "src/backtesting/"],
+                "MyPy Type Checking",
             )
             checks.append(("mypy", success))
 
@@ -368,14 +374,14 @@ class TestRunner:
         )
 
         passed_tests = sum(
-            1 for result in self.results.values()
+            1
+            for result in self.results.values()
             if isinstance(result, dict) and result.get("success", False)
         )
 
-        total_tests = len([
-            r for r in self.results.values()
-            if isinstance(r, dict) and "success" in r
-        ])
+        total_tests = len(
+            [r for r in self.results.values() if isinstance(r, dict) and "success" in r]
+        )
 
         print(f"Total Duration: {total_duration:.1f}s")
         print(f"Tests Passed: {passed_tests}/{total_tests}")
@@ -399,11 +405,12 @@ class TestRunner:
         # Save JSON report if requested
         if args.json_report:
             report_path = self.project_root / "test-report.json"
-            with open(report_path, 'w') as f:
+            with open(report_path, "w") as f:
                 json.dump(self.results, f, indent=2, default=str)
             self.print_info(f"JSON report saved to {report_path}")
 
         return passed_tests == total_tests
+
 
 def main():
     """Main entry point."""
@@ -417,25 +424,29 @@ Examples:
   python scripts/run_tests.py all --coverage         # Run all tests with coverage
   python scripts/run_tests.py unit --fast --no-cov   # Fast unit tests without coverage
   python scripts/run_tests.py lint --skip-mypy       # Run linting without type checking
-        """
+        """,
     )
 
     # Test type selection
     parser.add_argument(
         "test_type",
         choices=["unit", "integration", "backtest", "live", "lint", "all"],
-        help="Type of tests to run"
+        help="Type of tests to run",
     )
 
     # Coverage options
-    parser.add_argument("--coverage", action="store_true", default=True, help="Enable coverage reporting")
+    parser.add_argument(
+        "--coverage", action="store_true", default=True, help="Enable coverage reporting"
+    )
     parser.add_argument("--no-cov", action="store_true", help="Disable coverage reporting")
     parser.add_argument("--html-report", action="store_true", help="Generate HTML coverage report")
 
     # Execution options
     parser.add_argument("--parallel", action="store_true", help="Run tests in parallel")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--fast", action="store_true", help="Fast mode (reduced output, no coverage)")
+    parser.add_argument(
+        "--fast", action="store_true", help="Fast mode (reduced output, no coverage)"
+    )
     parser.add_argument("--junit-xml", action="store_true", help="Generate JUnit XML for CI")
 
     # Safety options

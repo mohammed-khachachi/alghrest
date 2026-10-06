@@ -1,0 +1,38 @@
+{
+  "verified_at": "2026-10-06T01:16:03.720863+00:00",
+  "full_mocked_passed": 1270,
+  "full_mocked_skipped": 53,
+  "aggregate_coverage_percent": 76.40286611383947,
+  "critical_coverage": {
+    "src/connectors/advisory/replay.py": 100.0,
+    "src/core/advisory/account.py": 100.0,
+    "src/core/advisory/data.py": 100.0,
+    "src/core/advisory/evaluation.py": 100.0,
+    "src/core/advisory/events.py": 100.0,
+    "src/core/advisory/health.py": 100.0,
+    "src/core/advisory/selection.py": 100.0,
+    "src/api/services/advisory.py": 100.0
+  },
+  "focused_passed": 402,
+  "property_ranking_examples": 60,
+  "source_checkpoint_files": 9,
+  "reviewed_source_files": 11,
+  "patch_lines": 1993,
+  "checks": [
+    "repository ruff",
+    "changed-file black/isort",
+    "strict mypy:34 relevant sources",
+    "architecture",
+    "dashboard build",
+    "four synthetic browser cases"
+  ],
+  "default_selection_policy_configured": false,
+  "current_research_reader_configured": false,
+  "actual_trading_evidence_provided": false,
+  "rule_exact_TCP25_simulator_provided": false,
+  "execution_enabled": false,
+  "runtime_financial_state_changed": false,
+  "owned_preview_stopped": true,
+  "goal_complete": false,
+  "next_action": "Reuse structural sizing and account/evaluation primitives to build one deterministic advisory risk decision with correlated-exposure and fail-closed boundaries."
+}

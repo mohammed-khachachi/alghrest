@@ -1,0 +1,726 @@
+{
+  "recorded_at": "2026-09-22",
+  "method": "Pre-edit filesystem inventory; files with mtime on 2026-09-22. Git unavailable; timestamps cannot establish exact edit authorship or historical completeness.",
+  "files": [
+    {
+      "path": "PROJECT_AUDIT_REPORT.md",
+      "size": 28260,
+      "mtime_ns": 1790102033266726497,
+      "sha256": "f5861e54a2905a42a2c43fd1c218125353ce01e761149b13b98ac7844209e024"
+    },
+    {
+      "path": "README.md",
+      "size": 14359,
+      "mtime_ns": 1790101989336620758,
+      "sha256": "b1031310047abb20a07565c0dc2a3731a6ca37d07338f5717b860fe8bdbbecae"
+    },
+    {
+      "path": "README.md.orig",
+      "size": 14359,
+      "mtime_ns": 1790101387995666447,
+      "sha256": "86e36dfdb3ebfaaa6bf5fd925ab9ad808eb8ac463c3b074d56691021bbf16c8a"
+    },
+    {
+      "path": "__pycache__/run_agent.cpython-314.pyc",
+      "size": 1738,
+      "mtime_ns": 1790097987311368578,
+      "sha256": "0c34996fd2c14545ac28b58cc9937bdb3c03cc0566216237cece46083dbe9615"
+    },
+    {
+      "path": "agents/__pycache__/__init__.cpython-314.pyc",
+      "size": 231,
+      "mtime_ns": 1790097987121565005,
+      "sha256": "092187c278747f6b00dd02c76c33809ef78e591b7d8b44921b9a789f20e78d0f"
+    },
+    {
+      "path": "agents/__pycache__/base_agent.cpython-314.pyc",
+      "size": 17552,
+      "mtime_ns": 1790097987124021196,
+      "sha256": "589574a86c300b5fa8f49b1104ce1ade2f43471a5ea4fecbdd081c165cf54299"
+    },
+    {
+      "path": "agents/tier1_executive/__pycache__/__init__.cpython-314.pyc",
+      "size": 205,
+      "mtime_ns": 1790097987124329402,
+      "sha256": "9f18d352eab9fefdc907898970e1f912c86ba0c5959cafdbe60f7ecb3f244b66"
+    },
+    {
+      "path": "agents/tier1_executive/__pycache__/cio_agent.cpython-314.pyc",
+      "size": 29923,
+      "mtime_ns": 1790097987127061222,
+      "sha256": "b2f98762f888d1c58311b4a228eab8f315dfc37139d01ed454eb5996ee3cdeb3"
+    },
+    {
+      "path": "agents/tier1_executive/__pycache__/proposal_approver.cpython-314.pyc",
+      "size": 11476,
+      "mtime_ns": 1790097987128573894,
+      "sha256": "a26e5507979c1fa2207a69d88e7bfdaab8619f690b6931c962c015e3b5af2d4e"
+    },
+    {
+      "path": "agents/tier1_executive/__pycache__/risk_governor.cpython-314.pyc",
+      "size": 19861,
+      "mtime_ns": 1790097987131093976,
+      "sha256": "9ab2b848d034b3e7a9c9f96ba01dc13c1e01777c96da071eaadb99f7bdd18bf0"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/__init__.cpython-314.pyc",
+      "size": 244,
+      "mtime_ns": 1790097987131504729,
+      "sha256": "79158ad6f4dc546ad1c82cbeba59d6fcb1f80bd6f3bd63410a4a7e7f43630b0c"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/geopolitical_watcher.cpython-314.pyc",
+      "size": 18315,
+      "mtime_ns": 1790097987135358130,
+      "sha256": "443b496313fa36e8a3f97eecd17826388b28a08834a9cff412a1535d441562f8"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/macro_economist.cpython-314.pyc",
+      "size": 13426,
+      "mtime_ns": 1790097987138555562,
+      "sha256": "a1f211806dd86c96acc41bcaa0694432ce7f5f5cc26c9ad0159d1f5a108b48c6"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/market_data_hub.cpython-314.pyc",
+      "size": 14487,
+      "mtime_ns": 1790097987141510374,
+      "sha256": "aaf9b1fd42b976ca898d61dd6e934fd678f0ead8cc6cf915d6afe513e413f0b5"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/news_analyst.cpython-314.pyc",
+      "size": 29678,
+      "mtime_ns": 1790097987144413784,
+      "sha256": "ee727fa4ac50ce95eebf1b3eb90b3e073de122e7c3d853db9df32129daae7b5f"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/onchain_sleuth.cpython-314.pyc",
+      "size": 16025,
+      "mtime_ns": 1790097987146342710,
+      "sha256": "a6e5b481ced7f8dbbc96401ef094f30fab838991db631bffd3983289ff0b63e1"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/price_publisher.cpython-314.pyc",
+      "size": 10412,
+      "mtime_ns": 1790097987147477377,
+      "sha256": "c17b1aa66359eb40e5eb7eac1e3ad3fe3253e2bf0d4f8d333370f7c25f82ba02"
+    },
+    {
+      "path": "agents/tier2_intelligence/__pycache__/sentiment_analyst.cpython-314.pyc",
+      "size": 19221,
+      "mtime_ns": 1790097987149776396,
+      "sha256": "c1420b74a63d8d2ca71d23a01d35b523d6dd3f5b77c54ff634b5318fb6a2c7cc"
+    },
+    {
+      "path": "agents/tier3_quant/__pycache__/__init__.cpython-314.pyc",
+      "size": 414,
+      "mtime_ns": 1790097987150110358,
+      "sha256": "397b5c20ef3c73d361a8a046e426323f88887726f12b46658798c614589c2176"
+    },
+    {
+      "path": "agents/tier3_quant/__pycache__/correlation_engine.cpython-314.pyc",
+      "size": 14534,
+      "mtime_ns": 1790097987151927989,
+      "sha256": "592d1250b93b7b398a0e63f79beaeb4d725feeb900fdaa81f2e2a023624c4a18"
+    },
+    {
+      "path": "agents/tier3_quant/__pycache__/technical_analyst.cpython-314.pyc",
+      "size": 17978,
+      "mtime_ns": 1790097987156387772,
+      "sha256": "e93459716558f0e56e1807053dcec96d756089c5c5599e1673bf57ad672e42e0"
+    },
+    {
+      "path": "agents/tier3_quant/__pycache__/volatility_forecaster.cpython-314.pyc",
+      "size": 15706,
+      "mtime_ns": 1790097987159896977,
+      "sha256": "cc4ef6252c7f1266422be9aaa294d8a2d8438ee3b813a0e43ebb9e538250e2c7"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/__init__.cpython-314.pyc",
+      "size": 209,
+      "mtime_ns": 1790097987160363920,
+      "sha256": "ca269f331f2de6a64f0be47eeb18fba2511ff2ef1a6e261ff42cb626de76b6a2"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/arb_cross_exchange.cpython-314.pyc",
+      "size": 14016,
+      "mtime_ns": 1790097987161677427,
+      "sha256": "d90975dd493b5f8aa9266ba768e4d6fd23769e305fc69f70c46bc66d7d35892b"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/breakout_hunter.cpython-314.pyc",
+      "size": 16630,
+      "mtime_ns": 1790097987164348657,
+      "sha256": "75834aa25eff09e8a2418425a0b121fd9d00e39c9b089722032863db878bb92e"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/macro_rotator.cpython-314.pyc",
+      "size": 16435,
+      "mtime_ns": 1790097987166171976,
+      "sha256": "1343c19eab3270e09816fe0c3b739d3c743f78cba6c0087709c1d52ae6d1c4fd"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/mean_reversion.cpython-314.pyc",
+      "size": 20369,
+      "mtime_ns": 1790097987168747415,
+      "sha256": "1e462aa3031dbaf1cb1c987f1edc9ac3f1c0eb5785a39e0fe48ebf4eb3532fb1"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/ml_predictor.cpython-314.pyc",
+      "size": 30773,
+      "mtime_ns": 1790097987172344208,
+      "sha256": "7320cf133486c362ee33deeeeafd2ffc2bc835333b49f22ad4c0717ce7e4da3a"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/momentum.cpython-314.pyc",
+      "size": 15333,
+      "mtime_ns": 1790097987174234522,
+      "sha256": "a69ecb381fec9d2cf9b2891392dc6660679f5dda20f019d337f88751374f52eb"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/stat_arb.cpython-314.pyc",
+      "size": 17167,
+      "mtime_ns": 1790097987176508228,
+      "sha256": "ce5779d5e04736813dc0de912e210ba3f828735e25a6ba60274252addcc3d42b"
+    },
+    {
+      "path": "agents/tier4_strategies/__pycache__/trend_follower.cpython-314.pyc",
+      "size": 18859,
+      "mtime_ns": 1790097987179041763,
+      "sha256": "116186b34e90c5df4bd3aa7912662f082c3b79c9a54b0f28e2f435cab38fb68e"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/__init__.cpython-314.pyc",
+      "size": 237,
+      "mtime_ns": 1790097987179357625,
+      "sha256": "18bb4e498d1fb8df8d89d838b441decaeb7027364a0fab74fd67488a18a14bb4"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/exchange_executor.cpython-314.pyc",
+      "size": 27761,
+      "mtime_ns": 1790097987182558974,
+      "sha256": "7047e82fc69904a9885b5bc20f30d34e8dec89f4ec6fbf82816457177e2b3664"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/fee_optimizer.cpython-314.pyc",
+      "size": 7329,
+      "mtime_ns": 1790097987183621881,
+      "sha256": "abdba3956bf65603ccc190c8feb2a9d79013c19bfeb14a7a4ef768be3d73727d"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/hedge_manager.cpython-314.pyc",
+      "size": 8171,
+      "mtime_ns": 1790097987184654057,
+      "sha256": "c7ba2264d373e52ec7c5446e0606dc57907cdb57eccde84fd83acf78a808af00"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/liquidation_guard.cpython-314.pyc",
+      "size": 11170,
+      "mtime_ns": 1790097987185972180,
+      "sha256": "c73b8cf47de347e1a72529c1fdb139042084d7fa1a649d75cc57c24f439e9110"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/order_router.cpython-314.pyc",
+      "size": 10937,
+      "mtime_ns": 1790097987186677351,
+      "sha256": "a874ac2be945d34701ad7d6985e04ea346d4f803510608c3ebbe3b204cd26b1d"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/position_sizer.cpython-314.pyc",
+      "size": 12018,
+      "mtime_ns": 1790097987188725598,
+      "sha256": "51be52edfc4d4037cbdc7184b6da0260db7967dbeaf6ed3bfc6f36e7cf24f2dc"
+    },
+    {
+      "path": "agents/tier5_execution/__pycache__/slippage_minimizer.cpython-314.pyc",
+      "size": 11073,
+      "mtime_ns": 1790097987190004877,
+      "sha256": "dc977bec694bc66f020f326e3204b742c3f5d73eca23716185eaa48280b5b3b4"
+    },
+    {
+      "path": "agents/tier6_defi/__pycache__/__init__.cpython-314.pyc",
+      "size": 225,
+      "mtime_ns": 1790097987190304332,
+      "sha256": "334d7c28c9d212d873a9a4bbbfcf9739635124bde50d793e7802a9d9a065565a"
+    },
+    {
+      "path": "agents/tier6_defi/__pycache__/bridge_strategist.cpython-314.pyc",
+      "size": 7090,
+      "mtime_ns": 1790097987191087635,
+      "sha256": "e3431e146ae1bd66a50bee54af96d4344a419655c6c5ca4d87e3aa0d7b330370"
+    },
+    {
+      "path": "agents/tier6_defi/__pycache__/dex_arbitrageur.cpython-314.pyc",
+      "size": 7085,
+      "mtime_ns": 1790097987191902173,
+      "sha256": "0d43f2e74f89ed14c18f68e6a1ef757d1e522ee3d3a4b313fdfb2eb51f95101a"
+    },
+    {
+      "path": "agents/tier6_defi/__pycache__/mev_hunter.cpython-314.pyc",
+      "size": 6170,
+      "mtime_ns": 1790097987192643300,
+      "sha256": "8d05044a8ae8585c538fbc636038dd0b6eb4ae0acfdf60c8cd650ffa8bca3d96"
+    },
+    {
+      "path": "agents/tier6_defi/__pycache__/yield_farmer.cpython-314.pyc",
+      "size": 7784,
+      "mtime_ns": 1790097987193497300,
+      "sha256": "7acbd41a6b2f89aab12b8d5be1dfbd4e44c8bd76cc6f485516e7f265845cf9a5"
+    },
+    {
+      "path": "agents/tier7_monitoring/__pycache__/__init__.cpython-314.pyc",
+      "size": 232,
+      "mtime_ns": 1790097987193774479,
+      "sha256": "b2ee8cc8890432684071e45ea24be239d5645a40e23985aa51e1e4bd26193ef7"
+    },
+    {
+      "path": "agents/tier7_monitoring/__pycache__/alert_manager.cpython-314.pyc",
+      "size": 16014,
+      "mtime_ns": 1790097987195698900,
+      "sha256": "cc27674812aefcfce928b6275e6f0f4735a0edbba53ecc39f32e63e1b1122730"
+    },
+    {
+      "path": "agents/tier7_monitoring/__pycache__/auditor_agent.cpython-314.pyc",
+      "size": 8483,
+      "mtime_ns": 1790097987196758988,
+      "sha256": "6cfc110897d7788269c09812673ee0d2c522daa1594aa6aca8db8f7b2216d78c"
+    },
+    {
+      "path": "agents/tier7_monitoring/__pycache__/compliance_agent.cpython-314.pyc",
+      "size": 17197,
+      "mtime_ns": 1790097987198707034,
+      "sha256": "40eae8e7d37fbff3eb057f04010da3cd5098c267d600fc3b192f982e16b5436b"
+    },
+    {
+      "path": "agents/tier7_monitoring/__pycache__/copy_trading_channel.cpython-314.pyc",
+      "size": 5626,
+      "mtime_ns": 1790097987199449537,
+      "sha256": "b3698db9687015f0cee845fe8af31341c7445c0b51ec189357d19c5d4d3e220d"
+    },
+    {
+      "path": "agents/tier7_monitoring/__pycache__/portfolio_tracker.cpython-314.pyc",
+      "size": 16407,
+      "mtime_ns": 1790097987201225084,
+      "sha256": "4a27b8917135c7c0582d8a8bfa02eb273957d545c2c405dfef23ef3fa3d1eccf"
+    },
+    {
+      "path": "api/__pycache__/__init__.cpython-314.pyc",
+      "size": 114,
+      "mtime_ns": 1790097987201496321,
+      "sha256": "28575507b37492ff3dba675a698a7e379720aaa515d9338db3b8c8b02aae4d08"
+    },
+    {
+      "path": "api/__pycache__/main.cpython-314.pyc",
+      "size": 20338,
+      "mtime_ns": 1790097987203726836,
+      "sha256": "b059f95b94fc8b741ec606d691a2a1ab8be7338cd92c44683c41d7426a6f24a1"
+    },
+    {
+      "path": "api/__pycache__/mock_server.cpython-314.pyc",
+      "size": 10200,
+      "mtime_ns": 1790097987205326350,
+      "sha256": "272d026a68bcc70d97a9f3ddb633bd2ee2bab16fb582a3eba3a563ecb79c869f"
+    },
+    {
+      "path": "api/routes/__pycache__/__init__.cpython-314.pyc",
+      "size": 121,
+      "mtime_ns": 1790097987205634657,
+      "sha256": "9d6c18acfaa31d7fb5820ec8976368dfc51c653b6a106b8ec518ff802749fc3b"
+    },
+    {
+      "path": "api/routes/__pycache__/quotes.cpython-314.pyc",
+      "size": 5078,
+      "mtime_ns": 1790097987206385086,
+      "sha256": "4a1a573cd9787c14f9cd3fd272311d77c602ae616a57f5b52462abc9f90398c7"
+    },
+    {
+      "path": "api/websockets/__pycache__/__init__.cpython-314.pyc",
+      "size": 125,
+      "mtime_ns": 1790097987206613887,
+      "sha256": "c5414c16a40073a6bf1e2b0956a718ab61d5b84711d2795ab72222b78478e923"
+    },
+    {
+      "path": "api/websockets/__pycache__/dashboard_ws.cpython-314.pyc",
+      "size": 29861,
+      "mtime_ns": 1790097987210807361,
+      "sha256": "ef478153d1575b48e4707de907f84c21f64fe21c9520605e5199dafe1b2650b6"
+    },
+    {
+      "path": "backtesting/__pycache__/__init__.cpython-314.pyc",
+      "size": 250,
+      "mtime_ns": 1790097987211145313,
+      "sha256": "0758e3a7f273323b6e4149ebc03635f531d86a3c75b9715d5ea61fa371992615"
+    },
+    {
+      "path": "backtesting/__pycache__/engine.cpython-314.pyc",
+      "size": 25599,
+      "mtime_ns": 1790097987214785588,
+      "sha256": "b61b52e265646a36f200db773479ea5a90a4c84fe0f345ad042501a1bcb7a290"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/__init__.cpython-314.pyc",
+      "size": 787,
+      "mtime_ns": 1790097987215173447,
+      "sha256": "253572c5c790cc338f9d8b69883f545d8ef363166a27ffb9c46f7a117d0d35e9"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/base.cpython-314.pyc",
+      "size": 6555,
+      "mtime_ns": 1790097987216201860,
+      "sha256": "c2f467455fe472ec8926019a2fb84e9d183e02c5bb1b3790708de5d4da01824d"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/crypto_provider.cpython-314.pyc",
+      "size": 4402,
+      "mtime_ns": 1790097987216897706,
+      "sha256": "0f085908a0a2f1942d8d1adc925a01a4783e22ea7052c0a47b877a8b74e2222c"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/equity_provider.cpython-314.pyc",
+      "size": 4413,
+      "mtime_ns": 1790097987217588590,
+      "sha256": "78532a050ca53e66590a482b58a9e264884e067df4c5e51c427779ff94c95653"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/forex_provider.cpython-314.pyc",
+      "size": 4319,
+      "mtime_ns": 1790097987218382299,
+      "sha256": "4250fb715bd3d2ec1779ba0c6f3bb2d94d3c7afbc0b365b1e3d57d48e411e937"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/holdings.cpython-314.pyc",
+      "size": 3198,
+      "mtime_ns": 1790097987218954998,
+      "sha256": "1c2df4fe066a3ec328a8a7640c2ea950351576bf8788f9edb936214c40a88be0"
+    },
+    {
+      "path": "connectors/data_providers/__pycache__/router.cpython-314.pyc",
+      "size": 7533,
+      "mtime_ns": 1790097987219889137,
+      "sha256": "0f8d9ccd4e3e50dfbc541d6cc5c219e7eb5a477a4faa55b7dc65a5decaa2832f"
+    },
+    {
+      "path": "connectors/exchanges/__pycache__/ccxt_connector.cpython-314.pyc",
+      "size": 23088,
+      "mtime_ns": 1790097987222897037,
+      "sha256": "0bc8a1ca4d17d66a64504e7eb661245052390441eac05fed675d9b717fc8d750"
+    },
+    {
+      "path": "core/__pycache__/__init__.cpython-314.pyc",
+      "size": 115,
+      "mtime_ns": 1790097987223203403,
+      "sha256": "4a297462019793d626cd2d2bd34892da05e88514a90c72767c94284be0e26697"
+    },
+    {
+      "path": "core/__pycache__/config.cpython-314.pyc",
+      "size": 6682,
+      "mtime_ns": 1790097987224054490,
+      "sha256": "0a719fe1221e5dff1a7ac54b6fa49cf962b0d01125ad87fd3f4365b265d5212e"
+    },
+    {
+      "path": "core/data/__init__.py",
+      "size": 144,
+      "mtime_ns": 1790117201213537043,
+      "sha256": "884481fcdc9bcb1ae7d2732ef1b1b73b3716ba69747c500827f7882d28daca20"
+    },
+    {
+      "path": "core/kafka/__pycache__/__init__.cpython-314.pyc",
+      "size": 121,
+      "mtime_ns": 1790097987224283998,
+      "sha256": "c1e670ce302243f75a95e3584f22dbf376589ab24cb6454a4d4416b4b457d1e0"
+    },
+    {
+      "path": "core/kafka/__pycache__/metrics_collector.cpython-314.pyc",
+      "size": 12355,
+      "mtime_ns": 1790097987225737028,
+      "sha256": "52c496e14ed98f9223f2e6d93077a47952852d791b7bd12e2aa8695ff9560e36"
+    },
+    {
+      "path": "core/kafka/__pycache__/pnl_history_writer.cpython-314.pyc",
+      "size": 4847,
+      "mtime_ns": 1790097987226430897,
+      "sha256": "181a5dde230520fcc84b82ec71b734ba45deedb0a1a7e879fa05f15e1c1c23b5"
+    },
+    {
+      "path": "core/orchestrator/__pycache__/__init__.cpython-314.pyc",
+      "size": 463,
+      "mtime_ns": 1790097987226718505,
+      "sha256": "e7fb32433bca7ec8b49f3525f29d69fb6732c8be7d2b3e055f20482fec100361"
+    },
+    {
+      "path": "core/orchestrator/__pycache__/message_bus.cpython-314.pyc",
+      "size": 15456,
+      "mtime_ns": 1790097987228471489,
+      "sha256": "2e3a173e8d52130cd698b700c5d324003464e8370a56f19fb2dfee3f253c8766"
+    },
+    {
+      "path": "core/orchestrator/__pycache__/state_manager.cpython-314.pyc",
+      "size": 17278,
+      "mtime_ns": 1790097987230321224,
+      "sha256": "dacd48eb584a7d4c2a29ffbc21d36aa1ee03e2bbe741959bdf834ba2f22c9f91"
+    },
+    {
+      "path": "core/risk/__pycache__/__init__.cpython-314.pyc",
+      "size": 378,
+      "mtime_ns": 1790097987230608932,
+      "sha256": "3f28d834a2b0ad97dd1e3822ce69d9a7029004ffa054c0c47f1da358c49bc5e9"
+    },
+    {
+      "path": "core/risk/__pycache__/kill_switch.cpython-314.pyc",
+      "size": 9599,
+      "mtime_ns": 1790097987231669768,
+      "sha256": "895878c14fd10e2249e0ecea91a36f3a19066cdf6384bebc84741e0bbd6c105c"
+    },
+    {
+      "path": "core/risk/__pycache__/position_limits.cpython-314.pyc",
+      "size": 8924,
+      "mtime_ns": 1790097987232770521,
+      "sha256": "7590da60c19b608b27c74c66b78a5a8e5f642c82ff488c3e87bb450fc61affff"
+    },
+    {
+      "path": "core/risk/__pycache__/risk_engine.cpython-314.pyc",
+      "size": 13724,
+      "mtime_ns": 1790097987233677210,
+      "sha256": "207e80e276a02e6503f2c3aa609c3b9b0eda53418aca40f795a6e33dcb3a0934"
+    },
+    {
+      "path": "core/telegram/__pycache__/__init__.cpython-314.pyc",
+      "size": 255,
+      "mtime_ns": 1790097987234580090,
+      "sha256": "a802001de259590fa0a73d752cb610b7b553633fb02a8d2d9bb494e96ab48cd4"
+    },
+    {
+      "path": "core/telegram/__pycache__/bot.cpython-314.pyc",
+      "size": 4120,
+      "mtime_ns": 1790097987235200314,
+      "sha256": "a81e99eaaa871ee850fddf422cb0548ad3004800a12aa5005ce3b6bd62bcdb6e"
+    },
+    {
+      "path": "core/telegram/__pycache__/bot_manager.cpython-314.pyc",
+      "size": 39817,
+      "mtime_ns": 1790097987240322935,
+      "sha256": "3300bb411762db648aabd6449d13fac98cc5cc302973fba92f0fa0d1d4df019f"
+    },
+    {
+      "path": "core/utils/__pycache__/__init__.cpython-314.pyc",
+      "size": 415,
+      "mtime_ns": 1790097987240707800,
+      "sha256": "45cfb2563539a833dd7d752449dcabed620731af013d1829f71646abcceb0736"
+    },
+    {
+      "path": "core/utils/__pycache__/alerts.cpython-314.pyc",
+      "size": 5079,
+      "mtime_ns": 1790097987241484608,
+      "sha256": "8b71b4a9153a6ec502ef8daf761fcbdb6df5c678a5ebcd4fcabf56d72ce992b6"
+    },
+    {
+      "path": "core/utils/__pycache__/audit_reporter.cpython-314.pyc",
+      "size": 5136,
+      "mtime_ns": 1790097987242172552,
+      "sha256": "2ea4b4c7e56f20e318576cd54568b1c286f831e0ab78e19e2fa9f60acbf58e4e"
+    },
+    {
+      "path": "core/utils/__pycache__/logging.cpython-314.pyc",
+      "size": 3191,
+      "mtime_ns": 1790097987242770849,
+      "sha256": "3e296f66304d534e04e02b974514a71d425d747942a72aece43b19d30e158fbd"
+    },
+    {
+      "path": "core/utils/__pycache__/metrics.cpython-314.pyc",
+      "size": 6172,
+      "mtime_ns": 1790097987243495665,
+      "sha256": "56479346d932678dc065fdc7bd2abb63dc16f4eae073a6058d8b43daa9724306"
+    },
+    {
+      "path": "mcp/claude_model_manager/__pycache__/__init__.cpython-314.pyc",
+      "size": 135,
+      "mtime_ns": 1790097987243764731,
+      "sha256": "370d770be974a9f84995dee4da8280947c36882ea1e600108ae3e5622d7a323b"
+    },
+    {
+      "path": "mcp/claude_model_manager/__pycache__/server.cpython-314.pyc",
+      "size": 17417,
+      "mtime_ns": 1790097987245786467,
+      "sha256": "30154b416d424d9ddb0ee06e8c345ecba0a24840d33c3079addd6ffc97a237d7"
+    },
+    {
+      "path": "ml/inference/__pycache__/server.cpython-314.pyc",
+      "size": 3920,
+      "mtime_ns": 1790097987246487925,
+      "sha256": "f664d95a1ca8699dfbee55cd79a6a7804d212733ff70e7075ab5fa67c4d8c3b8"
+    },
+    {
+      "path": "ml/models/__pycache__/cnn_pattern.cpython-314.pyc",
+      "size": 4447,
+      "mtime_ns": 1790097987247155155,
+      "sha256": "050834b26dd234199fe66c12a7691fdb1ecabd2b05418c1540bf2697b0b3bc87"
+    },
+    {
+      "path": "ml/models/__pycache__/rl_position_sizer.cpython-314.pyc",
+      "size": 4053,
+      "mtime_ns": 1790097987247780350,
+      "sha256": "bd2b426d12197ca12b310f47f0da648cada3a7a43ef4b35d37ca68828a8cab8b"
+    },
+    {
+      "path": "ml/training/__pycache__/data_loader.cpython-314.pyc",
+      "size": 4365,
+      "mtime_ns": 1790097987248500711,
+      "sha256": "c710606f8cc24ee8351a1c524a2012d0f92e7e2153157dcf119178c8d726e02a"
+    },
+    {
+      "path": "ml/training/__pycache__/train.cpython-314.pyc",
+      "size": 5040,
+      "mtime_ns": 1790097987248677164,
+      "sha256": "5a480c8823ecf9a1214254950697b91a1763d29ff7ea810a8ecac99b49e0fed2"
+    },
+    {
+      "path": "scripts/__pycache__/demo_kill_switch.cpython-314.pyc",
+      "size": 14508,
+      "mtime_ns": 1790097987250950929,
+      "sha256": "2f10d196834dd4c9716fadeefff4c3847b1737f91de3d18b2abda11e7263e391"
+    },
+    {
+      "path": "scripts/__pycache__/mock_ml_server.cpython-314.pyc",
+      "size": 10653,
+      "mtime_ns": 1790097987252643535,
+      "sha256": "5f2a5eee907260b7914d0dbb4385170803cb9b31225e1400d28819da26e7a931"
+    },
+    {
+      "path": "scripts/__pycache__/run_kill_switch_stress_test.cpython-314.pyc",
+      "size": 26512,
+      "mtime_ns": 1790097987255936622,
+      "sha256": "1bca4ea6598a6c40eebbf83fef67d2c96d43458f7bd8c767e442ba0f8a9d6338"
+    },
+    {
+      "path": "scripts/__pycache__/run_tests.cpython-314.pyc",
+      "size": 23657,
+      "mtime_ns": 1790097987258716535,
+      "sha256": "f22c78409360ede2afe43fe66fd3593d58cd13a4543382679c38df374b621b9c"
+    },
+    {
+      "path": "scripts/__pycache__/seed_redis.cpython-314.pyc",
+      "size": 19375,
+      "mtime_ns": 1790097987261220195,
+      "sha256": "9882d4362d105567b810c409d662f3ee4aeae37998bd808a823e8c58b6550802"
+    },
+    {
+      "path": "scripts/__pycache__/validate_agent_ids.cpython-314.pyc",
+      "size": 7093,
+      "mtime_ns": 1790097987262303119,
+      "sha256": "3066904b1a5f329b5f897212ba1fdb530294f8598f2481dc5bdbe86650b81cef"
+    },
+    {
+      "path": "scripts/__pycache__/validate_news_feeds.cpython-314.pyc",
+      "size": 12979,
+      "mtime_ns": 1790097987264033682,
+      "sha256": "6a38768922a063bec88c4f14fdb7714858a24af2c595c377fd0924a0f060afe7"
+    },
+    {
+      "path": "tests/__pycache__/__init__.cpython-314.pyc",
+      "size": 116,
+      "mtime_ns": 1790097987264338686,
+      "sha256": "658022336ab401353f47b13c9cf32ead306846b0baee481c320c3f55d56200f1"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_agent_coordination.cpython-314.pyc",
+      "size": 39354,
+      "mtime_ns": 1790097987269055011,
+      "sha256": "25feb659b353c5cc8233ab57b3b8393de0fa9b8b5e80398a94317f04c34f53c5"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_api_dashboard_integration.cpython-314.pyc",
+      "size": 24798,
+      "mtime_ns": 1790097987271964810,
+      "sha256": "16a02eaa8bf29f7ce4742efc92c20ff6693561d2dcfb6c2a71101f52a375a17b"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_backtesting_validation.cpython-314.pyc",
+      "size": 36393,
+      "mtime_ns": 1790097987277175062,
+      "sha256": "4fa0d48a50fa810960d3c952ad86d7ff06fefa7652e11a032601f7250072e5b4"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_execution_pipeline.cpython-314.pyc",
+      "size": 19581,
+      "mtime_ns": 1790097987280866776,
+      "sha256": "585030db48e6386697317ab62ccdb7879815c4806d43141178637e8e88bf3a8d"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_kafka_messaging.cpython-314.pyc",
+      "size": 19943,
+      "mtime_ns": 1790097987284807072,
+      "sha256": "42c8f0adc8789094eedabff99c6088d6e9b0efd171b1d629b286ebbf2ee1131f"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_market_crash_kill_switch.cpython-314.pyc",
+      "size": 25284,
+      "mtime_ns": 1790097987289387996,
+      "sha256": "f1d34facb55bbd0322745257e53191e6a535010d9a20d2cf34a3b961675fc4ae"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_ml_failover.cpython-314.pyc",
+      "size": 19078,
+      "mtime_ns": 1790097987293198168,
+      "sha256": "e3591f5a8d7bb0c3e8d9d3cba62aef53d3c260c8056f41adecaa3e3c531c2123"
+    },
+    {
+      "path": "tests/integration/__pycache__/test_redis_state_management.cpython-314.pyc",
+      "size": 21824,
+      "mtime_ns": 1790097987297145636,
+      "sha256": "714e6818f2fef605aa9aedb86dc8f270b8dba50d825d17187f7d1e7cd57fe246"
+    },
+    {
+      "path": "tests/unit/__pycache__/__init__.cpython-314.pyc",
+      "size": 121,
+      "mtime_ns": 1790097987297530650,
+      "sha256": "310e7fe7227a508643c7ffb2a8105a945ecb867055712a93f427c01f3e8659a6"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_exchange_executor.cpython-314.pyc",
+      "size": 11470,
+      "mtime_ns": 1790097987299684246,
+      "sha256": "5a551f2ff456ca1066c2ba5c5c5f8340fef3765a809a0eb3c1267680c41d946e"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_imports.cpython-314.pyc",
+      "size": 5259,
+      "mtime_ns": 1790097987300768690,
+      "sha256": "c47fe436a89d0405a5f2154944381f1f9f0a62d442f5f9c68ffcb736b2656e64"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_kill_switch_cancel.cpython-314.pyc",
+      "size": 7262,
+      "mtime_ns": 1790097987302234404,
+      "sha256": "f3cfd3e404946d0ab09fcfe4f13e9c24c909ce8dfc907951795697cd402cc711"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_models.cpython-314.pyc",
+      "size": 6620,
+      "mtime_ns": 1790097987303476193,
+      "sha256": "5c639afad2480e31f8ed2375cf36ea07a1ac5e2e9e215ec4fe6774609448f21f"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_portfolio_tracker.cpython-314.pyc",
+      "size": 22021,
+      "mtime_ns": 1790097987307470275,
+      "sha256": "084998c956b8635521e15f0eebed32020361f0ce462dc2fbd597f81be7e3d94c"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_price_publisher.cpython-314.pyc",
+      "size": 10428,
+      "mtime_ns": 1790097987308754216,
+      "sha256": "dc183df6f25b7eb4d33a29d2a8c12ef8072e2d7acd3a7ac3c52b65ec60538d3a"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_prompt_caching.cpython-314.pyc",
+      "size": 10337,
+      "mtime_ns": 1790097987310057191,
+      "sha256": "2e1faa3f771f935d8750f1337b06fa8307daabf171e90450eee2083c4752fc47"
+    },
+    {
+      "path": "tests/unit/__pycache__/test_risk_engine.cpython-314.pyc",
+      "size": 5868,
+      "mtime_ns": 1790097987310907262,
+      "sha256": "03454ec4884a2a1b5b66f632975acd19f99b01e157a85680de704fcc6bb0274b"
+    }
+  ]
+}

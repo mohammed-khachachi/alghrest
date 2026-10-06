@@ -1,5 +1,15 @@
 name: alghrest
 
+# Local trusted-host deployment. Live clients require SASL_SSL and a TLS broker overlay.
+x-runtime-environment: &runtime-environment
+  OPERATING_PROFILE: ${OPERATING_PROFILE:-general}
+  DATABASE_URL: postgresql+asyncpg://alghrest:${POSTGRES_PASSWORD:?Set an explicit strong POSTGRES_PASSWORD}@timescaledb:5432/alghrest
+  REDIS_URL: redis://redis:6379
+  KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+  KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+  KAFKA_SASL_USERNAME: alghrest
+  KAFKA_SASL_PASSWORD: ${KAFKA_APP_PASSWORD:?Run python -m scripts.configure_access}
+
 networks:
   alghrest-network:
     driver: bridge
@@ -42,7 +52,7 @@ services:
     environment:
       POSTGRES_DB: alghrest
       POSTGRES_USER: alghrest
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alghrest_secure_pass_2024}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set an explicit strong POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     command: >
       postgres
@@ -61,10 +71,14 @@ services:
       -c min_wal_size=1GB
       -c max_wal_size=4GB
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - timescale-data:/var/lib/postgresql/data
       - ./infra/init/timescale-init.sql:/docker-entrypoint-initdb.d/01-timescale-init.sql:ro
+      - ./infra/migrations/001_accounting.sql:/docker-entrypoint-initdb.d/02-accounting.sql:ro
+      - ./infra/migrations/002_execution_recovery.sql:/docker-entrypoint-initdb.d/03-execution-recovery.sql:ro
+      - ./infra/migrations/003_funding_performance.sql:/docker-entrypoint-initdb.d/04-funding-performance.sql:ro
+      - ./infra/migrations/004_ai_budget.sql:/docker-entrypoint-initdb.d/05-ai-budget.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U alghrest -d alghrest"]
       interval: 10s
@@ -92,9 +106,9 @@ services:
     container_name: alghrest-postgres-exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://alghrest:${POSTGRES_PASSWORD:-alghrest_secure_pass_2024}@timescaledb:5432/alghrest?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://alghrest:${POSTGRES_PASSWORD:?Set an explicit strong POSTGRES_PASSWORD}@timescaledb:5432/alghrest?sslmode=disable"
     ports:
-      - "9187:9187"
+      - "127.0.0.1:9187:9187"
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -129,7 +143,7 @@ services:
       --hz 20
       --loglevel notice
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -161,7 +175,7 @@ services:
     environment:
       REDIS_ADDR: redis://redis:6379
     ports:
-      - "9121:9121"
+      - "127.0.0.1:9121:9121"
     depends_on:
       redis:
         condition: service_healthy
@@ -191,7 +205,7 @@ services:
       ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: 24
       ZOOKEEPER_4LW_COMMANDS_WHITELIST: "*"
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
     volumes:
       - zookeeper-data:/var/lib/zookeeper/data
       - zookeeper-logs:/var/lib/zookeeper/log
@@ -223,16 +237,20 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: &broker-jaas 'org.apache.kafka.common.security.plain.PlainLoginModule required username="broker" password="${KAFKA_BROKER_PASSWORD:?Run python -m scripts.configure_access}" user_broker="${KAFKA_BROKER_PASSWORD}" user_alghrest="${KAFKA_APP_PASSWORD:?Run python -m scripts.configure_access}";'
+      KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 50
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
-      KAFKA_MIN_IN_SYNC_REPLICAS: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
       KAFKA_NUM_PARTITIONS: 6
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 536870912
@@ -250,12 +268,13 @@ services:
       KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,state.change.logger=INFO,kafka.log.LogCleaner=INFO"
     ports:
-      - "9092:9092"
-      - "9101:9101"
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:9101:9101"
     volumes:
       - kafka-data-1:/var/lib/kafka/data
+      - ./.secrets/kafka-client.properties:/run/secrets/kafka-client.properties:ro
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --command-config /run/secrets/kafka-client.properties --list 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 15
@@ -286,16 +305,20 @@ services:
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:29092,EXTERNAL://localhost:9093
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9093
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 50
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
-      KAFKA_MIN_IN_SYNC_REPLICAS: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
       KAFKA_NUM_PARTITIONS: 6
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 536870912
@@ -309,12 +332,13 @@ services:
       KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,state.change.logger=INFO,kafka.log.LogCleaner=INFO"
     ports:
-      - "9093:9093"
-      - "9102:9102"
+      - "127.0.0.1:9093:9093"
+      - "127.0.0.1:9102:9102"
     volumes:
       - kafka-data-2:/var/lib/kafka/data
+      - ./.secrets/kafka-client.properties:/run/secrets/kafka-client.properties:ro
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --list 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --command-config /run/secrets/kafka-client.properties --list 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 15
@@ -345,16 +369,20 @@ services:
     environment:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-3:29092,EXTERNAL://localhost:9094
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9094
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 50
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
-      KAFKA_MIN_IN_SYNC_REPLICAS: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
       KAFKA_NUM_PARTITIONS: 6
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_SEGMENT_BYTES: 536870912
@@ -368,12 +396,13 @@ services:
       KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,state.change.logger=INFO,kafka.log.LogCleaner=INFO"
     ports:
-      - "9094:9094"
-      - "9103:9103"
+      - "127.0.0.1:9094:9094"
+      - "127.0.0.1:9103:9103"
     volumes:
       - kafka-data-3:/var/lib/kafka/data
+      - ./.secrets/kafka-client.properties:/run/secrets/kafka-client.properties:ro
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9094 --list 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9094 --command-config /run/secrets/kafka-client.properties --list 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 15
@@ -408,12 +437,15 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: PLAIN
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: &app-jaas 'org.apache.kafka.common.security.plain.PlainLoginModule required username="alghrest" password="${KAFKA_APP_PASSWORD}";'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 3
       SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: http
       SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: INFO
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/subjects || exit 1"]
       interval: 15s
@@ -445,6 +477,7 @@ services:
         condition: service_healthy
     volumes:
       - ./infra/init/kafka-init.sh:/kafka-init.sh:ro
+      - ./.secrets/kafka-client.properties:/run/secrets/kafka-client.properties:ro
     entrypoint: ["/bin/bash", "/kafka-init.sh"]
     environment:
       BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
@@ -469,10 +502,13 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
       KAFKA_CLUSTERS_0_METRICS_PORT: 9101
-      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: PLAIN
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: *app-jaas
+      DYNAMIC_CONFIG_ENABLED: "false"
       AUTH_TYPE: DISABLED
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --spider http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
@@ -507,11 +543,12 @@ services:
       - --web.enable-admin-api
       - --web.external-url=http://localhost:9090
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
+      - ./.secrets/api_access_token:/run/secrets/api_access_token:ro
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --spider http://localhost:9090/-/healthy || exit 1"]
       interval: 15s
@@ -550,7 +587,7 @@ services:
       GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-worldmap-panel
       GF_FEATURE_TOGGLES_ENABLE: publicDashboards
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -594,7 +631,7 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     ports:
-      - "9100:9100"
+      - "127.0.0.1:9100:9100"
     networks:
       alghrest-network:
         ipv4_address: 172.20.0.22
@@ -614,8 +651,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier1_executive.cio_agent CIOAgent
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9201:9201"
+      - "127.0.0.1:9201:9201"
     depends_on:
       redis:
         condition: service_healthy
@@ -635,8 +673,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier1_executive.risk_governor RiskGovernor
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9202:9202"
+      - "127.0.0.1:9202:9202"
     depends_on:
       redis:
         condition: service_healthy
@@ -656,8 +695,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier1_executive.proposal_approver ProposalApprover
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9203:9203"
+      - "127.0.0.1:9203:9203"
     depends_on:
       redis:
         condition: service_healthy
@@ -677,8 +717,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier2_intelligence.price_publisher PricePublisher
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9204:9204"
+      - "127.0.0.1:9204:9204"
     depends_on:
       redis:
         condition: service_healthy
@@ -690,6 +731,32 @@ services:
     deploy:
       resources:
         limits:
+          memory: 192M
+
+  agent-paper-market-feed:
+    build: .
+    profiles: [paper-feed]
+    restart: unless-stopped
+    command: python run_agent.py agents.tier2_intelligence.paper_market_feed PaperMarketFeed
+    env_file: .env
+    environment:
+      <<: *runtime-environment
+      ENVIRONMENT: paper_trading
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+    ports:
+      - "127.0.0.1:9238:9238"
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - alghrest-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
           memory: 192M
 
   # ═══════════════════════════════════════════════════════
@@ -707,8 +774,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.trend_follower TrendFollower
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9212:9212"
+      - "127.0.0.1:9212:9212"
     depends_on:
       redis:
         condition: service_healthy
@@ -726,8 +794,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.mean_reversion MeanReversion
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9213:9213"
+      - "127.0.0.1:9213:9213"
     depends_on:
       redis:
         condition: service_healthy
@@ -745,8 +814,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.momentum MomentumStrategy
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9217:9217"
+      - "127.0.0.1:9217:9217"
     depends_on:
       redis:
         condition: service_healthy
@@ -764,8 +834,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.stat_arb StatArb
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9221:9221"
+      - "127.0.0.1:9221:9221"
     depends_on:
       redis:
         condition: service_healthy
@@ -783,8 +854,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.arb_cross_exchange CrossExchangeArb
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9218:9218"
+      - "127.0.0.1:9218:9218"
     depends_on:
       redis:
         condition: service_healthy
@@ -802,8 +874,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.macro_rotator MacroRotator
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9234:9234"
+      - "127.0.0.1:9234:9234"
     depends_on:
       redis:
         condition: service_healthy
@@ -821,8 +894,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier4_strategies.breakout_hunter BreakoutHunter
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9219:9219"
+      - "127.0.0.1:9219:9219"
     depends_on:
       redis:
         condition: service_healthy
@@ -844,8 +918,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier5_execution.order_router OrderRouter
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9220:9220"
+      - "127.0.0.1:9220:9220"
     depends_on:
       redis:
         condition: service_healthy
@@ -865,8 +940,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier5_execution.slippage_minimizer SlippageMinimizer
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9222:9222"
+      - "127.0.0.1:9222:9222"
     depends_on:
       redis:
         condition: service_healthy
@@ -884,8 +960,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier5_execution.hedge_manager HedgeManager
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9223:9223"
+      - "127.0.0.1:9223:9223"
     depends_on:
       redis:
         condition: service_healthy
@@ -903,8 +980,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier5_execution.fee_optimizer FeeOptimizer
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9224:9224"
+      - "127.0.0.1:9224:9224"
     depends_on:
       redis:
         condition: service_healthy
@@ -922,8 +1000,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier5_execution.liquidation_guard LiquidationGuard
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9225:9225"
+      - "127.0.0.1:9225:9225"
     depends_on:
       redis:
         condition: service_healthy
@@ -941,13 +1020,20 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier5_execution.exchange_executor ExchangeExecutor
     env_file: .env
+    environment:
+      <<: *runtime-environment
+      DATABASE_URL: postgresql+asyncpg://alghrest:${POSTGRES_PASSWORD:?Set an explicit strong POSTGRES_PASSWORD}@timescaledb:5432/alghrest
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
     ports:
-      - "9226:9226"
+      - "127.0.0.1:9226:9226"
     depends_on:
       redis:
         condition: service_healthy
-      kafka-1:
+      timescaledb:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
     networks:
       alghrest-network:
         ipv4_address: 172.20.5.26
@@ -960,14 +1046,43 @@ services:
   # TIER 7 — Monitoring Agents
   # ═══════════════════════════════════════════════════════
 
+  agent-portfolio-accountant:
+    build: .
+    container_name: alghrest-agent-portfolio-accountant
+    restart: unless-stopped
+    command: python run_agent.py agents.tier7_monitoring.portfolio_accountant PortfolioAccountant
+    env_file: .env
+    environment:
+      <<: *runtime-environment
+      DATABASE_URL: postgresql+asyncpg://alghrest:${POSTGRES_PASSWORD:?Set an explicit strong POSTGRES_PASSWORD}@timescaledb:5432/alghrest
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+    ports:
+      - "127.0.0.1:9237:9237"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      alghrest-network:
+        ipv4_address: 172.20.7.37
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   agent-portfolio-tracker:
     build: .
     container_name: alghrest-agent-portfolio-tracker
     restart: unless-stopped
     command: python run_agent.py agents.tier7_monitoring.portfolio_tracker PortfolioTracker
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9230:9230"
+      - "127.0.0.1:9230:9230"
     depends_on:
       redis:
         condition: service_healthy
@@ -987,8 +1102,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier7_monitoring.alert_manager AlertManager
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9231:9231"
+      - "127.0.0.1:9231:9231"
     depends_on:
       redis:
         condition: service_healthy
@@ -1008,8 +1124,9 @@ services:
     restart: unless-stopped
     command: python run_agent.py agents.tier7_monitoring.compliance_agent ComplianceAgent
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "9232:9232"
+      - "127.0.0.1:9232:9232"
     volumes:
       - ./logs/compliance:/app/logs/compliance
     depends_on:
@@ -1035,8 +1152,9 @@ services:
     restart: unless-stopped
     command: sh -c "pip install structlog uvicorn fastapi pydantic-settings redis aiokafka prometheus-client orjson pendulum tenacity httpx aiohttp asyncpg sqlalchemy && python -m api.main"
     env_file: .env
+    environment: *runtime-environment
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       redis:
         condition: service_healthy
@@ -1046,7 +1164,7 @@ services:
       alghrest-network:
         ipv4_address: 172.20.0.50
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; req = urllib.request.Request('http://localhost:8000/health'); urllib.request.urlopen(req)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; req = urllib.request.Request('http://localhost:8000/health/live'); urllib.request.urlopen(req)\""]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -1063,13 +1181,13 @@ services:
     build:
       context: ./dashboard
       target: development
+    command: npm run dev -- --host 0.0.0.0
     container_name: alghrest-dashboard
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     environment:
-      - VITE_WS_URL=ws://localhost:8000/ws/dashboard
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://api:8000
     volumes:
       - ./dashboard:/app
       - /app/node_modules
@@ -1089,7 +1207,7 @@ services:
     container_name: alghrest-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:

@@ -8,16 +8,15 @@ Provides both healthy and faulty modes to test circuit breaker functionality.
 import random
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
 
 
 class PredictionRequest(BaseModel):
     symbol: str
-    ohlcv_window: List[List[float]]  # 64 periods of [O,H,L,C,V]
+    ohlcv_window: list[list[float]]  # 64 periods of [O,H,L,C,V]
     volatility: float
     trend_strength: float
     win_rate: float
@@ -35,7 +34,7 @@ class PredictionResponse(BaseModel):
 app = FastAPI(
     title="ALGHREST ML Inference Server (Mock)",
     description="Mock ML inference server for testing ML Predictor failover",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Server state for testing different scenarios
@@ -44,7 +43,7 @@ server_state = {
     "error_rate": 0.0,  # 0.0 to 1.0
     "response_delay": 0.0,  # seconds
     "requests_processed": 0,
-    "start_time": time.time()
+    "start_time": time.time(),
 }
 
 
@@ -57,7 +56,7 @@ async def root():
         "status": "running",
         "mode": server_state["mode"],
         "uptime_seconds": uptime,
-        "requests_processed": server_state["requests_processed"]
+        "requests_processed": server_state["requests_processed"],
     }
 
 
@@ -72,7 +71,7 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "mode": server_state["mode"],
         "error_rate": server_state["error_rate"],
-        "response_delay": server_state["response_delay"]
+        "response_delay": server_state["response_delay"],
     }
 
 
@@ -86,9 +85,8 @@ async def predict(request: PredictionRequest):
     if server_state["mode"] == "error":
         raise HTTPException(status_code=500, detail="ML model inference failed")
 
-    if server_state["mode"] == "intermittent":
-        if random.random() < server_state["error_rate"]:
-            raise HTTPException(status_code=500, detail="Intermittent failure")
+    if server_state["mode"] == "intermittent" and random.random() < server_state["error_rate"]:
+        raise HTTPException(status_code=500, detail="Intermittent failure")
 
     # Add artificial delay if configured
     if server_state["response_delay"] > 0:
@@ -97,15 +95,14 @@ async def predict(request: PredictionRequest):
     # Validate input
     if len(request.ohlcv_window) != 64:
         raise HTTPException(
-            status_code=400,
-            detail=f"Expected 64 OHLCV periods, got {len(request.ohlcv_window)}"
+            status_code=400, detail=f"Expected 64 OHLCV periods, got {len(request.ohlcv_window)}"
         )
 
     for i, bar in enumerate(request.ohlcv_window):
         if len(bar) != 5:
             raise HTTPException(
                 status_code=400,
-                detail=f"OHLCV bar {i} must have 5 values [O,H,L,C,V], got {len(bar)}"
+                detail=f"OHLCV bar {i} must have 5 values [O,H,L,C,V], got {len(bar)}",
             )
 
     # Generate mock prediction based on simple heuristics
@@ -122,10 +119,7 @@ async def set_server_mode(mode: str, error_rate: float = 0.0, response_delay: fl
     """Admin endpoint to change server behavior for testing."""
     valid_modes = ["healthy", "slow", "error", "intermittent"]
     if mode not in valid_modes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid mode. Must be one of: {valid_modes}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid mode. Must be one of: {valid_modes}")
 
     server_state["mode"] = mode
     server_state["error_rate"] = max(0.0, min(1.0, error_rate))
@@ -135,11 +129,11 @@ async def set_server_mode(mode: str, error_rate: float = 0.0, response_delay: fl
         "message": f"Server mode set to '{mode}'",
         "mode": server_state["mode"],
         "error_rate": server_state["error_rate"],
-        "response_delay": server_state["response_delay"]
+        "response_delay": server_state["response_delay"],
     }
 
 
-def _generate_mock_prediction(request: PredictionRequest) -> Dict:
+def _generate_mock_prediction(request: PredictionRequest) -> dict:
     """Generate a mock ML prediction using simple technical analysis."""
 
     # Extract recent price data
@@ -149,8 +143,8 @@ def _generate_mock_prediction(request: PredictionRequest) -> Dict:
 
     # Simple trend detection
     short_ma = sum(closes[-10:]) / 10  # 10-period MA
-    long_ma = sum(closes[-20:]) / 20   # 20-period MA
-    current_price = closes[-1]
+    long_ma = sum(closes[-20:]) / 20  # 20-period MA
+    closes[-1]
 
     # Price momentum
     price_change = (closes[-1] - closes[-5]) / closes[-5]  # 5-period change
@@ -206,7 +200,7 @@ def _generate_mock_prediction(request: PredictionRequest) -> Dict:
         "recommended_risk_multiplier": round(risk_mult, 3),
         "source": "mock_cnn_rl",
         "model_version": "mock-v1.0",
-        "processing_time_ms": 0  # Will be set by caller
+        "processing_time_ms": 0,  # Will be set by caller
     }
 
 
@@ -220,10 +214,18 @@ if __name__ == "__main__":
     print("  POST /admin/set_mode - Change behavior (testing)")
     print()
     print("🧪 Test different modes:")
-    print("  curl -X POST http://localhost:8080/admin/set_mode -H 'Content-Type: application/json' -d '{\"mode\":\"error\"}'")
-    print("  curl -X POST http://localhost:8080/admin/set_mode -H 'Content-Type: application/json' -d '{\"mode\":\"intermittent\", \"error_rate\":0.3}'")
-    print("  curl -X POST http://localhost:8080/admin/set_mode -H 'Content-Type: application/json' -d '{\"mode\":\"slow\", \"response_delay\":5.0}'")
-    print("  curl -X POST http://localhost:8080/admin/set_mode -H 'Content-Type: application/json' -d '{\"mode\":\"healthy\"}'")
+    print(
+        "  curl -X POST http://localhost:8080/admin/set_mode -H 'Content-Type: application/json' -d '{\"mode\":\"error\"}'"
+    )
+    print(
+        '  curl -X POST http://localhost:8080/admin/set_mode -H \'Content-Type: application/json\' -d \'{"mode":"intermittent", "error_rate":0.3}\''
+    )
+    print(
+        '  curl -X POST http://localhost:8080/admin/set_mode -H \'Content-Type: application/json\' -d \'{"mode":"slow", "response_delay":5.0}\''
+    )
+    print(
+        "  curl -X POST http://localhost:8080/admin/set_mode -H 'Content-Type: application/json' -d '{\"mode\":\"healthy\"}'"
+    )
     print()
     print("🚀 Server starting on http://localhost:8080")
     print("=" * 50)

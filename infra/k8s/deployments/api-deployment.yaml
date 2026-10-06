@@ -40,7 +40,7 @@ spec:
             memory: "1Gi"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /health/live
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20

@@ -1,0 +1,18 @@
+{
+  "initial_negative_failures": 11,
+  "before_snapshot_failure": true,
+  "evaluation_cases_passed": 29,
+  "full_mocked_passed": 883,
+  "full_mocked_skipped": 53,
+  "branch_aware_coverage_percent": 73.08429993606723,
+  "financial_runtime_state_changed": false,
+  "sandbox_diagnostic": "Mocked async news test stalled; full suite passed outside sandbox",
+  "checks": [
+    "ruff",
+    "black",
+    "isort",
+    "architecture",
+    "strict mypy agents/core",
+    "mypy changed advisory store"
+  ]
+}

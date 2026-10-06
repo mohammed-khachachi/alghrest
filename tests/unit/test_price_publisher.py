@@ -10,10 +10,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agents.tier2_intelligence.price_publisher import (
-    PricePublisher,
     _REDIS_KEY_FMT,
     _REDIS_TTL,
     _THROTTLE_INTERVAL,
+    PricePublisher,
 )
 from core.data.models import Exchange, OHLCVBar, OrderBook, OrderBookLevel, Timeframe
 
@@ -23,12 +23,16 @@ def _build_publisher() -> PricePublisher:
     pub.state = MagicMock()
     pub.state.redis = MagicMock()
     pub.state.redis.setex = AsyncMock()
+    pub.state.set_accounting_mark = AsyncMock()
     return pub
 
 
-def _ohlcv_payload(symbol: str = "BTC/USDT", close: float = 45123.45,
-                   timeframe: Timeframe = Timeframe.M1,
-                   exchange: Exchange = Exchange.BINANCE) -> dict:
+def _ohlcv_payload(
+    symbol: str = "BTC/USDT",
+    close: float = 45123.45,
+    timeframe: Timeframe = Timeframe.M1,
+    exchange: Exchange = Exchange.BINANCE,
+) -> dict:
     bar = OHLCVBar(
         time=datetime.utcnow(),
         symbol=symbol,
@@ -43,9 +47,12 @@ def _ohlcv_payload(symbol: str = "BTC/USDT", close: float = 45123.45,
     return bar.model_dump(mode="json")
 
 
-def _orderbook_payload(symbol: str = "BTC/USDT", bid: float = 45000,
-                       ask: float = 45050,
-                       exchange: Exchange = Exchange.BINANCE) -> dict:
+def _orderbook_payload(
+    symbol: str = "BTC/USDT",
+    bid: float = 45000,
+    ask: float = 45050,
+    exchange: Exchange = Exchange.BINANCE,
+) -> dict:
     book = OrderBook(
         symbol=symbol,
         exchange=exchange,
@@ -57,6 +64,7 @@ def _orderbook_payload(symbol: str = "BTC/USDT", bid: float = 45000,
 
 
 # ── M1 OHLCV writes a `last` key to Redis ────────────────────────────────────
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -78,6 +86,7 @@ async def test_m1_ohlcv_writes_to_redis():
 
 # ── Non-M1 timeframes are ignored ─────────────────────────────────────────────
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_h4_ohlcv_is_skipped():
@@ -89,6 +98,7 @@ async def test_h4_ohlcv_is_skipped():
 
 
 # ── OrderBook adds bid/ask + uses mid as last fallback ───────────────────────
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -107,6 +117,7 @@ async def test_orderbook_writes_bid_ask_and_mid_fallback():
 
 # ── Combined: OHLCV `last` + later OrderBook bid/ask coexist ─────────────────
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_ohlcv_then_orderbook_merges_fields():
@@ -120,12 +131,13 @@ async def test_ohlcv_then_orderbook_merges_fields():
     assert pub.state.redis.setex.await_count == 2
     last_args = pub.state.redis.setex.await_args_list[-1].args
     blob = json.loads(last_args[2])
-    assert blob["last"] == 45200.0       # preserved from OHLCV
+    assert blob["last"] == 45200.0  # preserved from OHLCV
     assert blob["bid"] == 45100.0
     assert blob["ask"] == 45300.0
 
 
 # ── Throttling: rapid updates collapsed into one Redis write ─────────────────
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -150,6 +162,7 @@ def test_throttle_interval_is_one_second():
 
 
 # ── Invalid payloads do not crash ─────────────────────────────────────────────
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio

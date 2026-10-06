@@ -8,7 +8,6 @@ import importlib
 
 import pytest
 
-
 AGENT_MODULES = [
     ("agents.tier1_executive.cio_agent", "CIOAgent"),
     ("agents.tier1_executive.risk_governor", "RiskGovernor"),
@@ -51,26 +50,30 @@ def test_agent_class_imports(module_path: str, class_name: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("module_path, class_name", [
-    ("agents.tier4_strategies.trend_follower", "TrendFollower"),
-    ("agents.tier4_strategies.mean_reversion", "MeanReversion"),
-    ("agents.tier4_strategies.arb_cross_exchange", "CrossExchangeArb"),
-])
+@pytest.mark.parametrize(
+    "module_path, class_name",
+    [
+        ("agents.tier4_strategies.trend_follower", "TrendFollower"),
+        ("agents.tier4_strategies.mean_reversion", "MeanReversion"),
+        ("agents.tier4_strategies.arb_cross_exchange", "CrossExchangeArb"),
+    ],
+)
 def test_strategy_class_implements_abstract_interface(module_path: str, class_name: str):
     """Tier 4 strategies must implement all abstract methods to be instantiable."""
     module = importlib.import_module(module_path)
     cls = getattr(module, class_name)
     # If any abstract method is unimplemented, __abstractmethods__ is non-empty.
     assert getattr(cls, "__abstractmethods__", frozenset()) == frozenset(), (
-        f"{class_name} has unimplemented abstract methods: "
-        f"{cls.__abstractmethods__}"
+        f"{class_name} has unimplemented abstract methods: " f"{cls.__abstractmethods__}"
     )
 
 
 @pytest.mark.unit
 def test_position_sizer_constructs():
     from decimal import Decimal
+
     from agents.tier5_execution.position_sizer import PositionSizer
+
     sizer = PositionSizer(portfolio_value_usd=Decimal("100000"))
     result = sizer.size(
         symbol="BTC/USDT",
@@ -92,4 +95,5 @@ def test_position_sizer_constructs():
 @pytest.mark.unit
 def test_proposal_approver_imports():
     from agents.tier1_executive.proposal_approver import ProposalApprover
+
     assert ProposalApprover.AGENT_ID == 3

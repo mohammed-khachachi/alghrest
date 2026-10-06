@@ -1,228 +1,152 @@
-"""Unit tests for the ExchangeExecutor.
+"""Submission boundary tests; transactions are tested against PostgreSQL."""
 
-Focus: pure logic that doesn't require a real exchange connection. The
-network-touching paths (place_order, fetch_order) are mocked.
-"""
-
-from __future__ import annotations
-
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
-from agents.tier5_execution.exchange_executor import (
-    ExchangeExecutor,
-    _SUPPORTED_EXCHANGES,
-    _TERMINAL_STATUSES,
-)
-from core.data.models import (
-    AssetClass,
-    Exchange,
-    Fill,
-    KafkaTopic,
-    Order,
-    OrderSide,
-    OrderStatus,
-    OrderType,
-)
+from agents.tier5_execution.exchange_executor import _SUPPORTED_EXCHANGES, ExchangeExecutor
+from core.data.models import Exchange, Order, OrderSide, OrderStatus, OrderType
+from core.execution.contracts import RecoveryBlockedError
+
+pytestmark = pytest.mark.unit
 
 
-def _order(
-    exchange: Exchange = Exchange.BINANCE,
-    order_type: OrderType = OrderType.MARKET,
-    price: Decimal | None = None,
-) -> Order:
+def order(**changes):
     return Order(
-        order_id=uuid4(),
-        client_order_id=uuid4(),
-        symbol="BTC/USDT",
-        exchange=exchange,
-        side=OrderSide.BUY,
-        order_type=order_type,
-        size=Decimal("0.01"),
-        price=price,
-        strategy_id="test_strategy",
-        agent_id=12,
+        **(
+            dict(
+                symbol="BTC/USD",
+                exchange=Exchange.BINANCE,
+                side=OrderSide.BUY,
+                order_type=OrderType.MARKET,
+                size=Decimal(1),
+                strategy_id="test",
+                agent_id=12,
+            )
+            | changes
+        )
     )
 
 
-def _build_executor() -> ExchangeExecutor:
-    """Construct an executor with stubbed Kafka producer + Redis state."""
+def executor():
     ex = ExchangeExecutor()
-    # Replace producer with a no-op mock so .publish() doesn't actually emit.
-    ex.producer = MagicMock()
-    ex.producer.send = AsyncMock()
-    # Stub state methods used in the placement path.
-    ex.state = MagicMock()
-    ex.state.lock = MagicMock()
-    ex.state.get_json = AsyncMock(return_value=None)
-    ex.state.set_json = AsyncMock()
-    ex.state.is_already_processed = AsyncMock(return_value=False)
-    ex.state.is_kill_switch_active = AsyncMock(return_value=False)
-    return ex
-
-
-@pytest.mark.unit
-def test_supported_exchanges_match_connector_capabilities():
-    """The executor's supported list must be a subset of what the connector knows."""
-    expected = {Exchange.BINANCE, Exchange.BYBIT, Exchange.COINBASE, Exchange.KRAKEN}
-    assert set(_SUPPORTED_EXCHANGES) == expected
-
-
-@pytest.mark.unit
-def test_terminal_statuses_set():
-    assert OrderStatus.FILLED in _TERMINAL_STATUSES
-    assert OrderStatus.CANCELLED in _TERMINAL_STATUSES
-    assert OrderStatus.REJECTED in _TERMINAL_STATUSES
-    assert OrderStatus.EXPIRED in _TERMINAL_STATUSES
-    assert OrderStatus.OPEN not in _TERMINAL_STATUSES
-    assert OrderStatus.PENDING not in _TERMINAL_STATUSES
-
-
-@pytest.mark.unit
-def test_agent_id_in_tier5_metrics_port_window():
-    """AGENT_ID must be unique within tier 5 (20-26 range used now)."""
-    assert ExchangeExecutor.AGENT_ID == 26
-    # Metrics port = 9200 + agent_id → must not collide with siblings
-    used_ids = {20, 22, 23, 24, 25, 26}  # router, slippage, hedge, fee, liq, executor
-    assert ExchangeExecutor.AGENT_ID in used_ids
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_reject_unsupported_exchange():
-    ex = _build_executor()
-    ex.publish = AsyncMock()
-    # Bybit is supported, fake one that isn't (Alpaca)
-    bad_order = _order(exchange=Exchange.ALPACA)
-    placed_ok = await ex._place_order(bad_order)
-    assert placed_ok is False
-    # Two publishes: ORDERS_EXECUTED (rejected) + RISK_ALERTS
-    assert ex.publish.await_count == 2
-    topics = [call.kwargs.get("topic") or call.args[0] for call in ex.publish.await_args_list]
-    assert KafkaTopic.ORDERS_EXECUTED in topics
-    assert KafkaTopic.RISK_ALERTS in topics
-    assert ex._rejected_count == 1
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_reject_limit_without_price():
-    ex = _build_executor()
-    ex.publish = AsyncMock()
-    # Inject a fake connector so the exchange lookup succeeds
-    ex._connector = MagicMock()
-    ex._connector.get = MagicMock(return_value=MagicMock())
-    bad_order = _order(order_type=OrderType.LIMIT, price=None)
-    placed_ok = await ex._place_order(bad_order)
-    assert placed_ok is False
-    assert ex._rejected_count == 1
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_market_order_path_calls_market_placement():
-    ex = _build_executor()
-    ex.publish = AsyncMock()
-
-    fake_connector = MagicMock()
-    fake_connector.place_market_order = AsyncMock(return_value=Order(
-        order_id=uuid4(),
-        client_order_id=uuid4(),
-        exchange_order_id="EX-12345",
-        symbol="BTC/USDT",
-        exchange=Exchange.BINANCE,
-        side=OrderSide.BUY,
-        order_type=OrderType.MARKET,
-        size=Decimal("0.01"),
-        filled_size=Decimal("0.01"),
-        avg_fill_price=Decimal("45100"),
-        status=OrderStatus.FILLED,
-        strategy_id="test",
-        agent_id=12,
-    ))
-    fake_connector.fetch_trades = AsyncMock(return_value=[])
-    ex._connector = MagicMock()
-    ex._connector.get = MagicMock(return_value=fake_connector)
-
-    order = _order(order_type=OrderType.MARKET)
-    placed_ok = await ex._place_order(order)
-    assert placed_ok is True
-    fake_connector.place_market_order.assert_awaited_once()
-    fake_connector.place_limit_order = AsyncMock()
-    fake_connector.place_limit_order.assert_not_awaited()
-    assert ex._placed_count == 1
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_limit_order_path_calls_limit_placement():
-    ex = _build_executor()
-    ex.publish = AsyncMock()
-
-    fake_connector = MagicMock()
-    fake_connector.place_limit_order = AsyncMock(return_value=Order(
-        order_id=uuid4(),
-        client_order_id=uuid4(),
-        exchange_order_id="EX-67890",
-        symbol="BTC/USDT",
-        exchange=Exchange.BINANCE,
-        side=OrderSide.BUY,
-        order_type=OrderType.LIMIT,
-        size=Decimal("0.01"),
-        price=Decimal("45000"),
-        filled_size=Decimal("0"),
-        status=OrderStatus.OPEN,
-        strategy_id="test",
-        agent_id=12,
-    ))
-    ex._connector = MagicMock()
-    ex._connector.get = MagicMock(return_value=fake_connector)
-
-    order = _order(order_type=OrderType.LIMIT, price=Decimal("45000"))
-    placed_ok = await ex._place_order(order)
-    assert placed_ok is True
-    # Open order → goes into tracking dict for fill polling
-    assert "EX-67890" in ex._tracked_orders
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_fill_publication_dedup():
-    ex = _build_executor()
-    ex.publish = AsyncMock()
-
-    fake_connector = MagicMock()
-    fill = Fill(
-        order_id=uuid4(),  # placeholder from connector
-        exchange_order_id="EX-FILL-1",
-        symbol="BTC/USDT",
-        exchange=Exchange.BINANCE,
-        side=OrderSide.BUY,
-        fill_size=Decimal("0.01"),
-        fill_price=Decimal("45100"),
-        fee=Decimal("0.5"),
-        fee_currency="USDT",
-        timestamp=datetime.utcnow(),
+    ex.store = SimpleNamespace(
+        book_id="test",
+        check_writer=AsyncMock(),
+        seen=AsyncMock(return_value=False),
+        prepare=AsyncMock(return_value=True),
+        reject=AsyncMock(),
+        observe=AsyncMock(),
+        uncertain=AsyncMock(),
+        block=AsyncMock(),
     )
-    fake_connector.fetch_trades = AsyncMock(return_value=[fill])
-    ex._connector = MagicMock()
-    ex._connector.get = MagicMock(return_value=fake_connector)
+    ex.state = SimpleNamespace(
+        is_kill_switch_active=AsyncMock(return_value=False),
+        trading_ready=AsyncMock(return_value=True),
+        set_reconciliation=AsyncMock(),
+    )
+    venue = SimpleNamespace(
+        place=AsyncMock(return_value=order(exchange_order_id="venue", status=OrderStatus.OPEN))
+    )
+    ex.venues = {'["binance","default"]': venue}
+    return ex, venue
 
-    order = _order(order_type=OrderType.MARKET)
-    order = order.model_copy(update={"exchange_order_id": "EX-FILL-1"})
 
-    # First call → publishes
-    await ex._fetch_and_publish_fills(order)
-    first_calls = ex.publish.await_count
-    assert ex._fills_published == 1
+def test_supported_spot_venues_and_identity():
+    assert set(_SUPPORTED_EXCHANGES) == {
+        Exchange.BINANCE,
+        Exchange.BYBIT,
+        Exchange.COINBASE,
+        Exchange.KRAKEN,
+    }
+    assert ExchangeExecutor.AGENT_ID == 26
 
-    # Second call with dedup hit (mock returns True for is_already_processed)
-    ex.state.is_already_processed = AsyncMock(return_value=True)
-    await ex._fetch_and_publish_fills(order)
-    # No new publishes
-    assert ex.publish.await_count == first_calls
-    assert ex._fills_published == 1
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"exchange": Exchange.ALPACA},
+        {"order_type": OrderType.LIMIT},
+        {"size": Decimal(0)},
+        {"created_at": datetime.utcnow() - timedelta(minutes=3)},
+        {"order_type": OrderType.STOP},
+    ],
+)
+async def test_invalid_order_durably_rejected_without_contacting_venue(changes):
+    ex, venue = executor()
+    assert not await ex._place_order(order(**changes))
+    ex.store.reject.assert_awaited_once()
+    ex.store.prepare.assert_not_awaited()
+    venue.place.assert_not_awaited()
+
+
+@pytest.mark.parametrize("halted,verified", [(True, True), (False, False)])
+async def test_missing_risk_evidence_blocks_submission(halted, verified):
+    ex, venue = executor()
+    ex.state.is_kill_switch_active.return_value = halted
+    ex.state.trading_ready.return_value = verified
+    assert not await ex._place_order(order())
+    venue.place.assert_not_awaited()
+
+
+async def test_intent_commits_before_http_and_response_failure_never_resubmits():
+    ex, venue = executor()
+    intent = order()
+
+    async def place(_):
+        ex.store.prepare.assert_awaited_once_with(intent)
+        raise TimeoutError("accepted but response lost")
+
+    venue.place.side_effect = place
+    assert await ex._place_order(intent)
+    ex.store.uncertain.assert_awaited_once_with(intent, "TimeoutError")
+    ex.store.reject.assert_not_awaited()
+    ex.store.seen.return_value = True
+    assert not await ex._place_order(intent)
+    venue.place.assert_awaited_once()
+
+
+async def test_durable_gate_closes_between_cache_check_and_claim():
+    ex, venue = executor()
+    ex.store.prepare.side_effect = RecoveryBlockedError("changed ledger")
+    assert not await ex._place_order(order())
+    venue.place.assert_not_awaited()
+    ex.store.reject.assert_awaited_once()
+
+
+async def test_observation_failure_keeps_claim_uncertain_not_rejected():
+    ex, venue = executor()
+    ex.store.observe.side_effect = ConnectionError()
+    assert await ex._place_order(order())
+    venue.place.assert_awaited_once()
+    ex.store.uncertain.assert_awaited_once()
+    ex.store.reject.assert_not_awaited()
+
+
+async def test_unclaimed_duplicate_does_not_call_venue():
+    ex, venue = executor()
+    ex.store.prepare.return_value = False
+    assert not await ex._place_order(order())
+    venue.place.assert_not_awaited()
+
+
+async def test_history_polling_continues_during_halt(monkeypatch):
+    ex, _ = executor()
+    ex.state.is_kill_switch_active.return_value = True
+    ex.recovery = SimpleNamespace(
+        run_once=AsyncMock(return_value={"ready": False, "reasons": ["unsettled"]})
+    )
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock(side_effect=asyncio.CancelledError))
+    with pytest.raises(asyncio.CancelledError):
+        await ex._fill_polling_loop()
+    ex.recovery.run_once.assert_awaited_once()
+
+
+async def test_algo_parents_are_not_submitted():
+    ex, venue = executor()
+    await ex.handle_order({"payload": order(order_type=OrderType.TWAP).model_dump(mode="json")})
+    venue.place.assert_not_awaited()

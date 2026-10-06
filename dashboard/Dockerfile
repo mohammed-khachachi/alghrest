@@ -2,13 +2,13 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG VITE_WS_URL=ws://localhost:8000/ws/dashboard
+ARG VITE_WS_URL=
 ARG VITE_API_URL=http://localhost:8000
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_API_URL=$VITE_API_URL

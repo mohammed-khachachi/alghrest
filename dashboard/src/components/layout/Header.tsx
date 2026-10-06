@@ -1,3 +1,4 @@
+import { accessHeaders } from '@/lib/access';
 import { useEffect, useState, useCallback } from 'react';
 import { Menu, Power, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -22,9 +23,10 @@ function useUtcClock() {
 
 interface HeaderProps {
   onMenuClick: () => void;
+  researchOnly?: boolean;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
   const utc = useUtcClock();
   const systemStatus = useDashboardStore((s) => s.systemStatus);
   const addToast = useDashboardStore((s) => s.addToast);
@@ -40,8 +42,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     setKillDialogOpen(false);
     try {
       const resp = await fetch(
-        `${import.meta.env['VITE_API_URL'] ?? 'http://localhost:8000'}/api/v1/risk/kill-switch`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+        '/api/v1/risk/kill-switch',
+        { method: 'POST', headers: { 'Content-Type': 'application/json', ...accessHeaders('api') } },
       );
       if (!resp.ok) throw new Error(await resp.text());
       addToast({ id: 'kill-switch', severity: 'CRITICAL', message: 'KILL SWITCH ACTIVATED', dismissAfterMs: null, fullScreen: true });
@@ -50,7 +52,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   }, [addToast]);
 
-  const status = systemStatus?.status ?? 'PAPER';
+  const status = researchOnly ? 'RESEARCH' : systemStatus?.status ?? 'PAPER';
 
   return (
     <header className="flex items-center gap-3 px-4 py-3 bg-bg-surface border-b border-border flex-shrink-0">
@@ -97,7 +99,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       {/* Kill switch */}
-      <Dialog.Root open={killDialogOpen} onOpenChange={setKillDialogOpen}>
+      {!researchOnly && <Dialog.Root open={killDialogOpen} onOpenChange={setKillDialogOpen}>
         <Dialog.Trigger asChild>
           <button
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-loss/10 border border-loss/30 text-loss text-xs font-mono font-bold hover:bg-loss/20 transition-colors"
@@ -131,7 +133,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
           </Dialog.Content>
         </Dialog.Portal>
-      </Dialog.Root>
+      </Dialog.Root>}
     </header>
   );
 }

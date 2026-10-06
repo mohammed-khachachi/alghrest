@@ -1,0 +1,26 @@
+# Optional isolated assistant. No .env, account credentials, or trading network.
+name: alghrest-research
+services:
+  manual-assistant:
+    build: .
+    command: python -m uvicorn api.advisor:app --host 0.0.0.0 --port 8011 --workers 1 --limit-concurrency 8
+    ports:
+      - '127.0.0.1:8011:8011'
+    environment:
+      OPERATING_PROFILE: earn2trade_tcp25
+      ADVISORY_ACCESS_TOKEN: ${ADVISORY_ACCESS_TOKEN:?Run python -m scripts.configure_access}
+      ADVISORY_DB_PATH: /research/research.sqlite3
+      ADVISORY_KAFKA_SERVERS: ''
+    volumes:
+      - research:/research
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 32
+    restart: unless-stopped
+volumes:
+  research:

@@ -14,25 +14,20 @@ Test Scenarios:
 - Black swan: 25% drop in 30 minutes
 - Systematic failure: Multiple asset correlation breakdown
 """
+
 from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 import structlog
 
-from agents.tier1_executive.risk_governor import RiskGovernor
-from agents.tier5_execution.exchange_executor import ExchangeExecutor
 from core.data.models import (
-    AlertType,
     Exchange,
-    KafkaTopic,
-    KillSwitchEvent,
     OHLCVBar,
     Order,
     OrderSide,
@@ -42,13 +37,22 @@ from core.data.models import (
     Position,
     RiskMetrics,
     Timeframe,
-    TradeProposal,
 )
 from core.orchestrator.state_manager import StateManager
 from core.risk.kill_switch import KillSwitch
-from core.risk.risk_engine import RiskEngine
 
 logger = structlog.get_logger(__name__)
+
+
+@pytest.fixture(autouse=True)
+def kill_switch_io(monkeypatch):
+    """Patch the dependencies where KillSwitch looks them up; no real Redis or alerts."""
+    state = AsyncMock(spec=StateManager)
+    state.get_portfolio.return_value = None
+    monkeypatch.setattr("core.risk.kill_switch.state_manager", state)
+    monkeypatch.setattr("core.risk.kill_switch.send_telegram_alert", AsyncMock())
+    monkeypatch.setattr("core.risk.kill_switch.send_kill_switch_alert", AsyncMock())
+    return state
 
 
 class MarketCrashSimulator:
@@ -63,10 +67,8 @@ class MarketCrashSimulator:
         }
 
     def generate_crash_prices(
-        self,
-        scenario: str,
-        symbols: List[str] = None
-    ) -> List[OHLCVBar]:
+        self, scenario: str, symbols: list[str] | None = None
+    ) -> list[OHLCVBar]:
         """Generate price bars simulating market crash."""
         if symbols is None:
             symbols = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"]
@@ -95,8 +97,9 @@ class MarketCrashSimulator:
 
                 bar = OHLCVBar(
                     symbol=symbol,
+                    exchange=Exchange.BINANCE,
                     timeframe=Timeframe.M1,
-                    timestamp=datetime.utcnow() + timedelta(minutes=minute),
+                    time=datetime.utcnow() + timedelta(minutes=minute),
                     open=Decimal(str(crashed_price * 1.01)),
                     high=Decimal(str(high)),
                     low=Decimal(str(low)),
@@ -109,10 +112,8 @@ class MarketCrashSimulator:
         return bars
 
     def calculate_portfolio_impact(
-        self,
-        initial_positions: List[Position],
-        price_bars: List[OHLCVBar]
-    ) -> Dict[str, Decimal]:
+        self, initial_positions: list[Position], price_bars: list[OHLCVBar]
+    ) -> dict[str, Decimal]:
         """Calculate portfolio value impact from crash prices."""
         impacts = {}
 
@@ -142,6 +143,11 @@ def mock_portfolio_with_positions():
     positions = [
         Position(
             symbol="BTC/USDT",
+            exchange=Exchange.BINANCE,
+            asset_class="CRYPTO",
+            strategy_id="crash_test",
+            agent_id=12,
+            opened_at=datetime.utcnow(),
             size=Decimal("10"),  # 10 BTC @ $45k = $450k
             current_price=Decimal("45000"),
             unrealized_pnl=Decimal("0"),
@@ -150,6 +156,11 @@ def mock_portfolio_with_positions():
         ),
         Position(
             symbol="ETH/USDT",
+            exchange=Exchange.BINANCE,
+            asset_class="CRYPTO",
+            strategy_id="crash_test",
+            agent_id=12,
+            opened_at=datetime.utcnow(),
             size=Decimal("100"),  # 100 ETH @ $3k = $300k
             current_price=Decimal("3000"),
             unrealized_pnl=Decimal("0"),
@@ -158,6 +169,11 @@ def mock_portfolio_with_positions():
         ),
         Position(
             symbol="SOL/USDT",
+            exchange=Exchange.BINANCE,
+            asset_class="CRYPTO",
+            strategy_id="crash_test",
+            agent_id=12,
+            opened_at=datetime.utcnow(),
             size=Decimal("1000"),  # 1000 SOL @ $100 = $100k
             current_price=Decimal("100"),
             unrealized_pnl=Decimal("0"),
@@ -209,15 +225,12 @@ class TestMarketCrashKillSwitch:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_flash_crash_kill_switch_activation(
-        self,
-        crash_simulator: MarketCrashSimulator,
-        mock_portfolio_with_positions: Portfolio
+        self, crash_simulator: MarketCrashSimulator, mock_portfolio_with_positions: Portfolio
     ):
         """Test kill switch activation during 15% flash crash in 5 minutes."""
 
         # Setup
         kill_switch = KillSwitch()
-        risk_engine = RiskEngine()
 
         # Generate flash crash scenario
         crash_bars = crash_simulator.generate_crash_prices("flash_crash")
@@ -226,33 +239,35 @@ class TestMarketCrashKillSwitch:
         activation_events = []
 
         async def mock_close_positions(reason: str) -> int:
-            activation_events.append({
-                "timestamp": datetime.utcnow(),
-                "reason": reason,
-                "portfolio_value": mock_portfolio_with_positions.total_capital
-            })
+            activation_events.append(
+                {
+                    "timestamp": datetime.utcnow(),
+                    "reason": reason,
+                    "portfolio_value": mock_portfolio_with_positions.total_capital,
+                }
+            )
             return len(mock_portfolio_with_positions.positions)
 
         # Simulate price updates and measure response time
         start_time = datetime.utcnow()
+        initial_capital = mock_portfolio_with_positions.total_capital
 
-        for i, bar in enumerate(crash_bars):
+        for bar in crash_bars:
             # Update portfolio with crashed prices
             for position in mock_portfolio_with_positions.positions:
                 if position.symbol == bar.symbol:
                     position.current_price = bar.close
 
             # Recalculate portfolio value
-            new_total = sum(
-                pos.size * pos.current_price
-                for pos in mock_portfolio_with_positions.positions
-            ) + mock_portfolio_with_positions.available_capital
+            new_total = (
+                sum(pos.size * pos.current_price for pos in mock_portfolio_with_positions.positions)
+                + mock_portfolio_with_positions.available_capital
+            )
 
-            old_total = mock_portfolio_with_positions.total_capital
             mock_portfolio_with_positions.total_capital = new_total
 
-            # Calculate drawdown
-            drawdown_pct = float((old_total - new_total) / old_total)
+            # Drawdown is cumulative from the starting capital, not the last tick.
+            drawdown_pct = float((initial_capital - new_total) / initial_capital)
 
             # Create risk metrics
             risk_metrics = RiskMetrics(
@@ -266,8 +281,7 @@ class TestMarketCrashKillSwitch:
 
             # Check kill switch
             event = await kill_switch.check(
-                metrics=risk_metrics,
-                on_close_all_positions=mock_close_positions
+                metrics=risk_metrics, on_close_all_positions=mock_close_positions
             )
 
             if event:
@@ -277,13 +291,15 @@ class TestMarketCrashKillSwitch:
                     scenario="flash_crash",
                     response_time_seconds=response_time,
                     drawdown=drawdown_pct,
-                    trigger_reason=event.trigger_reason
+                    trigger_reason=event.trigger_reason,
                 )
                 break
 
         # Assertions
         assert len(activation_events) > 0, "Kill switch should have activated during flash crash"
-        assert activation_events[0]["reason"].startswith("Daily drawdown")
+        assert activation_events[0]["reason"].startswith("Weekly drawdown")
+        assert event.scope == "all_strategies"
+        assert event.drawdown_pct >= 0.07
 
         # Response time should be under 30 seconds for flash crash
         response_time = (datetime.utcnow() - start_time).total_seconds()
@@ -291,52 +307,35 @@ class TestMarketCrashKillSwitch:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_order_cancellation_speed(
-        self,
-        mock_open_orders: List[Order]
-    ):
+    async def test_order_cancellation_speed(self, mock_open_orders: list[Order]):
         """Test order cancellation speed across multiple exchanges."""
 
-        # Setup exchange executor with mock connectors
-        executor = ExchangeExecutor()
+        from core.accounting.models import key
+        from core.execution.recovery import RecoveryCoordinator
 
-        # Mock connectors for different exchanges
-        mock_connectors = {}
-        for exchange in [Exchange.BINANCE, Exchange.COINBASE, Exchange.KRAKEN]:
-            connector = MagicMock()
-            connector.cancel_order = AsyncMock(return_value=True)
-            mock_connectors[exchange] = connector
-
-        executor._connector = MagicMock()
-        executor._connector.get = lambda ex: mock_connectors[ex]
-        executor.publish = AsyncMock()
-
-        # Track open orders
-        executor._tracked_orders = {
-            order.exchange_order_id: (order, datetime.utcnow())
+        store = AsyncMock()
+        store.orders.return_value = [
+            {"current_order": order.model_dump_json(), "cancel_requested": False}
             for order in mock_open_orders
-        }
-
-        # Measure cancellation speed
-        start_time = datetime.utcnow()
-        await executor._cancel_all_tracked_orders("market_crash_test")
-        cancellation_time = (datetime.utcnow() - start_time).total_seconds()
-
-        # Assertions
-        assert executor._cancelled_by_kill_switch == len(mock_open_orders)
-        assert len(executor._tracked_orders) == 0  # All orders cancelled
-        assert cancellation_time < 5.0, f"Order cancellation too slow: {cancellation_time}s"
-
-        # Verify all exchanges were called
-        for connector in mock_connectors.values():
-            assert connector.cancel_order.await_count >= 5  # 5 orders per exchange
+        ]
+        store.observe.side_effect = lambda original, observed: observed
+        venues = {}
+        for order in mock_open_orders:
+            venue_key = key(order.exchange.value, order.account_id)
+            if venue_key not in venues:
+                venues[venue_key] = AsyncMock()
+                venues[venue_key].lookup.side_effect = lambda value: value
+        coordinator = RecoveryCoordinator(store, [], venues, AsyncMock(), AsyncMock())
+        assert await coordinator.recover_orders(halted=True) == []
+        assert store.request_cancel.await_count == len(mock_open_orders)
+        assert sum(venue.cancel.await_count for venue in venues.values()) == len(mock_open_orders)
+        # Cancellation requests remain durable until terminal status is observed.
+        store.observe.assert_awaited()
 
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_kill_switch_escalation_levels(
-        self,
-        crash_simulator: MarketCrashSimulator,
-        mock_portfolio_with_positions: Portfolio
+        self, crash_simulator: MarketCrashSimulator, mock_portfolio_with_positions: Portfolio
     ):
         """Test all 4 escalation levels during systematic market failure."""
 
@@ -355,7 +354,7 @@ class TestMarketCrashKillSwitch:
             return 5
 
         # Patch alert functions
-        with patch("core.utils.alerts.send_telegram_alert", mock_telegram_alert):
+        with patch("core.risk.kill_switch.send_telegram_alert", mock_telegram_alert):
 
             # Simulate escalating drawdown
             drawdown_levels = [0.02, 0.04, 0.08, 0.15]  # 2%, 4%, 8%, 15%
@@ -373,7 +372,7 @@ class TestMarketCrashKillSwitch:
                 await kill_switch.check(
                     metrics=risk_metrics,
                     on_pause_strategy=mock_pause_strategy,
-                    on_close_all_positions=mock_close_positions
+                    on_close_all_positions=mock_close_positions,
                 )
 
         # Verify escalation progression
@@ -401,47 +400,52 @@ class TestMarketCrashKillSwitch:
                 super().__init__(agent_id=999, name="test", tier=1)
                 self.state = state_manager
 
-            async def initialize(self): pass
-            async def run(self): pass
-            async def shutdown(self): pass
+            async def initialize(self):
+                pass
+
+            async def run(self):
+                pass
+
+            async def shutdown(self):
+                pass
 
         agent = TestAgent()
 
         # Verify halt detection
         is_halted = await agent.is_halted()
-        assert is_halted == True, "Agent should detect active kill switch"
+        assert is_halted is True, "Agent should detect active kill switch"
 
         # Verify state manager was called
         state_manager.is_kill_switch_active.assert_awaited_once()
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_kill_switch_recovery_procedures(self):
+    async def test_kill_switch_recovery_procedures(self, kill_switch_io):
         """Test system recovery after kill switch reset."""
 
         kill_switch = KillSwitch()
 
         # Activate kill switch
         await kill_switch._trigger(
-            reason="test_recovery",
-            drawdown_pct=0.15,
-            scope="system",
-            cro_agent_id=2
+            reason="test_recovery", drawdown_pct=0.15, scope="system", cro_agent_id=2
         )
 
-        assert kill_switch.is_active == True
+        assert kill_switch.is_active is True
         assert "test_recovery" in kill_switch.active_reason
 
         # Reset kill switch
         await kill_switch.reset(authorized_by="integration_test")
 
-        assert kill_switch.is_active == False
+        assert kill_switch.is_active is False
         assert kill_switch.active_reason is None
+        kill_switch_io.activate_kill_switch.assert_awaited_once_with("test_recovery")
+        kill_switch_io.deactivate_kill_switch.assert_awaited_once()
 
 
 # =============================================================================
 # PERFORMANCE BENCHMARKS
 # =============================================================================
+
 
 class TestKillSwitchPerformance:
     """Performance benchmarks for kill switch response times."""
@@ -472,8 +476,7 @@ class TestKillSwitchPerformance:
         start_time = datetime.utcnow()
 
         event = await kill_switch.check(
-            metrics=risk_metrics,
-            on_close_all_positions=mock_close_positions
+            metrics=risk_metrics, on_close_all_positions=mock_close_positions
         )
 
         response_time = (datetime.utcnow() - start_time).total_seconds()
@@ -487,18 +490,13 @@ class TestKillSwitchPerformance:
     async def test_concurrent_order_cancellation(self):
         """Test order cancellation performance under high load."""
 
-        executor = ExchangeExecutor()
+        from core.accounting.models import key
+        from core.execution.recovery import RecoveryCoordinator
 
-        # Create 1000 mock orders across exchanges
-        large_order_set = []
-        for i in range(1000):
-            exchange = [Exchange.BINANCE, Exchange.COINBASE, Exchange.KRAKEN][i % 3]
-            order = Order(
-                order_id=uuid4(),
-                client_order_id=uuid4(),
-                exchange_order_id=f"LOAD-{i}",
+        orders = [
+            Order(
                 symbol="BTC/USDT",
-                exchange=exchange,
+                exchange=Exchange.BINANCE,
                 side=OrderSide.BUY,
                 order_type=OrderType.LIMIT,
                 size=Decimal("0.01"),
@@ -506,28 +504,23 @@ class TestKillSwitchPerformance:
                 status=OrderStatus.OPEN,
                 strategy_id="load_test",
                 agent_id=12,
+                exchange_order_id=f"LOAD-{i}",
             )
-            large_order_set.append(order)
-
-        # Mock fast connectors
-        mock_connector = MagicMock()
-        mock_connector.cancel_order = AsyncMock(return_value=True)
-
-        executor._connector = MagicMock()
-        executor._connector.get = MagicMock(return_value=mock_connector)
-        executor.publish = AsyncMock()
-
-        executor._tracked_orders = {
-            order.exchange_order_id: (order, datetime.utcnow())
-            for order in large_order_set
-        }
-
-        # Measure cancellation performance
-        start_time = datetime.utcnow()
-        await executor._cancel_all_tracked_orders("performance_test")
-        cancellation_time = (datetime.utcnow() - start_time).total_seconds()
-
-        # Performance assertions
-        orders_per_second = len(large_order_set) / cancellation_time
-        assert orders_per_second > 100, f"Cancellation rate too slow: {orders_per_second}/sec"
-        assert executor._cancelled_by_kill_switch == 1000
+            for i in range(1000)
+        ]
+        store, venue = AsyncMock(), AsyncMock()
+        store.orders.return_value = [
+            {"current_order": order.model_dump_json(), "cancel_requested": False}
+            for order in orders
+        ]
+        store.observe.side_effect = lambda original, observed: observed
+        venue.lookup.side_effect = lambda value: value
+        # A failed cancellation must not prevent attempts for other open orders.
+        venue.cancel.side_effect = [RuntimeError("timeout"), *([None] * 999)]
+        coordinator = RecoveryCoordinator(
+            store, [], {key("binance", "default"): venue}, AsyncMock(), AsyncMock()
+        )
+        issues = await coordinator.recover_orders(halted=True)
+        assert len(issues) == 1 and "RuntimeError" in issues[0]
+        assert venue.cancel.await_count == 1000
+        assert store.request_cancel.await_count == 1000

@@ -14,13 +14,11 @@ from core.data.models import (
     OHLCVBar,
     Order,
     OrderSide,
-    OrderStatus,
     OrderType,
     PositionSizingResult,
     SignalDirection,
     Timeframe,
     TradeProposal,
-    TradeProposalStatus,
 )
 
 

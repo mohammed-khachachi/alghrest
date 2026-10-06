@@ -1,0 +1,59 @@
+{
+  "full_mocked_passed": 953,
+  "full_mocked_skipped": 53,
+  "focused_passed": 123,
+  "new_contract_test_cases": 38,
+  "api_cases": 10,
+  "new_property_examples": 180,
+  "aggregate_coverage_percent": 73.67949062864317,
+  "focused_advisory_coverage_percent": 97.5609756097561,
+  "critical_function_coverage": {
+    "unique_months": {
+      "source": "src/core/advisory/models.py",
+      "start": 36,
+      "end": 39,
+      "missing_lines": [],
+      "missing_branches": []
+    },
+    "tick_value": {
+      "source": "src/core/advisory/models.py",
+      "start": 57,
+      "end": 58,
+      "missing_lines": [],
+      "missing_branches": []
+    },
+    "specification_kind": {
+      "source": "src/core/advisory/models.py",
+      "start": 61,
+      "end": 66,
+      "missing_lines": [],
+      "missing_branches": []
+    },
+    "valid_contract": {
+      "source": "src/core/advisory/models.py",
+      "start": 68,
+      "end": 80,
+      "missing_lines": [],
+      "missing_branches": []
+    },
+    "risk_worksheet": {
+      "source": "src/core/advisory/analysis.py",
+      "start": 166,
+      "end": 199,
+      "missing_lines": [],
+      "missing_branches": []
+    }
+  },
+  "checks": [
+    "ruff",
+    "black",
+    "isort",
+    "architecture",
+    "strict mypy (102 source files)"
+  ],
+  "runtime_financial_state_changed": false,
+  "broker_integration_added": false,
+  "listing_expiry_or_tcp25_eligibility_verified": false,
+  "nonflat_sizing_complete": false,
+  "qualified_historical_data_available": false
+}

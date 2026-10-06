@@ -1,0 +1,24 @@
+{
+  "full_mocked_passed": 986,
+  "full_mocked_skipped": 53,
+  "focused_passed": 156,
+  "provider_replay_cases": 33,
+  "property_examples": 100,
+  "aggregate_coverage_percent": 73.97321032555664,
+  "provider_coverage": {
+    "src/core/advisory/data.py": 100.0,
+    "src/connectors/advisory/replay.py": 100.0,
+    "src/api/services/advisory.py": 100.0
+  },
+  "checks": [
+    "ruff",
+    "black",
+    "isort",
+    "architecture",
+    "strict mypy:104 source files"
+  ],
+  "runtime_financial_state_changed": false,
+  "broker_or_vendor_integration_added": false,
+  "full_decision_replay_complete": false,
+  "market_data_guard_complete": false
+}

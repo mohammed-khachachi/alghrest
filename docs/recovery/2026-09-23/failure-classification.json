@@ -1,0 +1,386 @@
+[
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_agent_failure_cascade_prevention",
+    "baseline": "passed",
+    "final": "failure",
+    "category": "Nondeterministic test",
+    "root_cause": "Random failures do not guarantee that the final stable fallback executes. Passed the baseline but failed the combined run. No production change in between.",
+    "final_error": "assert 0 > 0\n +  where 0 = <test_agent_coordination.TestAgentCoordination.test_agent_failure_cascade_prevention.<locals>.FallibleAgent object at 0x7f8f76a873e0>.processed_messages"
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_message_ordering_and_causality",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale topic/API",
+    "root_cause": "KafkaTopic.MARKET_DATA is absent; current producers use PRICES_REALTIME/OHLCV. Mock agents also use legacy publishing/consumer conventions.",
+    "final_error": "AttributeError: type object 'KafkaTopic' has no attribute 'MARKET_DATA'"
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_multi_tier_signal_propagation",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale fixture/API",
+    "root_cause": "Mock BaseStrategy supplies unsupported tier argument and omits current strategy constructor fields; mock publishers also use removed topics and await synchronous make_consumer.",
+    "final_error": "failed on setup with \"TypeError: BaseStrategy.__init__() got an unexpected keyword argument 'tier'\""
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_risk_governor_emergency_coordination",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale fixture/API",
+    "root_cause": "Same invalid MockTrendStrategy constructor; test exercises mock orchestration, not the production RiskGovernor.",
+    "final_error": "failed on setup with \"TypeError: BaseStrategy.__init__() got an unexpected keyword argument 'tier'\""
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentRecoveryAndRebalancing::test_workload_rebalancing",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Test simulation defect / missing real integration",
+    "root_cause": "Fixed capacity of the local fake agents yields exactly five unprocessed items; assertion requires fewer than five. No runtime rebalancer is exercised.",
+    "final_error": "AssertionError: assert 5 < 5\n +  where 5 = len([{'data': 'work_25', 'id': 25}, {'data': 'work_26', 'id': 26}, {'data': 'work_27', 'id': 27}, {'data': 'work_28', 'id': 28}, {'data': 'work_29', 'id': 29}])"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestAPIDashboardIntegration::test_dashboard_error_handling",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Wrong patch target / missing assertion",
+    "root_cause": "patch(app.get_portfolio) targets a nonexistent Python module; even a corrected patch would need to target the registered dependency/route and assert the 500 response.",
+    "final_error": "ModuleNotFoundError: No module named 'app'"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestAPIEndpoints::test_api_cors_headers",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Test app configuration",
+    "root_cause": "Locally defined FastAPI test app has no CORS middleware; bare OPTIONS receives 405. It is not api.main.app.",
+    "final_error": "assert 405 in [200, 204]\n +  where 405 = <Response [405 Method Not Allowed]>.status_code"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestWebSocketFeeds::test_websocket_connection_handling",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "TestClient misuse",
+    "root_cause": "websocket_connect returns a context manager; the nonexistent endpoint connection is never entered, so no exception is raised.",
+    "final_error": "Failed: DID NOT RAISE <class 'Exception'>"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestWebSocketFeeds::test_websocket_message_rate",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "TestClient misuse / swallowed error",
+    "root_cause": "receive_json has no timeout keyword. A bare except hides the resulting TypeError, leaving zero received messages.",
+    "final_error": "assert 0 > 0\n +  where 0 = len([])"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_complete_backtesting_pipeline",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Mock arithmetic and stale result contracts",
+    "root_cause": "Local MockBacktestEngine multiplies Decimal OHLC prices by floats. Further code uses stale BacktestResult/WalkForwardResult contracts; it does not invoke backtesting.engine.BacktestEngine.",
+    "final_error": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_data_quality_validation",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Mock arithmetic and stale result contracts",
+    "root_cause": "Local MockBacktestEngine multiplies Decimal OHLC prices by floats. Further code uses stale BacktestResult/WalkForwardResult contracts; it does not invoke backtesting.engine.BacktestEngine.",
+    "final_error": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_monte_carlo_risk_assessment",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale mock result contract",
+    "root_cause": "Local MockBacktestEngine constructs MonteCarloResult with legacy fields, not the production engine contract. Do not add model aliases to accommodate it.",
+    "final_error": "pydantic_core._pydantic_core.ValidationError: 10 validation errors for MonteCarloResult\nstrategy_id\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nsimulations\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nvar_95\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nvar_99\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ncvar_95\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nmedian_return_pct\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\npercentile_5_return_pct\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\npercentile_95_return_pct\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\npassed_validation\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nfailure_reasons\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_performance_metrics_calculation",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Mock arithmetic and stale result contracts",
+    "root_cause": "Local MockBacktestEngine multiplies Decimal OHLC prices by floats. Further code uses stale BacktestResult/WalkForwardResult contracts; it does not invoke backtesting.engine.BacktestEngine.",
+    "final_error": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_strategy_approval_workflow",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Mock arithmetic and stale result contracts",
+    "root_cause": "Local MockBacktestEngine multiplies Decimal OHLC prices by floats. Further code uses stale BacktestResult/WalkForwardResult contracts; it does not invoke backtesting.engine.BacktestEngine.",
+    "final_error": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_strategy_qualification_thresholds",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Mock arithmetic and stale result contracts",
+    "root_cause": "Local MockBacktestEngine multiplies Decimal OHLC prices by floats. Further code uses stale BacktestResult/WalkForwardResult contracts; it does not invoke backtesting.engine.BacktestEngine.",
+    "final_error": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_walk_forward_analysis_degradation",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Mock arithmetic and stale result contracts",
+    "root_cause": "Local MockBacktestEngine multiplies Decimal OHLC prices by floats. Further code uses stale BacktestResult/WalkForwardResult contracts; it does not invoke backtesting.engine.BacktestEngine.",
+    "final_error": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_execution_pipeline_performance",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and assertions",
+    "root_cause": "Current typed Portfolio/TradeProposal/AgentMessage, finite awaited streams, precise risk rejection assertions, optimization flags, and actual executor fill publication with mocked external I/O.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_happy_path_execution",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and assertions",
+    "root_cause": "Current typed Portfolio/TradeProposal/AgentMessage, finite awaited streams, precise risk rejection assertions, optimization flags, and actual executor fill publication with mocked external I/O.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_kill_switch_halts_pipeline",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and assertions",
+    "root_cause": "Current typed Portfolio/TradeProposal/AgentMessage, finite awaited streams, precise risk rejection assertions, optimization flags, and actual executor fill publication with mocked external I/O.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_optimization_flags_prevent_reentry",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and assertions",
+    "root_cause": "Current typed Portfolio/TradeProposal/AgentMessage, finite awaited streams, precise risk rejection assertions, optimization flags, and actual executor fill publication with mocked external I/O.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_pipeline_with_ml_predictor_fallback",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and assertions",
+    "root_cause": "Current typed Portfolio/TradeProposal/AgentMessage, finite awaited streams, precise risk rejection assertions, optimization flags, and actual executor fill publication with mocked external I/O.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_position_limit_rejection",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and assertions",
+    "root_cause": "Current typed Portfolio/TradeProposal/AgentMessage, finite awaited streams, precise risk rejection assertions, optimization flags, and actual executor fill publication with mocked external I/O.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_consumer_error_handling",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale wrapper API / reliability gap",
+    "root_cause": "Consumer takes agent_name, not group_id/bootstrap_servers. Mock dict records differ from Kafka records; the test also expects three failures from a one-pass stream. Handler acknowledgements need independent real-broker validation.",
+    "final_error": "TypeError: AlghrestConsumer.__init__() got an unexpected keyword argument 'group_id'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_consumer_group_load_balancing",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale API / missing real integration",
+    "root_cause": "MARKET_DATA and consumer constructor are stale; the test merely increments local counters and cannot validate group assignment or rebalance.",
+    "final_error": "AttributeError: type object 'KafkaTopic' has no attribute 'MARKET_DATA'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_dead_letter_queue_handling",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale API / unimplemented feature",
+    "root_cause": "Automatic DLQ routing and DLQ provisioning are absent. Test manually sends a dict to an invented topic; adapting the constructor alone would not test recovery.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_high_throughput_message_processing",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale wrapper/topic API",
+    "root_cause": "Uses unsupported constructor, MARKET_DATA, and dict send API. Mock throughput would not establish broker throughput.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_message_ordering_guarantee",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale wrapper API",
+    "root_cause": "Producer is settings-driven, send expects AgentMessage, low-level method is send_and_wait, and MARKET_DATA is not a provisioned topic.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_producer_consumer_roundtrip",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale fixture/API",
+    "root_cause": "Proposal omits agent_id, exchange, asset_class, size_usd, confidence_score; wrapper constructors and wire expectations are also stale.",
+    "final_error": "failed on setup with \"pydantic_core._pydantic_core.ValidationError: 5 validation errors for TradeProposal\nagent_id\n  Field required [type=missing, input_value={'proposal_id': 'a7cb508d...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nexchange\n  Field required [type=missing, input_value={'proposal_id': 'a7cb508d...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_class\n  Field required [type=missing, input_value={'proposal_id': 'a7cb508d...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nsize_usd\n  Field required [type=missing, input_value={'proposal_id': 'a7cb508d...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nconfidence_score\n  Field required [type=missing, input_value={'proposal_id': 'a7cb508d...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\""
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_schema_validation_and_evolution",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale wrapper/model contract",
+    "root_cause": "Wrapper does not take bootstrap_servers or serialize arbitrary proposal dicts through send; tests need real AgentMessage and current required proposal fields.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestMessageBusReliability::test_connection_recovery",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Wrong patch target",
+    "root_cause": "No producer _connect method; initialize retries AIOKafkaProducer.start using tenacity. Test patches an API that does not exist.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestMessageBusReliability::test_exactly_once_semantics",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale API / unsupported guarantee",
+    "root_cause": "Setting an arbitrary _enable_idempotence attribute does not configure Kafka. Three explicit sends are not application deduplication or exactly-once processing.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestMessageBusReliability::test_message_durability",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale configuration boundary",
+    "root_cause": "acks and enable_idempotence belong to AIOKafkaProducer construction, not wrapper.send. Real broker acknowledgement/durability remains unverified.",
+    "final_error": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestKillSwitchPerformance::test_kill_switch_latency_benchmark",
+    "baseline": "failure",
+    "final": "passed",
+    "category": "Repaired fixture and accounting",
+    "root_cause": "Complete Position/OHLCV contracts, patch imported state/alerts at lookup sites, cumulative drawdown from initial capital, assert the actual 7% weekly halt, and verify Redis activation/reset calls.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestMarketCrashKillSwitch::test_flash_crash_kill_switch_activation",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and accounting",
+    "root_cause": "Complete Position/OHLCV contracts, patch imported state/alerts at lookup sites, cumulative drawdown from initial capital, assert the actual 7% weekly halt, and verify Redis activation/reset calls.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestMarketCrashKillSwitch::test_kill_switch_escalation_levels",
+    "baseline": "error",
+    "final": "passed",
+    "category": "Repaired fixture and accounting",
+    "root_cause": "Complete Position/OHLCV contracts, patch imported state/alerts at lookup sites, cumulative drawdown from initial capital, assert the actual 7% weekly halt, and verify Redis activation/reset calls.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestMarketCrashKillSwitch::test_kill_switch_recovery_procedures",
+    "baseline": "failure",
+    "final": "passed",
+    "category": "Repaired fixture and accounting",
+    "root_cause": "Complete Position/OHLCV contracts, patch imported state/alerts at lookup sites, cumulative drawdown from initial capital, assert the actual 7% weekly halt, and verify Redis activation/reset calls.",
+    "final_error": ""
+  },
+  {
+    "test": "tests.integration.test_ml_failover.TestMLPredictorFailover::test_technical_analysis_fallback_accuracy",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Fixture/strategy expectation mismatch",
+    "root_cause": "Monotonic rising closes produce overbought RSI (>70), which the implemented fallback treats as bearish. The test assumes trend-following behavior; changing trading logic or accepting every signal would conceal the mismatch.",
+    "final_error": "AssertionError: assert 'BEARISH' in ['BULLISH', 'NEUTRAL']"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestCrossAgentStateSync::test_state_consistency_across_agents",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale API / invalid shared-state harness",
+    "root_cause": "Uses nonexistent constructor/setter and store_shared_state/get_shared_state. Independent mocks configured with identical return values do not test Redis consistency.",
+    "final_error": "TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestCrossAgentStateSync::test_state_version_conflicts",
+    "baseline": "failure",
+    "final": "failure",
+    "category": "Stale API / unimplemented feature",
+    "root_cause": "No store_versioned_state/CAS API exists. No compatibility method was added just to satisfy this test.",
+    "final_error": "TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_agent_heartbeat_tracking",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale StateManager API/fixture",
+    "root_cause": "Constructor takes no redis_url and redis is read-only. Runtime uses set_agent_health/get_all_agent_healths and expiring per-agent keys, not heartbeat hashes.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_connection_pool_management",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API / mock cannot prove pooling",
+    "root_cause": "Constructor fails first; store_agent_state does not exist. Mock call counts cannot establish real pool exhaustion behavior.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_kill_switch_state_propagation",
+    "baseline": "error",
+    "final": "error",
+    "category": "Wrong patch target / stale API",
+    "root_cause": "Constructor fails first; KillSwitch uses imported module singleton, is_active is a property, and state key is alghrest:kill_switch:active via setex.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_memory_usage_optimization",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API / unimplemented feature",
+    "root_cause": "Constructor fails first; store_compressed_data is not implemented and has no current runtime consumer.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_portfolio_state_persistence",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API/storage contract",
+    "root_cause": "Constructor fails first; runtime set_portfolio/get_portfolio uses a serialized Portfolio in one string key, not hashes or an untyped dict. Position fixture is incomplete.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_price_cache_performance",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API / unsupported bulk helper",
+    "root_cause": "Constructor fails first; PricePublisher uses set_json(prices:{symbol}, ttl=60), not store_price_data/get_multiple_prices.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_redis_failover_handling",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API / unimplemented feature",
+    "root_cause": "Constructor fails first; no StateManager.health_check or Sentinel failover integration is implemented.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_state_corruption_recovery",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API / unimplemented feature",
+    "root_cause": "Constructor fails first; get_agent_state_with_backup and automatic backup recovery do not exist. JSON parsing currently raises on corruption.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_unhealthy_agent_detection",
+    "baseline": "error",
+    "final": "error",
+    "category": "Stale API / unimplemented feature",
+    "root_cause": "Constructor fails first; StateManager has no get_unhealthy_agents timeout-scanning API. Agent health keys instead expire.",
+    "final_error": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\""
+  }
+]

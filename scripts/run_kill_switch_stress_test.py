@@ -24,7 +24,6 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
 
 import structlog
 from rich.console import Console
@@ -34,7 +33,7 @@ from rich.table import Table
 from rich.text import Text
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 logger = structlog.get_logger(__name__)
 console = Console()
@@ -68,11 +67,11 @@ class KillSwitchStressTester:
 [green]التاريخ:[/green] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 [green]النسخة:[/green] v0.3 Integration Tests
             """,
-            style="bold"
+            style="bold",
         )
         console.print(header)
 
-    async def run_scenario(self, scenario_name: str) -> Dict:
+    async def run_scenario(self, scenario_name: str) -> dict:
         """تشغيل سيناريو اختبار واحد."""
 
         console.print(f"\n[bold yellow]🧪 تشغيل سيناريو: {scenario_name}[/bold yellow]")
@@ -109,7 +108,9 @@ class KillSwitchStressTester:
             if status == "PASSED":
                 console.print(f"✅ [green]{scenario_name}: نجح الاختبار[/green] ({duration:.2f}s)")
             elif status == "FAILED":
-                console.print(f"❌ [red]{scenario_name}: فشل الاختبار[/red] - {result.get('error', 'خطأ غير معروف')}")
+                console.print(
+                    f"❌ [red]{scenario_name}: فشل الاختبار[/red] - {result.get('error', 'خطأ غير معروف')}"
+                )
             else:
                 console.print(f"⏭️ [yellow]{scenario_name}: تم تخطي الاختبار[/yellow]")
 
@@ -121,20 +122,21 @@ class KillSwitchStressTester:
                 "status": "ERROR",
                 "error": str(e),
                 "duration_seconds": duration,
-                "scenario": scenario_name
+                "scenario": scenario_name,
             }
-            console.print(f"💥 [red]{scenario_name}: خطأ في التنفيذ[/red] - {str(e)}")
+            console.print(f"💥 [red]{scenario_name}: خطأ في التنفيذ[/red] - {e!s}")
             return result
 
-    async def _test_flash_crash(self) -> Dict:
+    async def _test_flash_crash(self) -> dict:
         """اختبار الانهيار السريع."""
-        from tests.integration.test_market_crash_kill_switch import MarketCrashSimulator
-        from core.risk.kill_switch import KillSwitch
-        from core.data.models import RiskMetrics, Portfolio, Position, OrderSide
         from decimal import Decimal
 
+        from core.data.models import OrderSide, Portfolio, Position, RiskMetrics
+        from core.risk.kill_switch import KillSwitch
+        from tests.integration.test_market_crash_kill_switch import MarketCrashSimulator
+
         # إعداد المحاكي
-        simulator = MarketCrashSimulator()
+        MarketCrashSimulator()
         kill_switch = KillSwitch()
 
         # إنشاء محفظة وهمية
@@ -186,8 +188,7 @@ class KillSwitchStressTester:
 
             # فحص Kill Switch
             event = await kill_switch.check(
-                metrics=risk_metrics,
-                on_close_all_positions=mock_close_positions
+                metrics=risk_metrics, on_close_all_positions=mock_close_positions
             )
 
             if event:
@@ -197,7 +198,7 @@ class KillSwitchStressTester:
                     "response_time_seconds": response_time,
                     "trigger_drawdown": current_drop,
                     "positions_closed": event.positions_closed,
-                    "activation_detected": True
+                    "activation_detected": True,
                 }
 
             # محاكاة مرور الوقت
@@ -206,35 +207,36 @@ class KillSwitchStressTester:
         return {
             "status": "FAILED",
             "error": "Kill switch did not activate during 15% crash",
-            "activation_detected": activation_detected
+            "activation_detected": activation_detected,
         }
 
-    async def _test_black_swan(self) -> Dict:
+    async def _test_black_swan(self) -> dict:
         """اختبار الحدث الأسود."""
         # Similar implementation but 25% over 30 minutes
         return {
             "status": "PASSED",
             "simulation": "black_swan_25pct",
             "response_time_seconds": 45.2,
-            "escalation_levels_triggered": ["alert", "pause", "halt"]
+            "escalation_levels_triggered": ["alert", "pause", "halt"],
         }
 
-    async def _test_systematic_failure(self) -> Dict:
+    async def _test_systematic_failure(self) -> dict:
         """اختبار الفشل النظامي."""
         return {
             "status": "PASSED",
             "simulation": "systematic_failure_35pct",
             "correlated_assets_affected": 12,
-            "kill_switch_scope": "system_wide"
+            "kill_switch_scope": "system_wide",
         }
 
-    async def _test_order_cancellation(self) -> Dict:
+    async def _test_order_cancellation(self) -> dict:
         """اختبار إلغاء الأوامر."""
-        from tests.integration.test_market_crash_kill_switch import ExchangeExecutor
-        from core.data.models import Order, Exchange, OrderSide, OrderType, OrderStatus
-        from unittest.mock import AsyncMock, MagicMock
         from decimal import Decimal
+        from unittest.mock import AsyncMock, MagicMock
         from uuid import uuid4
+
+        from core.data.models import Exchange, Order, OrderSide, OrderStatus, OrderType
+        from tests.integration.test_market_crash_kill_switch import ExchangeExecutor
 
         # إعداد المنفذ
         executor = ExchangeExecutor()
@@ -267,8 +269,7 @@ class KillSwitchStressTester:
         executor.publish = AsyncMock()
 
         executor._tracked_orders = {
-            order.exchange_order_id: (order, datetime.now())
-            for order in orders
+            order.exchange_order_id: (order, datetime.now()) for order in orders
         }
 
         # قياس سرعة الإلغاء
@@ -276,21 +277,22 @@ class KillSwitchStressTester:
         await executor._cancel_all_tracked_orders("stress_test")
         cancel_duration = (datetime.now() - cancel_start).total_seconds()
 
-        orders_per_second = len(orders) / cancel_duration if cancel_duration > 0 else float('inf')
+        orders_per_second = len(orders) / cancel_duration if cancel_duration > 0 else float("inf")
 
         return {
             "status": "PASSED" if orders_per_second > 50 else "FAILED",
             "orders_cancelled": len(orders),
             "cancellation_time_seconds": cancel_duration,
             "orders_per_second": orders_per_second,
-            "threshold_met": orders_per_second > 50
+            "threshold_met": orders_per_second > 50,
         }
 
-    async def _test_escalation_levels(self) -> Dict:
+    async def _test_escalation_levels(self) -> dict:
         """اختبار مستويات التصعيد."""
-        from core.risk.kill_switch import KillSwitch
-        from core.data.models import RiskMetrics
         from decimal import Decimal
+
+        from core.data.models import RiskMetrics
+        from core.risk.kill_switch import KillSwitch
 
         kill_switch = KillSwitch()
         escalation_events = []
@@ -320,12 +322,11 @@ class KillSwitchStressTester:
             )
 
             # استخدام patch محاكي بدلاً من التطبيق الفعلي
-            with_mock = True  # في البيئة الحقيقية، استخدم patch
 
             await kill_switch.check(
                 metrics=risk_metrics,
                 on_pause_strategy=mock_pause_strategy,
-                on_close_all_positions=mock_close_positions
+                on_close_all_positions=mock_close_positions,
             )
 
         # تحقق من التصعيد التدريجي
@@ -338,19 +339,19 @@ class KillSwitchStressTester:
             "escalation_events": escalation_events,
             "levels_triggered": levels_triggered,
             "total_levels": len(expected_levels),
-            "coverage_percent": len(levels_triggered) / len(expected_levels) * 100
+            "coverage_percent": len(levels_triggered) / len(expected_levels) * 100,
         }
 
-    async def _test_system_compliance(self) -> Dict:
+    async def _test_system_compliance(self) -> dict:
         """اختبار امتثال النظام."""
         return {
             "status": "PASSED",
             "agents_tested": 32,
             "compliance_rate": 100.0,
-            "halt_detection_time_ms": 5.2
+            "halt_detection_time_ms": 5.2,
         }
 
-    async def _test_recovery(self) -> Dict:
+    async def _test_recovery(self) -> dict:
         """اختبار إجراءات التعافي."""
         from core.risk.kill_switch import KillSwitch
 
@@ -358,10 +359,7 @@ class KillSwitchStressTester:
 
         # تفعيل Kill Switch
         await kill_switch._trigger(
-            reason="recovery_test",
-            drawdown_pct=0.15,
-            scope="system",
-            cro_agent_id=2
+            reason="recovery_test", drawdown_pct=0.15, scope="system", cro_agent_id=2
         )
 
         activation_confirmed = kill_switch.is_active
@@ -375,20 +373,20 @@ class KillSwitchStressTester:
             "status": "PASSED" if activation_confirmed and reset_confirmed else "FAILED",
             "activation_confirmed": activation_confirmed,
             "reset_confirmed": reset_confirmed,
-            "recovery_time_seconds": 0.1  # فوري تقريباً
+            "recovery_time_seconds": 0.1,  # فوري تقريباً
         }
 
-    async def _test_performance(self) -> Dict:
+    async def _test_performance(self) -> dict:
         """قياس الأداء."""
         return {
             "status": "PASSED",
             "kill_switch_latency_ms": 12.5,
             "order_cancellation_rate_per_sec": 250,
             "memory_usage_mb": 45.2,
-            "cpu_usage_percent": 15.8
+            "cpu_usage_percent": 15.8,
         }
 
-    def generate_report(self, results: List[Dict]) -> str:
+    def generate_report(self, results: list[dict]) -> str:
         """إنتاج تقرير شامل."""
 
         # إحصائيات عامة
@@ -399,7 +397,9 @@ class KillSwitchStressTester:
         success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
 
         # إنشاء جدول النتائج
-        table = Table(title="نتائج اختبار Kill Switch", show_header=True, header_style="bold magenta")
+        table = Table(
+            title="نتائج اختبار Kill Switch", show_header=True, header_style="bold magenta"
+        )
         table.add_column("السيناريو", style="cyan", width=25)
         table.add_column("الحالة", width=10)
         table.add_column("الوقت (ثانية)", justify="right", width=15)
@@ -436,7 +436,7 @@ class KillSwitchStressTester:
                 self.scenarios.get(scenario, scenario),
                 Text(status_icon, style=status_style),
                 f"{duration:.2f}",
-                details_text
+                details_text,
             )
 
         console.print(table)
@@ -453,7 +453,7 @@ class KillSwitchStressTester:
 
 [bold]{"🎉 جميع الاختبارات نجحت!" if failed_tests == 0 else "⚠️ بعض الاختبارات فشلت - يتطلب مراجعة"}[/bold]
             """,
-            style="white"
+            style="white",
         )
         console.print(performance_panel)
 
@@ -466,11 +466,19 @@ async def main():
     parser = argparse.ArgumentParser(description="ALGHREST Kill Switch Stress Test")
     parser.add_argument(
         "--scenario",
-        choices=["all", "flash_crash", "black_swan", "systematic_failure",
-                 "order_cancellation", "escalation_levels", "system_compliance",
-                 "recovery_procedures", "performance_benchmark"],
+        choices=[
+            "all",
+            "flash_crash",
+            "black_swan",
+            "systematic_failure",
+            "order_cancellation",
+            "escalation_levels",
+            "system_compliance",
+            "recovery_procedures",
+            "performance_benchmark",
+        ],
         default="all",
-        help="السيناريو المراد اختباره"
+        help="السيناريو المراد اختباره",
     )
     parser.add_argument("--output", help="مسار حفظ التقرير (JSON)")
     parser.add_argument("--verbose", "-v", action="store_true", help="عرض تفاصيل أكثر")
@@ -481,10 +489,7 @@ async def main():
     tester.print_header()
 
     # تحديد السيناريوهات المراد تشغيلها
-    if args.scenario == "all":
-        scenarios_to_run = list(tester.scenarios.keys())
-    else:
-        scenarios_to_run = [args.scenario]
+    scenarios_to_run = list(tester.scenarios.keys()) if args.scenario == "all" else [args.scenario]
 
     console.print(f"\n[bold]السيناريوهات المختارة:[/bold] {len(scenarios_to_run)}")
     for scenario in scenarios_to_run:
@@ -494,9 +499,7 @@ async def main():
     results = []
 
     with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console
+        SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
     ) as progress:
 
         task = progress.add_task("تشغيل اختبارات Kill Switch...", total=len(scenarios_to_run))
@@ -508,15 +511,15 @@ async def main():
             progress.advance(task)
 
     # إنتاج التقرير
-    console.print("\n" + "="*80)
+    console.print("\n" + "=" * 80)
     console.print("[bold blue]📋 التقرير النهائي[/bold blue]")
-    console.print("="*80)
+    console.print("=" * 80)
 
     report_json = tester.generate_report(results)
 
     # حفظ التقرير
     if args.output:
-        with open(args.output, 'w', encoding='utf-8') as f:
+        with open(args.output, "w", encoding="utf-8") as f:
             f.write(report_json)
         console.print(f"\n💾 تم حفظ التقرير في: {args.output}")
 

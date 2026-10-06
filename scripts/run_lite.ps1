@@ -2,14 +2,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $dashboardDir = Join-Path $repoRoot "dashboard"
-$mockServer = Join-Path $repoRoot "api\mock_server.py"
+$mockServer = Join-Path $repoRoot "src\api\mock_server.py"
 $dashboardPackage = Join-Path $dashboardDir "package.json"
 $dashboardNodeModules = Join-Path $dashboardDir "node_modules"
 
 $env:ENVIRONMENT = "development"
 $env:ENABLE_DEFI_AGENTS = "false"
 
-$pythonPathParts = @($repoRoot, (Join-Path $repoRoot "api"))
+$pythonPathParts = @((Join-Path $repoRoot "src"))
 if ($env:PYTHONPATH) {
     $pythonPathParts += $env:PYTHONPATH
 }
@@ -60,7 +60,7 @@ $dashboardProcess = $null
 try {
     $apiProcess = Start-Process `
         -FilePath $python `
-        -ArgumentList @("api/mock_server.py") `
+        -ArgumentList @("-m", "api.mock_server") `
         -WorkingDirectory $repoRoot `
         -NoNewWindow `
         -PassThru

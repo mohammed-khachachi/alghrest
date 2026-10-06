@@ -1,0 +1,1164 @@
+{
+  "algorithm_version": "observed-eod-events-v1",
+  "lifecycle": "EXPERIMENT",
+  "rule_exact_verified": false,
+  "tape": {
+    "id": "synthetic-events",
+    "version": "1",
+    "origin": "synthetic",
+    "source_reference": "Hand-calculated fixture, no account/data entitlement attestation",
+    "rules": {
+      "id": "earn2trade-tcp25-eod",
+      "version": "tcp25-eod-public-2026-10-06",
+      "known_at": "2026-10-06T09:31:44Z",
+      "sources": [
+        "https://www.earn2trade.com/trader-career-path",
+        "https://help.earn2trade.com/en/articles/5941958-what-are-the-evaluation-rules",
+        "https://help.earn2trade.com/en/articles/3395926-how-is-my-daily-loss-calculated",
+        "https://help.earn2trade.com/en/articles/5372687-how-does-end-of-day-drawdown-work",
+        "https://help.earn2trade.com/en/articles/3849975-what-is-the-maintain-consistency-rule",
+        "https://help.earn2trade.com/en/articles/5922873-what-is-the-progression-ladder-on-the-trader-career-path",
+        "https://help.earn2trade.com/en/articles/3224526-are-there-any-restrictions-on-when-i-can-trade-in-my-evaluation-account"
+      ],
+      "program": "trader_career_path",
+      "starting_balance": "25000",
+      "profit_target": "1750",
+      "daily_loss_limit": "550",
+      "maximum_drawdown": "1500",
+      "consistency_percent": 30,
+      "minimum_trading_days": 0,
+      "maximum_standard_contracts": 3,
+      "eligible_markets": [
+        "MES",
+        "MYM",
+        "MNQ",
+        "MGC",
+        "M2K",
+        "MCL",
+        "M6E",
+        "M6B",
+        "MHG",
+        "NQ"
+      ],
+      "micro_markets": [
+        "MES",
+        "MYM",
+        "MNQ",
+        "MGC",
+        "M2K",
+        "MCL",
+        "M6E",
+        "M6B",
+        "MHG"
+      ],
+      "micros_per_standard": 10
+    },
+    "policy_confirmed": true,
+    "initially_flat": true,
+    "fills_complete": true,
+    "intraday_extrema_complete": true,
+    "progression": {
+      "id": "synthetic-ladder",
+      "version": "example-1",
+      "policy_id": "earn2trade-tcp25-eod",
+      "policy_version": "tcp25-eod-public-2026-10-06",
+      "known_at": "2026-10-06T15:00:00Z",
+      "source_reference": "Synthetic bands; NOT official TCP25 account bands",
+      "confirmed": true,
+      "bands": [
+        {
+          "minimum_equity": "23500",
+          "maximum_standard_contracts": 1
+        },
+        {
+          "minimum_equity": "25500",
+          "maximum_standard_contracts": 2
+        },
+        {
+          "minimum_equity": "26500",
+          "maximum_standard_contracts": 3
+        }
+      ]
+    },
+    "calendar": {
+      "id": "synthetic-calendar",
+      "version": "example-1",
+      "known_at": "2026-10-06T15:00:00Z",
+      "source_reference": "Synthetic regular sessions; NOT authenticated exchange schedule",
+      "confirmed": true,
+      "complete": true,
+      "coverage_start": "2026-10-06T13:00:00Z",
+      "coverage_end": "2026-10-10T22:00:00Z",
+      "covered_markets": [
+        "MES",
+        "MYM",
+        "MNQ",
+        "MGC",
+        "M2K",
+        "MCL",
+        "M6E",
+        "M6B",
+        "MHG",
+        "NQ"
+      ],
+      "windows": [
+        {
+          "instrument_id": "MES",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "MYM",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "MNQ",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "MGC",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "M2K",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "MCL",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6E",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6B",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "MHG",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "NQ",
+          "start": "2026-10-06T13:00:00Z",
+          "end": "2026-10-06T21:00:00Z",
+          "flat_by": "2026-10-06T20:50:00Z"
+        },
+        {
+          "instrument_id": "MES",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "MYM",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "MNQ",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "MGC",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "M2K",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "MCL",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6E",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6B",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "MHG",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "NQ",
+          "start": "2026-10-07T13:00:00Z",
+          "end": "2026-10-07T21:00:00Z",
+          "flat_by": "2026-10-07T20:50:00Z"
+        },
+        {
+          "instrument_id": "MES",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "MYM",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "MNQ",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "MGC",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "M2K",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "MCL",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6E",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6B",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "MHG",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "NQ",
+          "start": "2026-10-08T13:00:00Z",
+          "end": "2026-10-08T21:00:00Z",
+          "flat_by": "2026-10-08T20:50:00Z"
+        },
+        {
+          "instrument_id": "MES",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "MYM",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "MNQ",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "MGC",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "M2K",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "MCL",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6E",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "M6B",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "MHG",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        },
+        {
+          "instrument_id": "NQ",
+          "start": "2026-10-09T13:00:00Z",
+          "end": "2026-10-09T21:00:00Z",
+          "flat_by": "2026-10-09T20:50:00Z"
+        }
+      ]
+    },
+    "margin": [
+      {
+        "id": "MES",
+        "instrument_id": "MES",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "MYM",
+        "instrument_id": "MYM",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "MNQ",
+        "instrument_id": "MNQ",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "MGC",
+        "instrument_id": "MGC",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "M2K",
+        "instrument_id": "M2K",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "MCL",
+        "instrument_id": "MCL",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "M6E",
+        "instrument_id": "M6E",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "M6B",
+        "instrument_id": "M6B",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "MHG",
+        "instrument_id": "MHG",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      },
+      {
+        "id": "NQ",
+        "instrument_id": "NQ",
+        "known_at": "2026-10-06T15:00:00Z",
+        "confirmed": true,
+        "maximum_total_contracts": 30,
+        "source_reference": "Synthetic capacity"
+      }
+    ],
+    "events": [
+      {
+        "id": "6-11-0-FLOOR_SYNC",
+        "at": "2026-10-06T16:00:00Z",
+        "kind": "FLOOR_SYNC",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": "23500",
+        "confirmed": true
+      },
+      {
+        "id": "6-12-0-OPEN",
+        "at": "2026-10-06T17:00:00Z",
+        "kind": "OPEN",
+        "position_id": "p6",
+        "order_id": null,
+        "instrument_id": "MES",
+        "contract": "MESZ26",
+        "side": "BUY",
+        "quantity": 1,
+        "price": "100",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "6-14-0-CLOSE",
+        "at": "2026-10-06T19:00:00Z",
+        "kind": "CLOSE",
+        "position_id": "p6",
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": "190",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "6-16-0-SESSION_END",
+        "at": "2026-10-06T21:00:00Z",
+        "kind": "SESSION_END",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "6-16-10-FLOOR_SYNC",
+        "at": "2026-10-06T21:10:00Z",
+        "kind": "FLOOR_SYNC",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": "23948",
+        "confirmed": true
+      },
+      {
+        "id": "7-12-0-OPEN",
+        "at": "2026-10-07T17:00:00Z",
+        "kind": "OPEN",
+        "position_id": "p7",
+        "order_id": null,
+        "instrument_id": "MES",
+        "contract": "MESZ26",
+        "side": "BUY",
+        "quantity": 1,
+        "price": "100",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "7-14-0-CLOSE",
+        "at": "2026-10-07T19:00:00Z",
+        "kind": "CLOSE",
+        "position_id": "p7",
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": "190",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "7-16-0-SESSION_END",
+        "at": "2026-10-07T21:00:00Z",
+        "kind": "SESSION_END",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "7-16-10-FLOOR_SYNC",
+        "at": "2026-10-07T21:10:00Z",
+        "kind": "FLOOR_SYNC",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": "24396",
+        "confirmed": true
+      },
+      {
+        "id": "8-12-0-OPEN",
+        "at": "2026-10-08T17:00:00Z",
+        "kind": "OPEN",
+        "position_id": "p8",
+        "order_id": null,
+        "instrument_id": "MES",
+        "contract": "MESZ26",
+        "side": "BUY",
+        "quantity": 1,
+        "price": "100",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "8-14-0-CLOSE",
+        "at": "2026-10-08T19:00:00Z",
+        "kind": "CLOSE",
+        "position_id": "p8",
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": "190",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "8-16-0-SESSION_END",
+        "at": "2026-10-08T21:00:00Z",
+        "kind": "SESSION_END",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "8-16-10-FLOOR_SYNC",
+        "at": "2026-10-08T21:10:00Z",
+        "kind": "FLOOR_SYNC",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": "24844",
+        "confirmed": true
+      },
+      {
+        "id": "9-12-0-OPEN",
+        "at": "2026-10-09T17:00:00Z",
+        "kind": "OPEN",
+        "position_id": "p9",
+        "order_id": null,
+        "instrument_id": "MES",
+        "contract": "MESZ26",
+        "side": "BUY",
+        "quantity": 1,
+        "price": "100",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "9-14-0-CLOSE",
+        "at": "2026-10-09T19:00:00Z",
+        "kind": "CLOSE",
+        "position_id": "p9",
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": "190",
+        "commission_usd": "1",
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "9-16-0-SESSION_END",
+        "at": "2026-10-09T21:00:00Z",
+        "kind": "SESSION_END",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": null,
+        "confirmed": null
+      },
+      {
+        "id": "9-16-10-FLOOR_SYNC",
+        "at": "2026-10-09T21:10:00Z",
+        "kind": "FLOOR_SYNC",
+        "position_id": null,
+        "order_id": null,
+        "instrument_id": null,
+        "contract": null,
+        "side": null,
+        "quantity": null,
+        "price": null,
+        "commission_usd": null,
+        "minimum_balance": "25000",
+        "confirmed": true
+      }
+    ]
+  },
+  "tape_sha256": "c73fa5b761063dfbadb31edf0d022748ea452d3da6c62755c7ef615fdc15bc2c",
+  "implementation_sha256": "09e27839dfad928227ba0d8e204417af3a7d1198f1d1582c92ddfeb949905625",
+  "shared_source_sha256": {
+    "core/advisory/evaluation.py": "df7d697b16ada98f30fa71671dd692825a9c6f37742169833cafb77377d69751",
+    "core/advisory/policy.py": "764de0321ece4d3ddc34425113b15eb035351e0582af7fc267a7a089c160c094",
+    "core/advisory/models.py": "a5ea31df4876fc85cfbae1e96151c6ee77f3ad8290c07b0f58b8641e043f84b7"
+  },
+  "steps": [
+    {
+      "event_id": "6-11-0-FLOOR_SYNC",
+      "at": "2026-10-06T16:00:00Z",
+      "session_date": "2026-10-06",
+      "cash_balance": "25000",
+      "unrealized_pnl": "0",
+      "equity": "25000",
+      "session_net_pnl": "0",
+      "session_lowest_pnl": "0",
+      "financial": {
+        "balance": "25000",
+        "peak": "25000",
+        "floor": "23500",
+        "best_day": "0",
+        "trading_days": 0
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "6-12-0-OPEN",
+      "at": "2026-10-06T17:00:00Z",
+      "session_date": "2026-10-06",
+      "cash_balance": "24999",
+      "unrealized_pnl": "0",
+      "equity": "24999",
+      "session_net_pnl": "-1",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "24999",
+        "peak": "25000",
+        "floor": "23500",
+        "best_day": "0",
+        "trading_days": 1
+      },
+      "positions": [
+        {
+          "id": "p6",
+          "instrument_id": "MES",
+          "contract": "MESZ26",
+          "side": "BUY",
+          "quantity": 1,
+          "entry_price": "100",
+          "mark_price": "100"
+        }
+      ],
+      "working_order_ids": [],
+      "standard_equivalents": "0.1",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "6-14-0-CLOSE",
+      "at": "2026-10-06T19:00:00Z",
+      "session_date": "2026-10-06",
+      "cash_balance": "25448",
+      "unrealized_pnl": "0",
+      "equity": "25448",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25448",
+        "peak": "25000",
+        "floor": "23500",
+        "best_day": "448",
+        "trading_days": 1
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "6-16-0-SESSION_END",
+      "at": "2026-10-06T21:00:00Z",
+      "session_date": "2026-10-06",
+      "cash_balance": "25448",
+      "unrealized_pnl": "0",
+      "equity": "25448",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25448",
+        "peak": "25448",
+        "floor": "23948",
+        "best_day": "448",
+        "trading_days": 1
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "6-16-10-FLOOR_SYNC",
+      "at": "2026-10-06T21:10:00Z",
+      "session_date": "2026-10-06",
+      "cash_balance": "25448",
+      "unrealized_pnl": "0",
+      "equity": "25448",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25448",
+        "peak": "25448",
+        "floor": "23948",
+        "best_day": "448",
+        "trading_days": 1
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "7-12-0-OPEN",
+      "at": "2026-10-07T17:00:00Z",
+      "session_date": "2026-10-07",
+      "cash_balance": "25447",
+      "unrealized_pnl": "0",
+      "equity": "25447",
+      "session_net_pnl": "-1",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25447",
+        "peak": "25448",
+        "floor": "23948",
+        "best_day": "448",
+        "trading_days": 2
+      },
+      "positions": [
+        {
+          "id": "p7",
+          "instrument_id": "MES",
+          "contract": "MESZ26",
+          "side": "BUY",
+          "quantity": 1,
+          "entry_price": "100",
+          "mark_price": "100"
+        }
+      ],
+      "working_order_ids": [],
+      "standard_equivalents": "0.1",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "7-14-0-CLOSE",
+      "at": "2026-10-07T19:00:00Z",
+      "session_date": "2026-10-07",
+      "cash_balance": "25896",
+      "unrealized_pnl": "0",
+      "equity": "25896",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25896",
+        "peak": "25448",
+        "floor": "23948",
+        "best_day": "448",
+        "trading_days": 2
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "7-16-0-SESSION_END",
+      "at": "2026-10-07T21:00:00Z",
+      "session_date": "2026-10-07",
+      "cash_balance": "25896",
+      "unrealized_pnl": "0",
+      "equity": "25896",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25896",
+        "peak": "25896",
+        "floor": "24396",
+        "best_day": "448",
+        "trading_days": 2
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "7-16-10-FLOOR_SYNC",
+      "at": "2026-10-07T21:10:00Z",
+      "session_date": "2026-10-07",
+      "cash_balance": "25896",
+      "unrealized_pnl": "0",
+      "equity": "25896",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25896",
+        "peak": "25896",
+        "floor": "24396",
+        "best_day": "448",
+        "trading_days": 2
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "8-12-0-OPEN",
+      "at": "2026-10-08T17:00:00Z",
+      "session_date": "2026-10-08",
+      "cash_balance": "25895",
+      "unrealized_pnl": "0",
+      "equity": "25895",
+      "session_net_pnl": "-1",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "25895",
+        "peak": "25896",
+        "floor": "24396",
+        "best_day": "448",
+        "trading_days": 3
+      },
+      "positions": [
+        {
+          "id": "p8",
+          "instrument_id": "MES",
+          "contract": "MESZ26",
+          "side": "BUY",
+          "quantity": 1,
+          "entry_price": "100",
+          "mark_price": "100"
+        }
+      ],
+      "working_order_ids": [],
+      "standard_equivalents": "0.1",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "8-14-0-CLOSE",
+      "at": "2026-10-08T19:00:00Z",
+      "session_date": "2026-10-08",
+      "cash_balance": "26344",
+      "unrealized_pnl": "0",
+      "equity": "26344",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26344",
+        "peak": "25896",
+        "floor": "24396",
+        "best_day": "448",
+        "trading_days": 3
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "8-16-0-SESSION_END",
+      "at": "2026-10-08T21:00:00Z",
+      "session_date": "2026-10-08",
+      "cash_balance": "26344",
+      "unrealized_pnl": "0",
+      "equity": "26344",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26344",
+        "peak": "26344",
+        "floor": "24844",
+        "best_day": "448",
+        "trading_days": 3
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "8-16-10-FLOOR_SYNC",
+      "at": "2026-10-08T21:10:00Z",
+      "session_date": "2026-10-08",
+      "cash_balance": "26344",
+      "unrealized_pnl": "0",
+      "equity": "26344",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26344",
+        "peak": "26344",
+        "floor": "24844",
+        "best_day": "448",
+        "trading_days": 3
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "9-12-0-OPEN",
+      "at": "2026-10-09T17:00:00Z",
+      "session_date": "2026-10-09",
+      "cash_balance": "26343",
+      "unrealized_pnl": "0",
+      "equity": "26343",
+      "session_net_pnl": "-1",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26343",
+        "peak": "26344",
+        "floor": "24844",
+        "best_day": "448",
+        "trading_days": 4
+      },
+      "positions": [
+        {
+          "id": "p9",
+          "instrument_id": "MES",
+          "contract": "MESZ26",
+          "side": "BUY",
+          "quantity": 1,
+          "entry_price": "100",
+          "mark_price": "100"
+        }
+      ],
+      "working_order_ids": [],
+      "standard_equivalents": "0.1",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": false,
+      "targets_met": false
+    },
+    {
+      "event_id": "9-14-0-CLOSE",
+      "at": "2026-10-09T19:00:00Z",
+      "session_date": "2026-10-09",
+      "cash_balance": "26792",
+      "unrealized_pnl": "0",
+      "equity": "26792",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26792",
+        "peak": "26344",
+        "floor": "24844",
+        "best_day": "448",
+        "trading_days": 4
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": true,
+      "targets_met": false
+    },
+    {
+      "event_id": "9-16-0-SESSION_END",
+      "at": "2026-10-09T21:00:00Z",
+      "session_date": "2026-10-09",
+      "cash_balance": "26792",
+      "unrealized_pnl": "0",
+      "equity": "26792",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26792",
+        "peak": "26792",
+        "floor": "25000",
+        "best_day": "448",
+        "trading_days": 4
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "CONTINUE",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": true,
+      "targets_met": true
+    },
+    {
+      "event_id": "9-16-10-FLOOR_SYNC",
+      "at": "2026-10-09T21:10:00Z",
+      "session_date": "2026-10-09",
+      "cash_balance": "26792",
+      "unrealized_pnl": "0",
+      "equity": "26792",
+      "session_net_pnl": "448",
+      "session_lowest_pnl": "-1",
+      "financial": {
+        "balance": "26792",
+        "peak": "26792",
+        "floor": "25000",
+        "best_day": "448",
+        "trading_days": 4
+      },
+      "positions": [],
+      "working_order_ids": [],
+      "standard_equivalents": "0",
+      "outcome": "PASS",
+      "breaches": [],
+      "unknowns": [],
+      "consistency_met": true,
+      "targets_met": true
+    }
+  ],
+  "outcome": "PASS",
+  "trade_permitted": false,
+  "execution_enabled": false
+}

@@ -1,0 +1,31 @@
+{
+  "verified_at": "2026-10-06T00:32:56.567717+00:00",
+  "full_mocked_passed": 1150,
+  "full_mocked_skipped": 53,
+  "focused_passed": 320,
+  "aggregate_coverage_percent": 75.09347382732835,
+  "critical_coverage": {
+    "src/core/advisory/account.py": 100.0,
+    "src/core/advisory/evaluation.py": 100.0,
+    "src/core/advisory/health.py": 100.0,
+    "src/core/advisory/events.py": 100.0,
+    "src/core/advisory/data.py": 100.0,
+    "src/connectors/advisory/replay.py": 100.0,
+    "src/api/services/advisory.py": 100.0
+  },
+  "event_property_examples": 100,
+  "calendar_replay_property_examples": 50,
+  "checks": [
+    "repository ruff",
+    "changed-file black/isort",
+    "architecture",
+    "strict mypy:105 sources",
+    "dashboard build",
+    "five synthetic browser cases"
+  ],
+  "runtime_financial_state_changed": false,
+  "live_calendar_enabled": false,
+  "default_event_risk_policy_configured": false,
+  "goal_complete": false,
+  "next_action": "Implement market-selection evidence contracts and deterministic guarded ranking; absent qualified evidence must yield no selected market."
+}

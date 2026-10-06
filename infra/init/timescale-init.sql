@@ -666,7 +666,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy(
     'market_data.ohlcv_1d',
-    start_offset => INTERVAL '2 days',
+    start_offset => INTERVAL '3 days',
     end_offset   => INTERVAL '1 day',
     schedule_interval => INTERVAL '1 day',
     if_not_exists => TRUE

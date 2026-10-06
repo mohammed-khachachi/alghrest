@@ -17,13 +17,25 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def reserve_without_paid_api(monkeypatch):
+    for module in ("agents.tier1_executive.cio_agent", "agents.tier2_intelligence.news_analyst"):
+        monkeypatch.setattr(module + ".reserve", AsyncMock())
+
+
 # ---------------------------------------------------------------------------
 # Helpers — fake an Anthropic Messages API response with usage metadata.
 # ---------------------------------------------------------------------------
 
 
-def _fake_response(text: str, *, cache_created: int = 0, cache_read: int = 0,
-                   input_tokens: int = 100, output_tokens: int = 50):
+def _fake_response(
+    text: str,
+    *,
+    cache_created: int = 0,
+    cache_read: int = 0,
+    input_tokens: int = 100,
+    output_tokens: int = 50,
+):
     """Build a SimpleNamespace that quacks like an anthropic Message."""
     return SimpleNamespace(
         content=[SimpleNamespace(text=text)],
@@ -45,15 +57,20 @@ def _fake_response(text: str, *, cache_created: int = 0, cache_read: int = 0,
 @pytest.mark.asyncio
 async def test_cio_passes_cache_control_in_system_prompt():
     """The CIO must use a list-form system prompt with cache_control."""
-    from agents.tier1_executive.cio_agent import CIOAgent, _CIO_SYSTEM_PROMPT
+    from agents.tier1_executive.cio_agent import _CIO_SYSTEM_PROMPT, CIOAgent
 
     cio = CIOAgent()
     cio._claude = MagicMock()
     cio._claude.messages = MagicMock()
-    cio._claude.messages.create = AsyncMock(return_value=_fake_response(
-        '{"trend_follower_donchian": 0.10}',
-        cache_created=2500, cache_read=0, input_tokens=2700, output_tokens=20,
-    ))
+    cio._claude.messages.create = AsyncMock(
+        return_value=_fake_response(
+            '{"trend_follower_donchian": 0.10}',
+            cache_created=2500,
+            cache_read=0,
+            input_tokens=2700,
+            output_tokens=20,
+        )
+    )
 
     weights = await cio._ask_claude("dynamic context goes here")
     assert weights == {"trend_follower_donchian": 0.1}
@@ -82,6 +99,7 @@ def test_cio_system_prompt_meets_caching_minimum_for_opus():
     """Opus prompt cache requires 2048 tokens minimum; English is ~4 chars
     per token, so we want > 8200 chars to be safely above the threshold."""
     from agents.tier1_executive.cio_agent import _CIO_SYSTEM_PROMPT
+
     assert len(_CIO_SYSTEM_PROMPT) > 8500, (
         f"CIO system prompt is only {len(_CIO_SYSTEM_PROMPT)} chars — "
         "must exceed ~8500 to comfortably meet Opus 2048-token cache minimum"
@@ -98,10 +116,15 @@ async def test_cio_records_cache_read_when_response_has_cache_hit():
     cio = CIOAgent()
     cio._claude = MagicMock()
     cio._claude.messages = MagicMock()
-    cio._claude.messages.create = AsyncMock(return_value=_fake_response(
-        '{"trend_follower_donchian": 0.10}',
-        cache_created=0, cache_read=2500, input_tokens=200, output_tokens=20,
-    ))
+    cio._claude.messages.create = AsyncMock(
+        return_value=_fake_response(
+            '{"trend_follower_donchian": 0.10}',
+            cache_created=0,
+            cache_read=2500,
+            input_tokens=200,
+            output_tokens=20,
+        )
+    )
 
     before = claude_input_tokens.labels(
         model="claude-opus-4-7", agent_id="1", kind="cache_read"
@@ -124,19 +147,22 @@ async def test_cio_records_cache_read_when_response_has_cache_hit():
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_news_analyst_passes_cache_control_in_system_prompt():
-    from agents.tier2_intelligence.news_analyst import (
-        NewsAnalyst, _NEWS_CLASSIFIER_SYSTEM,
-    )
+    from agents.tier2_intelligence.news_analyst import _NEWS_CLASSIFIER_SYSTEM, NewsAnalyst
 
     analyst = NewsAnalyst()
     analyst._claude = MagicMock()
     analyst._claude.messages = MagicMock()
-    analyst._claude.messages.create = AsyncMock(return_value=_fake_response(
-        '{"direction": "BULLISH", "impact_score": 7.0, '
-        '"categories": ["regulation"], "affected_symbols": ["BTC"], '
-        '"summary": "ETF approved."}',
-        cache_created=1500, cache_read=0, input_tokens=1600, output_tokens=40,
-    ))
+    analyst._claude.messages.create = AsyncMock(
+        return_value=_fake_response(
+            '{"direction": "BULLISH", "impact_score": 7.0, '
+            '"categories": ["regulation"], "affected_symbols": ["BTC"], '
+            '"summary": "ETF approved."}',
+            cache_created=1500,
+            cache_read=0,
+            input_tokens=1600,
+            output_tokens=40,
+        )
+    )
 
     result = await analyst._classify_with_claude(
         headline="SEC approves spot Bitcoin ETF",
@@ -166,6 +192,7 @@ async def test_news_analyst_passes_cache_control_in_system_prompt():
 def test_news_classifier_system_meets_caching_minimum_for_sonnet():
     """Sonnet minimum is ~1024 tokens; we want ~4000+ chars to be safe."""
     from agents.tier2_intelligence.news_analyst import _NEWS_CLASSIFIER_SYSTEM
+
     assert len(_NEWS_CLASSIFIER_SYSTEM) > 4000, (
         f"News classifier system prompt is only {len(_NEWS_CLASSIFIER_SYSTEM)} "
         "chars — may not meet Sonnet 1024-token minimum for prompt caching"
@@ -184,11 +211,16 @@ async def test_news_records_cache_create_then_read():
     analyst._claude.messages = MagicMock()
 
     # First call: cache miss (write)
-    analyst._claude.messages.create = AsyncMock(return_value=_fake_response(
-        '{"direction": "NEUTRAL", "impact_score": 5.0, "categories": [], '
-        '"affected_symbols": [], "summary": "Test."}',
-        cache_created=1500, cache_read=0, input_tokens=1600, output_tokens=40,
-    ))
+    analyst._claude.messages.create = AsyncMock(
+        return_value=_fake_response(
+            '{"direction": "NEUTRAL", "impact_score": 5.0, "categories": [], '
+            '"affected_symbols": [], "summary": "Test."}',
+            cache_created=1500,
+            cache_read=0,
+            input_tokens=1600,
+            output_tokens=40,
+        )
+    )
 
     create_before = claude_input_tokens.labels(
         model="claude-sonnet-4-6", agent_id="6", kind="cache_create"
@@ -200,11 +232,16 @@ async def test_news_records_cache_create_then_read():
     await analyst._classify_with_claude("Test headline", "Test summary")
 
     # Second call: cache hit (read)
-    analyst._claude.messages.create = AsyncMock(return_value=_fake_response(
-        '{"direction": "NEUTRAL", "impact_score": 5.0, "categories": [], '
-        '"affected_symbols": [], "summary": "Test 2."}',
-        cache_created=0, cache_read=1500, input_tokens=100, output_tokens=40,
-    ))
+    analyst._claude.messages.create = AsyncMock(
+        return_value=_fake_response(
+            '{"direction": "NEUTRAL", "impact_score": 5.0, "categories": [], '
+            '"affected_symbols": [], "summary": "Test 2."}',
+            cache_created=0,
+            cache_read=1500,
+            input_tokens=100,
+            output_tokens=40,
+        )
+    )
     await analyst._classify_with_claude("Test headline 2", "Test summary 2")
 
     create_after = claude_input_tokens.labels(

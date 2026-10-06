@@ -1,0 +1,25 @@
+{
+  "unit_passed": 762,
+  "integration_passed": 86,
+  "integration_skipped": 51,
+  "advisory_profile_passed": 24,
+  "capability_passed": 149,
+  "coverage_percent": 72.5229357798165,
+  "checks": [
+    "ruff",
+    "black",
+    "isort",
+    "architecture",
+    "mypy agents/core"
+  ],
+  "evidence_sha256": {
+    "unit.txt": "0d9fad30cc009237c197986768c13700020cab8bf4377b011acf9e5f616d1a64",
+    "unit.xml": "41865f67db84111e0200ea453150d02d3bb5cac5242a18219e9be16413333097",
+    "unit-coverage.json": "ddc8df2b566c4d9d9bf33d38bc439fa2c6f0c8deeeebd7d705e738b0a422bbb1",
+    "integration.txt": "c4dc2a9477868b3bfbe04beee6c708ccbfbef7cc36f7bf7a99ea38e9d3f43d6d",
+    "integration.xml": "62fc70f0ef07bb005dc316db8a15f23d600f34613bb8019193952ef2f8837508",
+    "available-coverage.json": "ab0e902f05eaf201baaf0197d47392f6609f653e1342380a74ef618d2cada4b8"
+  },
+  "runtime_services_changed": false,
+  "git_metadata_available": false
+}

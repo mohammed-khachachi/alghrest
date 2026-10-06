@@ -1,0 +1,352 @@
+{
+  "phase": "Recorded net-return loss-streak probability and seeded contiguous-block bootstrap",
+  "verified_at": "2026-10-06T15:32:54Z",
+  "goal_status": "active",
+  "previous_turn": "progress: immutable strategy experiment registry and required risk provenance",
+  "audit_adjustment": {
+    "prior_next_action": "Registered historical run bound to research definition and realistic costs",
+    "observed_prerequisite": "First registered kernel contains entry features only; immutable exit/fill model missing. Legacy engine is long-only percentage cash, unlike stateful agent ATR exits.",
+    "selected_action": "Implement required loss-streak mathematics and recorded-outcome sequence tooling; do not invent exits or claim cash-backtest output is futures edge"
+  },
+  "repository": {
+    "git": "Read-only external checks still fail: missing metadata; no reset/init/cleanup/discard",
+    "preserved_existing_paths": 3,
+    "new_paths": 2,
+    "changed_paths": 5,
+    "checkpoint_hashes_verified": true,
+    "final_sha256": {
+      "src/backtesting/engine.py": "aa1e45365759ac78d4edf97452c9dcbf893b398327ad408cb1306d82c5b321dc",
+      "docs/manual-assistant.md": "bb40e865eb4d6ae7181ccfc6e27a59a7597d9a3697fcd8cfa8e865d8b4671f23",
+      "docs/maintenance/tcp25-migration.md": "fb6a8c2431d5fa4fd9aafff4a5a0a277c6447547cb31151b552978eaa925ab4d",
+      "src/backtesting/path_risk.py": "1ecb08f9505f367b3b8509ba1730b8b35fc5f3cfdf2a04e802b4cf8e18f8b6f1",
+      "tests/unit/test_path_risk.py": "12428ead2a46d37af53e5a2feb0eaf6e0446129a254eca0f6a275b3c0e0cf4fc"
+    },
+    "patch_lines": 787
+  },
+  "reuse": [
+    "BacktestResult.trade_returns net closed-trade fractions",
+    "Nonpositive outcome loss convention from existing engine",
+    "NumPy and existing seed conventions",
+    "Selector LosingStreakEstimate grid model",
+    "Existing engine entry point; Monte Carlo and validate_all behavior retained"
+  ],
+  "calculations": {
+    "algorithm_version": "recorded-loss-runs-v1",
+    "scope": "experimental_cash_backtest_path_risk",
+    "lifecycle": "EXPERIMENT",
+    "iid": "Absorbing state recurrence with Decimal precision 50; event anywhere in horizon, not one fixed block",
+    "bootstrap": "Non-circular contiguous blocks, common 100-trade paths and prefix horizons; explicit block length/simulations/uint64 seed",
+    "horizons": [
+      10,
+      25,
+      50,
+      100
+    ],
+    "loss_runs": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "five_means": "five or more somewhere in the horizon",
+    "tables_per_method": 16,
+    "outputs": [
+      "Empirical net nonpositive fraction",
+      "Conditional IID probability grid",
+      "Conditional block-bootstrap probability grid",
+      "Longest-run histogram per horizon",
+      "Detached source snapshot and content SHA256",
+      "Version and explicit configuration"
+    ],
+    "hypothetical_iid_oracle": {
+      "loss_probability": "0.5",
+      "horizon": 10,
+      "loss_run": 2,
+      "anywhere_probability": "0.859375",
+      "one_fixed_block_probability": "0.25"
+    }
+  },
+  "safety": {
+    "unknown_history": "No source/probability table for missing, malformed, oversized or invalid-period histories",
+    "config_errors": "Explicit errors for wrong type, bounds, or block larger than complete sample",
+    "caps": {
+      "observed_trades": 10000,
+      "bootstrap_paths": 100000,
+      "maximum_boolean_path_cells": 10000000,
+      "iid_state_updates": 1000000
+    },
+    "reproduction": "Validated study must exactly reproduce source digest, both probability grids and histograms from captured source/configuration",
+    "trade_permitted": false,
+    "execution_enabled": false,
+    "approval_or_actual_strategy_metrics_created": false,
+    "selection_or_risk_integration": false,
+    "new_agent_topic_database_dependency": false
+  },
+  "verification": {
+    "tests": 1801,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 53,
+    "passed": 1748,
+    "new_pytest_cases": 101,
+    "focused_cases": 158,
+    "warnings": 520,
+    "seconds": 63.12,
+    "aggregate_coverage_percent": 80.40462818864606,
+    "critical_coverage": {
+      "src/backtesting/path_risk.py": {
+        "covered_lines": 133,
+        "num_statements": 133,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 50,
+        "num_partial_branches": 0,
+        "covered_branches": 50,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/strategies.py": {
+        "covered_lines": 128,
+        "num_statements": 128,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 30,
+        "num_partial_branches": 0,
+        "covered_branches": 30,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/risk.py": {
+        "covered_lines": 313,
+        "num_statements": 313,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 142,
+        "num_partial_branches": 0,
+        "covered_branches": 142,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/policy.py": {
+        "covered_lines": 274,
+        "num_statements": 274,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 22,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 98,
+        "num_partial_branches": 0,
+        "covered_branches": 98,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/account.py": {
+        "covered_lines": 201,
+        "num_statements": 201,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 70,
+        "num_partial_branches": 0,
+        "covered_branches": 70,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/evaluation.py": {
+        "covered_lines": 153,
+        "num_statements": 153,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 56,
+        "num_partial_branches": 0,
+        "covered_branches": 56,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/health.py": {
+        "covered_lines": 120,
+        "num_statements": 120,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 74,
+        "num_partial_branches": 0,
+        "covered_branches": 74,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/events.py": {
+        "covered_lines": 60,
+        "num_statements": 60,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 36,
+        "num_partial_branches": 0,
+        "covered_branches": 36,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/advisory/selection.py": {
+        "covered_lines": 418,
+        "num_statements": 418,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 172,
+        "num_partial_branches": 0,
+        "covered_branches": 172,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/core/strategy_signals.py": {
+        "covered_lines": 61,
+        "num_statements": 61,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 17,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 16,
+        "num_partial_branches": 0,
+        "covered_branches": 16,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/connectors/advisory/replay.py": {
+        "covered_lines": 114,
+        "num_statements": 114,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 46,
+        "num_partial_branches": 0,
+        "covered_branches": 46,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "src/api/services/advisory.py": {
+        "covered_lines": 195,
+        "num_statements": 195,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 42,
+        "num_partial_branches": 0,
+        "covered_branches": 42,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      }
+    },
+    "legacy_backtest_engine_coverage_percent": 94.67455621301775,
+    "legacy_uncovered_lines": [
+      115,
+      120,
+      218,
+      312,
+      397,
+      401,
+      460,
+      472,
+      528,
+      529
+    ],
+    "oracles": [
+      "Exhaustive binary sequences: horizons 0..8, runs 1..5, probabilities 0/0.2/0.5/0.8/1",
+      "Independent Python groupby/block reconstruction for block lengths 1/3/7/33/100/150",
+      "All-win/all-loss supports",
+      "Alternating versus clustered sources with same marginal loss fraction",
+      "80 reproducible probability monotonicity scenarios",
+      "Micro-probability noncancellation and local precision",
+      "Net return -1/zero epsilon boundaries, clock/count/capacity bounds",
+      "Seeded round trips, source detachment and summary-claim independence",
+      "Copied source/config/result faults and raw malformed history shapes"
+    ],
+    "service_opt_ins_removed": [
+      "ACCOUNTING_TEST_DATABASE_URL",
+      "ACCOUNTING_TEST_REDIS_URL",
+      "PAPER_RUNTIME_TESTS",
+      "KAFKA_AUTH_TESTS",
+      "WRITER_LEASE_TEST_DATABASE_URL"
+    ]
+  },
+  "regressions": {
+    "malformed_copies": {
+      "red": "history-shape-red.txt: 3 failed, 1 passed before source shape/clock repair",
+      "green": "focused-tests.txt: all 158 cases pass"
+    },
+    "coverage_instrumentation": {
+      "failure": "dotted-coverage-failure.txt: existing NumPy _NoValueType failures before probe execution",
+      "resolution": "Use --cov=src/backtesting filesystem source; focused and full suites pass without dependency modification"
+    }
+  },
+  "quality": {
+    "ruff": "passed",
+    "black": "3 changed Python paths passed",
+    "isort": "passed",
+    "architecture_packages": 6,
+    "mypy_source_files": 112,
+    "dependency_metadata_distributions": 411
+  },
+  "runtime": "Synthetic isolated tests only; no actual .env, agent stack, broker orders, account plan, registered strategy, licensed data or installed dependency changed",
+  "limitations": [
+    "Cash-backtest net signs, not validated futures trade outcomes",
+    "IID baseline assumes independence and stationary loss probability; empirical fraction does not establish either",
+    "Block joins break dependence; non-circular endpoint weighting differs from interior; no calibrated block size or future-risk confidence interval",
+    "Source lacks individual timestamps, day/regime labels and cross-market correlations; chronology is treated as reported",
+    "Only loss-run signs/distributions measured; tail PnL magnitudes, rule paths, pass/fail times and economics unmodeled",
+    "Content SHA does not authenticate data license, executable definition or final holdout integrity",
+    "No actual market/account path risk or TCP25 pass probability measured; G7/G8/G10/G11/G12/G13 unachieved",
+    "Full decision-ledger and replay/trade equivalence still unverified"
+  ],
+  "next_action": "Complete shared trade-management definition for first migrated strategy and verify existing behavior before producing futures outcomes with realistic costs bound to immutable research splits"
+}

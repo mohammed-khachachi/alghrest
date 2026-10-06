@@ -1,10 +1,17 @@
 [tool.poetry]
 name = "alghrest"
 version = "0.1.0"
-description = "ALGHREST — Production-grade autonomous multi-agent trading system (32 agents, 7 tiers)"
+description = "ALGHREST — Event-driven trading agents, portfolio accounting, and research tooling"
 authors = ["ALGHREST Team"]
 readme = "README.md"
-packages = [{include = "agents"}, {include = "core"}, {include = "connectors"}, {include = "ml"}, {include = "backtesting"}, {include = "api"}]
+packages = [
+    {include = "agents", from = "src"},
+    {include = "core", from = "src"},
+    {include = "connectors", from = "src"},
+    {include = "ml", from = "src"},
+    {include = "backtesting", from = "src"},
+    {include = "api", from = "src"},
+]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
@@ -49,7 +56,7 @@ arch = "^7.1.0"     # GARCH/EGARCH models
 py-vollib = "^1.0.1"
 
 # ── MESSAGE BUS ───────────────────────────────────────────
-aiokafka = "^0.11.0"
+aiokafka = {version = "^0.11.0", extras = ["lz4"]}
 confluent-kafka = {extras = ["avro", "schemaregistry"], version = "^2.5.0"}
 fastavro = "^1.9.0"
 
@@ -92,9 +99,9 @@ sentry-sdk = {extras = ["fastapi", "celery"], version = "^2.16.0"}
 python-json-logger = "^2.0.7"
 
 # ── NATURAL LANGUAGE PROCESSING ───────────────────────────
-# spacy is opt-in: its thinc dep is stuck on the numpy 1.x ABI while pandas-ta 0.4
-# requires numpy>=2.2.6. Install via `poetry install --with nlp` if you need NER
-# in news_analyst.py; otherwise the agent skips entity extraction gracefully.
+# spaCy is opt-in via `poetry install --with nlp`. The lock resolves compatible
+# spaCy, thinc and NumPy versions. The news agent also needs a language model
+# for entity extraction; without one it skips extraction gracefully.
 vaderSentiment = "^3.3.2"
 transformers = "^4.45.0"
 
@@ -107,7 +114,9 @@ tenacity = "^9.0.0"      # Retry logic with exponential backoff
 orjson = "^3.10.0"       # Fast JSON
 pendulum = "^3.0.0"      # Better datetime handling
 rich = "^13.8.0"         # Pretty terminal output
-typer = "^0.9.0"         # CLI (capped <0.10 by spacy 4.0.0.dev3)
+typer = "^0.9.0"         # CLI
+asyncpraw = ">=7.8,<8"
+psutil = ">=5.9,<8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -122,6 +131,8 @@ pre-commit = "^3.8.0"
 ipykernel = "^6.29.0"
 jupyter = "^1.1.0"
 hypothesis = "^6.112.0"   # Property-based testing
+pytest-timeout = "^2.4.0"
+pytest-json-report = "^1.5.0"
 
 [tool.poetry.group.backtesting.dependencies]
 quantstats = "^0.0.62"
@@ -131,9 +142,7 @@ pyfolio-reloaded = "^0.9.5"
 optional = true
 
 [tool.poetry.group.nlp.dependencies]
-# spaCy 3.8.x is the only stable line; it pins thinc<8.4 which caps numpy<2.1.
-# Will conflict with the main env's numpy 2.x — only resolvable as a separate venv
-# or once spacy 4.0 stable lands with thinc>=9.1 (which uses the numpy 2.x ABI).
+# Import compatibility with the locked NumPy version is checked during quality validation.
 spacy = "^3.8.0"
 
 [build-system]
@@ -145,31 +154,45 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+src = ["src"]
+extend-exclude = ["research", "examples", "artifacts"]
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 ignore = ["E501", "B008", "RUF012"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ANN"]
-"ml/training/*" = ["T201"]  # Allow print in training scripts
+"src/ml/training/*" = ["T201"]  # Allow print in training scripts
+
+[tool.ruff.lint.isort]
+known-first-party = ["agents", "core", "connectors", "ml", "backtesting", "api", "scripts", "tests"]
+combine-as-imports = true
 
 [tool.black]
 target-version = ["py312"]
 line-length = 100
 skip-string-normalization = false
+extend-exclude = "(^|/)(research|examples|artifacts)/"
 
 [tool.isort]
 profile = "black"
 line_length = 100
-known_first_party = ["agents", "core", "connectors", "ml", "backtesting", "api"]
+known_first_party = ["agents", "core", "connectors", "ml", "backtesting", "api", "scripts", "tests"]
+combine_as_imports = true
+
+src_paths = ["src"]
+extend_skip = ["research", "examples", "artifacts"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
-exclude = ["tests/", "ml/training/"]
+exclude = ["tests/", "src/ml/training/", "research/", "examples/"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 addopts = [
     "--cov=agents",
@@ -184,8 +207,13 @@ markers = [
     "integration: tests requiring external services",
     "backtest: backtesting tests (slow)",
     "live: tests requiring live exchange connections",
+    "slow: tests with longer runtimes",
+    "requires_kafka: tests requiring Kafka",
+    "requires_redis: tests requiring Redis",
+    "requires_db: tests requiring PostgreSQL",
+    "smoke: basic smoke tests",
 ]
 
 [tool.coverage.run]
 branch = true
-omit = ["tests/*", "*/migrations/*", "ml/training/*"]
+omit = ["tests/*", "*/migrations/*", "src/ml/training/*"]

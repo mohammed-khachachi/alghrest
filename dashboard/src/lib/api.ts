@@ -1,3 +1,4 @@
+import { accessHeaders } from '@/lib/access';
 import {
   HistoryResponseSchema,
   HoldingsResponseSchema,
@@ -10,7 +11,7 @@ import {
 } from '@/types/quotes';
 
 async function jsonFetch<T>(url: string, parse: (raw: unknown) => T): Promise<T> {
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  const res = await fetch(url, { headers: { Accept: 'application/json', ...accessHeaders('api') } });
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText} — ${url}`);
   }

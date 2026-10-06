@@ -1,0 +1,40 @@
+{
+  "verified_at": "2026-10-06T09:04:58.308068+00:00",
+  "previous_turn": "progress",
+  "full_mocked_passed": 1377,
+  "full_mocked_skipped": 53,
+  "focused_passed": 509,
+  "aggregate_coverage_percent": 77.22256760957414,
+  "critical_coverage": {
+    "src/api/services/advisory.py": 100.0,
+    "src/connectors/advisory/replay.py": 100.0,
+    "src/core/advisory/account.py": 100.0,
+    "src/core/advisory/data.py": 100.0,
+    "src/core/advisory/evaluation.py": 100.0,
+    "src/core/advisory/events.py": 100.0,
+    "src/core/advisory/health.py": 100.0,
+    "src/core/advisory/risk.py": 100.0,
+    "src/core/advisory/selection.py": 100.0
+  },
+  "property_sizing_examples": 100,
+  "checkpointed_existing_files": 7,
+  "reviewed_source_files": 9,
+  "patch_lines": 1885,
+  "checks": [
+    "repository ruff",
+    "changed-file black/isort",
+    "strict mypy:108 sources",
+    "architecture",
+    "dependency consistency",
+    "full mocked suite"
+  ],
+  "default_risk_reader_configured": false,
+  "trade_permitted": false,
+  "execution_enabled": false,
+  "runtime_financial_state_changed": false,
+  "actual_trading_evidence_provided": false,
+  "goal_complete": false,
+  "next_action": "Verify official current TCP25 rules and adapt existing journal calculations behind a replaceable evaluation policy that issues typed risk allowances.",
+  "dependency_validation": "Installed distribution metadata and active base requirement specifiers; pip is not installed in the venv.",
+  "final_test_only_fix": "Constant import alias corrected for Ruff; three legacy-copy regressions rerun successfully. No runtime source changed after full suite."
+}

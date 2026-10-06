@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   BarChart2,
   Presentation,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -22,6 +23,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { to: '/assistant', label: 'مساعد التداول اليدوي', Icon: BookOpen },
   { to: '/overview',  label: 'Overview',  Icon: LayoutDashboard },
   { to: '/agents',    label: 'Agents',    Icon: Bot },
   { to: '/positions', label: 'Positions', Icon: TrendingUp },

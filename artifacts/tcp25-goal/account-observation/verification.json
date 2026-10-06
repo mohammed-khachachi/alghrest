@@ -1,0 +1,35 @@
+{
+  "full_mocked_passed": 912,
+  "full_mocked_skipped": 53,
+  "focused_passed": 57,
+  "api_passed": 7,
+  "hypothesis_examples": 180,
+  "aggregate_coverage_percent": 73.52252252252252,
+  "focused_coverage": {
+    "src/core/advisory/account.py": 100.0,
+    "src/core/advisory/evaluation.py": 100.0
+  },
+  "checks": [
+    "ruff",
+    "black",
+    "isort",
+    "architecture",
+    "strict mypy",
+    "dashboard build"
+  ],
+  "ui_verified": [
+    "manual confirmation initially unchecked",
+    "editing cash clears confirmation",
+    "saved traded=false preserved",
+    "account source/financial controls rendered",
+    "unsaved account edits disable sizing and clear worksheet",
+    "delayed synthetic sizing renders normally",
+    "delayed sizing after account edit is discarded; marker absent after response completed"
+  ],
+  "ui_fixture_only": true,
+  "ui_preview_terminal_exit": 143,
+  "financial_runtime_state_changed": false,
+  "nonflat_sizing_complete": false,
+  "ui_race_completed": true,
+  "ui_race_preview_terminal_exit": 143
+}

@@ -40,17 +40,17 @@ pytest --cov=agents --cov=core --cov-report=html
 ruff check .
 black .
 isort .
-mypy agents/ core/                  # strict mode
+mypy src/agents/ src/core/                  # strict mode
 pre-commit run --all-files
 
 # Dashboard (React/Vite)
 Set-Location dashboard; npm install; npm run dev    # http://localhost:5173
 
 # ML inference server (required for Agent 16 ml_predictor)
-Set-Location ml; python inference/server.py          # http://localhost:8080/predict
+python -m ml.inference.server          # http://localhost:8080/predict
 
 # Mock server (for dashboard development without real backend)
-python api/mock_server.py                    # http://localhost:8000 (fakes all agents)
+python -m api.mock_server                    # http://localhost:8000 (fakes all agents)
 
 # Demo and testing utilities
 python scripts/demo_kill_switch.py           # Interactive kill switch demo (Arabic UI)
@@ -121,8 +121,8 @@ Only enable after implementing proper DeFi protocol integrations and extensive t
 
 ### Base classes (always inherit, never duplicate)
 
-- `agents/base_agent.py::BaseAgent` — every agent inherits this. Provides `self.producer` (Kafka), `self.state` (Redis), `self.logger`, lifecycle (`initialize/run/shutdown`), heartbeat loop, kill-switch guard (`await self.is_halted()`), and Prometheus metrics on port `9200 + agent_id`.
-- `agents/base_agent.py::BaseStrategy` — Tier 4 only. Adds `generate_signal`, `should_exit`, `backtest`, plus `record_loss/record_win/resume` (auto-pauses after 5 consecutive losses).
+- `src/agents/base_agent.py::BaseAgent` — every agent inherits this. Provides `self.producer` (Kafka), `self.state` (Redis), `self.logger`, lifecycle (`initialize/run/shutdown`), heartbeat loop, kill-switch guard (`await self.is_halted()`), and Prometheus metrics on port `9200 + agent_id`.
+- `src/agents/base_agent.py::BaseStrategy` — Tier 4 only. Adds `generate_signal`, `should_exit`, `backtest`, plus `record_loss/record_win/resume` (auto-pauses after 5 consecutive losses).
 
 Standard agent run loop:
 ```python
@@ -136,17 +136,17 @@ async def run(self) -> None:
 
 ### Topics
 
-All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (string enum). Kafka topics are created up front by `infra/init/kafka-init.sh` (18 topics including the legacy `orders.approved` alias) — auto-create is **off**. If you add a topic, update both the enum and the init script.
+All Kafka topic names are centralised in `src/core/data/models.py::KafkaTopic` (string enum). Kafka topics are created up front by `infra/init/kafka-init.sh` (18 topics including the legacy `orders.approved` alias) — auto-create is **off**. If you add a topic, update both the enum and the init script.
 
 ### State & messaging primitives
 
-- `core/orchestrator/message_bus.py::AlghrestProducer` / `AlghrestConsumer` wrap aiokafka. Use `BaseAgent.publish(topic, payload)` and `self.make_consumer([topics])` rather than instantiating these directly.
-- `core/orchestrator/state_manager.py::StateManager` is the singleton Redis client (`self.state` on every agent). Carries kill switch, agent health, and `prices:{symbol}` JSON (60s TTL, written by `PricePublisher`).
-- `core/risk/kill_switch.py`, `core/risk/position_limits.py`, `core/risk/risk_engine.py` — risk plumbing used by Risk Governor and ProposalApprover.
+- `src/core/orchestrator/message_bus.py::AlghrestProducer` / `AlghrestConsumer` wrap aiokafka. Use `BaseAgent.publish(topic, payload)` and `self.make_consumer([topics])` rather than instantiating these directly.
+- `src/core/orchestrator/state_manager.py::StateManager` is the singleton Redis client (`self.state` on every agent). Carries kill switch, agent health, and `prices:{symbol}` JSON (60s TTL, written by `PricePublisher`).
+- `src/core/risk/kill_switch.py`, `src/core/risk/position_limits.py`, `src/core/risk/risk_engine.py` — risk plumbing used by Risk Governor and ProposalApprover.
 
 ### Adding a new agent
 
-1. File under the correct `agents/tierN_*/` directory.
+1. File under the correct `src/agents/tierN_*/` directory.
 2. Inherit `BaseAgent` (or `BaseStrategy` for Tier 4). Set unique `AGENT_ID` (range now 1–36+).
 3. Implement `initialize() / run() / shutdown()`. Always include the kill-switch guard in `run()`.
 4. Test locally: `python run_agent.py agents.tierN_category.agent_file AgentClass`
@@ -167,22 +167,22 @@ All Kafka topic names are centralised in `core/data/models.py::KafkaTopic` (stri
 
 The system now supports 36+ agents with proper Prometheus port isolation.
 
-### ML inference subsystem (`ml/` + Agent 16)
+### ML inference subsystem (`src/ml/` + Agent 16)
 
 The ML predictor strategy does **not** load models in-process. Instead:
 
-- `ml/models/cnn_pattern.py::CandlestickCNN` and `ml/models/rl_position_sizer.py` are loaded by `ml/inference/server.py` (FastAPI) which serves `POST /predict` on **port 8080**.
-- `agents/tier4_strategies/ml_predictor.py` (Agent 16) is just an HTTP client — it builds a 64-period OHLCV window and POSTs to `http://localhost:8080/predict`.
-- Trained weights live in `ml/weights/` (`cnn_btc_usdt.pth`, `ppo_position_sizer.zip`); training entry is `ml/training/train.py`.
+- `src/ml/models/cnn_pattern.py::CandlestickCNN` and `src/ml/models/rl_position_sizer.py` are loaded by `src/ml/inference/server.py` (FastAPI) which serves `POST /predict` on **port 8080**.
+- `src/agents/tier4_strategies/ml_predictor.py` (Agent 16) is just an HTTP client — it builds a 64-period OHLCV window and POSTs to `http://localhost:8080/predict`.
+- Trained weights live in `artifacts/models/` (`cnn_btc_usdt.pth`, `ppo_position_sizer.zip`); training entry is `src/ml/training/train.py`.
 
 When deploying, the inference server is a **separate process** from the agent. Don't add it to the standard `run_agent.py` flow.
 
 ### Other moving parts worth knowing
 
-- `api/main.py` is the production FastAPI app (REST + WebSocket dashboard feed). `api/mock_server.py` is a **separate dev-only mock** that fakes all 36+ agents and live data — use this for dashboard development when you don't want to spin up the full infrastructure stack. They both bind a FastAPI app named `app`; don't run them on the same port. The market-data routes in `api/routes/quotes.py` (`/api/symbols`, `/api/quotes`, `/api/history`, `/api/holdings`) are mounted on **both** apps.
-- `core/telegram/bot.py` + `bot_manager.py` back the Tier 7 alert manager and copy-trading channel. Telegram credentials (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`) come from `core/config.py` settings. The bot broadcasts formatted trade signals with Arabic UI support.
+- `src/api/main.py` is the production FastAPI app (REST + WebSocket dashboard feed). `src/api/mock_server.py` is a **separate dev-only mock** that fakes all 36+ agents and live data — use this for dashboard development when you don't want to spin up the full infrastructure stack. They both bind a FastAPI app named `app`; don't run them on the same port. The market-data routes in `src/api/routes/quotes.py` (`/api/symbols`, `/api/quotes`, `/api/history`, `/api/holdings`) are mounted on **both** apps.
+- `src/core/telegram/bot.py` + `bot_manager.py` back the Tier 7 alert manager and copy-trading channel. Telegram credentials (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`) come from `src/core/config.py` settings. The bot broadcasts formatted trade signals with Arabic UI support.
 - `infra/k8s/` and `infra/terraform/` exist but are scaffold-only (a few manifests / `main.tf` + `variables.tf`). Don't treat them as production-ready deploy targets without filling them in.
-- `connectors/data_providers/` is the dashboard-facing market-data layer (separate from the Kafka agent fabric). `base.py` defines the `QuoteProvider` ABC + `ANCHOR_DATE` (currently `2025-05-11`); `{crypto,forex,equity}_provider.py` ship as deterministic mocks designed to be swapped for ccxt/CoinGecko, Alpha Vantage/ExchangeRate-API, and Alpaca/Finnhub. Replace only the `quote()` / `history()` bodies — router, catalog (24 symbols), and the 8-position mock ledger in `holdings.py` stay untouched.
+- `src/connectors/data_providers/` is the dashboard-facing market-data layer (separate from the Kafka agent fabric). `base.py` defines the `QuoteProvider` ABC + `ANCHOR_DATE` (currently `2025-05-11`); `{crypto,forex,equity}_provider.py` ship as deterministic mocks designed to be swapped for ccxt/CoinGecko, Alpha Vantage/ExchangeRate-API, and Alpaca/Finnhub. Replace only the `quote()` / `history()` bodies — router, catalog (24 symbols), and the 8-position mock ledger in `holdings.py` stay untouched.
 - `dashboard/src/lib/useLiveQuotes.ts` is the **single source of truth for dashboard quote polling** — one TanStack Query call every 3s, shared across `PortfolioOverview`, `HoldingsPanel`, and `MarketDataPanel`. Do not add per-panel polling to `/api/quotes`; subscribe to this hook instead so all panels stay in lockstep and the backend only sees one request.
 - Dashboard pages live in `dashboard/src/pages/`: `Overview` (default), `Agents`, `Positions`, `Risk`, `Kafka`, plus three newer surfaces — `AuditorDashboard`, `BacktestSimulation`, `InvestorPitch`. `components/layout/Sidebar.tsx` is the routing source of truth.
 - `CLAUDE.md` is the canonical sibling of this file. When the two drift, prefer CLAUDE.md.
@@ -197,11 +197,11 @@ When deploying, the inference server is a **separate process** from the agent. D
 
 ## Backtest validation thresholds (Tier 4)
 
-Strategies must pass all of these in `backtesting/engine.py::BacktestEngine.validate_all` before going live: ≥5y data, ≥50 trades/yr, IS Sharpe ≥1.0, walk-forward OOS Sharpe ≥0.8, max DD <25%, profit factor ≥1.3, walk-forward efficiency ≥60%, Monte Carlo ruin <1%, MC 95% VaR <15%.
+Strategies must pass all of these in `src/backtesting/engine.py::BacktestEngine.validate_all` before going live: ≥5y data, ≥50 trades/yr, IS Sharpe ≥1.0, walk-forward OOS Sharpe ≥0.8, max DD <25%, profit factor ≥1.3, walk-forward efficiency ≥60%, Monte Carlo ruin <1%, MC 95% VaR <15%.
 
 ## Environment & secrets
 
-All settings flow through `core/config.py::Settings` (pydantic-settings, loads `.env`). Use `from core.config import settings`.
+All settings flow through `src/core/config.py::Settings` (pydantic-settings, loads `.env`). Use `from core.config import settings`.
 
 ### Critical Environment Variables
 
@@ -258,7 +258,7 @@ live             → Real money — requires explicit ENVIRONMENT=live
 
 ## Development workflow
 
-**For dashboard-only work**: Use `python api/mock_server.py` + `Set-Location dashboard; npm run dev` — no infrastructure needed.
+**For dashboard-only work**: Use `python -m api.mock_server` + `Set-Location dashboard; npm run dev` — no infrastructure needed.
 
 **For agent development**: Start with `docker compose up -d` → `poetry install` → test your agent with `python run_agent.py <module> <Class>`.
 
@@ -274,7 +274,7 @@ live             → Real money — requires explicit ENVIRONMENT=live
 
 - ruff: py312, line-length 100, rules `E,F,W,I,N,UP,B,SIM,RUF` (E501/B008/RUF012 ignored)
 - black + isort: line-length 100, black profile for isort
-- mypy: strict, excludes `tests/` and `ml/training/`
+- mypy: strict, excludes `tests/` and `src/ml/training/`
 - pytest: `asyncio_mode=auto`, markers `unit | integration | backtest | live`
 
 ## Recent completions (v0.2+)

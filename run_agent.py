@@ -6,11 +6,14 @@ Example:
     python run_agent.py agents.tier1_executive.cio_agent CIOAgent
     python run_agent.py agents.tier2_intelligence.market_data_hub MarketDataHub
 """
+
 from __future__ import annotations
 
 import asyncio
 import importlib
 import sys
+
+from core.config import settings
 
 
 def main() -> None:
@@ -22,6 +25,7 @@ def main() -> None:
     module_path = sys.argv[1]
     class_name = sys.argv[2]
 
+    settings.require_order_execution()
     module = importlib.import_module(module_path)
     agent_class = getattr(module, class_name)
     agent = agent_class()

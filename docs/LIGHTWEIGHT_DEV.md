@@ -13,9 +13,9 @@ work, but it is too heavy for many laptops.
 
 Lightweight mode starts only:
 
-- `api/mock_server.py`
-- `api/routes/quotes.py`
-- `connectors/data_providers`
+- `src/api/mock_server.py`
+- `src/api/routes/quotes.py`
+- `src/connectors/data_providers`
 - the dashboard Vite dev server
 
 It does not start Docker, Kafka, Redis, TimescaleDB, agents, or the ML server.
@@ -48,6 +48,7 @@ Install only the lightweight backend dependencies and lightweight test tools:
 
 ```powershell
 python -m pip install -r requirements-lite.txt
+python -m pip install --no-deps -e .
 ```
 
 For dashboard development, install Node dependencies once:
@@ -110,7 +111,7 @@ docker compose up -d
 pytest -m integration
 pytest -m backtest
 python run_agent.py agents.tier1_executive.cio_agent CIOAgent
-Set-Location ml; python inference/server.py
+python -m ml.inference.server
 ```
 
 Also avoid enabling DeFi agents. Keep this setting unchanged:

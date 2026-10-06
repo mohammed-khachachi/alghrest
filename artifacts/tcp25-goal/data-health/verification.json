@@ -1,0 +1,39 @@
+{
+  "verified_at": "2026-10-06T00:02:23.901246+00:00",
+  "full_mocked_passed": 1074,
+  "full_mocked_skipped": 53,
+  "focused_passed": 244,
+  "aggregate_coverage_percent": 74.61458513771002,
+  "critical_coverage": {
+    "src/core/advisory/account.py": 100.0,
+    "src/core/advisory/evaluation.py": 100.0,
+    "src/core/advisory/health.py": 100.0,
+    "src/core/advisory/data.py": 100.0,
+    "src/connectors/advisory/replay.py": 100.0,
+    "src/api/services/advisory.py": 100.0
+  },
+  "health_property_examples": 100,
+  "checks": [
+    "repository ruff",
+    "changed-file black",
+    "changed-file isort",
+    "architecture",
+    "strict mypy:104 sources",
+    "dashboard build",
+    "synthetic browser UNKNOWN/legacy/HEALTHY"
+  ],
+  "runtime_financial_state_changed": false,
+  "git_repository_available": false,
+  "assessment_scope": "closed_bar_research",
+  "market_data_guard_complete": false,
+  "goal_complete": false,
+  "next_action": "Inspect reusable session/event-risk and market-selection evidence contracts; keep missing evidence blocked.",
+  "limitations": [
+    "No verified session-gap calendar",
+    "No historical quote replay",
+    "No calibrated live quote/spread limits",
+    "No authenticated CME provider entitlement",
+    "No complete advice/risk/policy/strategy pipeline",
+    "No qualified OOS edge/pass-rate evidence"
+  ]
+}

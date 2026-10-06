@@ -9,7 +9,7 @@ set -euo pipefail
 
 BOOTSTRAP="${BOOTSTRAP_SERVERS:-kafka-1:29092,kafka-2:29092,kafka-3:29092}"
 REPLICATION=3
-CMD="kafka-topics --bootstrap-server ${BOOTSTRAP}"
+CMD="kafka-topics --bootstrap-server ${BOOTSTRAP} --command-config /run/secrets/kafka-client.properties"
 
 echo "========================================================"
 echo " ALGHREST Kafka Topic Initialization"

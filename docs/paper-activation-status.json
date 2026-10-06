@@ -1,0 +1,21 @@
+{
+  "book_id": "paper_trading:paper-main",
+  "ready": true,
+  "checks": {
+    "paper_environment": true,
+    "execution_scope": true,
+    "database_schema": true,
+    "opening_balances": true,
+    "durable_performance": true,
+    "execution_configuration": true,
+    "database_reconciliation": true,
+    "redis": true,
+    "kafka_topics": true,
+    "fresh_portfolio_and_reconciliation": true,
+    "kill_switch_clear": true
+  },
+  "blocked_by": [],
+  "missing_topics": [],
+  "errors": {},
+  "checked_at": "2026-09-28T17:26:58.684750+00:00"
+}

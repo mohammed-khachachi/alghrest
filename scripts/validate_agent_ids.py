@@ -8,12 +8,12 @@ and checks for consistency across the entire system.
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-def extract_agent_ids_from_code() -> Dict[str, int]:
+
+def extract_agent_ids_from_code() -> dict[str, int]:
     """Extract AGENT_ID assignments from all agent files."""
     agent_ids = {}
-    agents_dir = Path("agents")
+    agents_dir = Path(__file__).resolve().parents[1] / "src" / "agents"
 
     for agent_file in agents_dir.rglob("*.py"):
         if agent_file.name == "__init__.py" or agent_file.name == "base_agent.py":
@@ -22,7 +22,7 @@ def extract_agent_ids_from_code() -> Dict[str, int]:
         try:
             content = agent_file.read_text()
             # Match AGENT_ID = <number>
-            match = re.search(r'AGENT_ID\s*=\s*(\d+)', content)
+            match = re.search(r"AGENT_ID\s*=\s*(\d+)", content)
             if match:
                 agent_id = int(match.group(1))
                 agent_ids[agent_file.stem] = agent_id
@@ -31,9 +31,10 @@ def extract_agent_ids_from_code() -> Dict[str, int]:
 
     return agent_ids
 
-def extract_docker_ports_and_ips() -> Dict[str, Tuple[int, str]]:
+
+def extract_docker_ports_and_ips() -> dict[str, tuple[int, str]]:
     """Extract port mappings and IP addresses from docker-compose.yml."""
-    docker_compose = Path("docker-compose.yml")
+    docker_compose = Path(__file__).resolve().parents[1] / "docker-compose.yml"
     if not docker_compose.exists():
         print("Error: docker-compose.yml not found")
         return {}
@@ -42,20 +43,20 @@ def extract_docker_ports_and_ips() -> Dict[str, Tuple[int, str]]:
     services = {}
 
     # Split by service definitions
-    service_sections = re.split(r'\n  (\w+(?:-\w+)*):', content)[1:]  # Remove empty first element
+    service_sections = re.split(r"\n  (\w+(?:-\w+)*):", content)[1:]  # Remove empty first element
 
     for i in range(0, len(service_sections), 2):
         service_name = service_sections[i]
         service_content = service_sections[i + 1] if i + 1 < len(service_sections) else ""
 
         # Skip non-agent services
-        if not service_name.startswith('agent-'):
+        if not service_name.startswith("agent-"):
             continue
 
         # Extract port
         port_match = re.search(r'ports:\s*\n\s*-\s*"(\d+):\d+', service_content)
         # Extract IP
-        ip_match = re.search(r'ipv4_address:\s*(172\.20\.\d+\.\d+)', service_content)
+        ip_match = re.search(r"ipv4_address:\s*(172\.20\.\d+\.\d+)", service_content)
 
         if port_match and ip_match:
             port = int(port_match.group(1))
@@ -66,6 +67,7 @@ def extract_docker_ports_and_ips() -> Dict[str, Tuple[int, str]]:
             services[agent_name] = (port, ip)
 
     return services
+
 
 def validate_agent_ids():
     """Main validation function."""
@@ -92,19 +94,27 @@ def validate_agent_ids():
 
             # Check port consistency
             if actual_port != expected_port:
-                errors.append(f"❌ {agent_name}: Port mismatch - Code ID {agent_id} expects port {expected_port}, but docker-compose has {actual_port}")
+                errors.append(
+                    f"❌ {agent_name}: Port mismatch - Code ID {agent_id} expects port {expected_port}, but docker-compose has {actual_port}"
+                )
 
             # Check IP consistency (optional, just warning)
             if not actual_ip.endswith(expected_ip_suffix):
-                warnings.append(f"⚠️ {agent_name}: IP doesn't match Agent ID - {actual_ip} doesn't end with {expected_ip_suffix}")
+                warnings.append(
+                    f"⚠️ {agent_name}: IP doesn't match Agent ID - {actual_ip} doesn't end with {expected_ip_suffix}"
+                )
 
         else:
-            warnings.append(f"⚠️ {agent_name}: Agent ID {agent_id} found in code but no docker-compose service")
+            warnings.append(
+                f"⚠️ {agent_name}: Agent ID {agent_id} found in code but no docker-compose service"
+            )
 
     # Check for services without corresponding agents
-    for service_name, (port, ip) in docker_services.items():
+    for service_name, (_port, _ip) in docker_services.items():
         if service_name not in agent_ids:
-            warnings.append(f"⚠️ {service_name}: Docker service found but no corresponding agent file")
+            warnings.append(
+                f"⚠️ {service_name}: Docker service found but no corresponding agent file"
+            )
 
     # Print results
     print("\n✅ VALIDATION RESULTS")
@@ -127,7 +137,9 @@ def validate_agent_ids():
     # Print summary table
     print("\n📊 AGENT ID SUMMARY")
     print("=" * 80)
-    print(f"{'Agent Name':<25} {'Code ID':<8} {'Expected Port':<13} {'Docker Port':<12} {'Docker IP':<15} {'Status'}")
+    print(
+        f"{'Agent Name':<25} {'Code ID':<8} {'Expected Port':<13} {'Docker Port':<12} {'Docker IP':<15} {'Status'}"
+    )
     print("-" * 80)
 
     for agent_name, agent_id in sorted(agent_ids.items()):
@@ -141,9 +153,12 @@ def validate_agent_ids():
             docker_ip = "N/A"
             status = "⚠️ MISSING"
 
-        print(f"{agent_name:<25} {agent_id:<8} {expected_port:<13} {docker_port:<12} {docker_ip:<15} {status}")
+        print(
+            f"{agent_name:<25} {agent_id:<8} {expected_port:<13} {docker_port:<12} {docker_ip:<15} {status}"
+        )
 
     return len(errors) == 0
+
 
 if __name__ == "__main__":
     success = validate_agent_ids()

@@ -1,0 +1,30 @@
+{
+  "initial_failures": 10,
+  "lease_unit_cases": 20,
+  "focused_regression_passed": 255,
+  "real_postgres_passed": 2,
+  "full_mocked_passed": 868,
+  "full_mocked_skipped": 53,
+  "branch_aware_coverage_percent": 73.00192254875034,
+  "real_before_reproduction": {
+    "accounting": {
+      "attempts": 100,
+      "overlap_errors": 99,
+      "financial_writes": false
+    },
+    "execution": {
+      "attempts": 100,
+      "overlap_errors": 99,
+      "financial_writes": false
+    }
+  },
+  "financial_writes": false,
+  "soak_restarted": false,
+  "checks": [
+    "ruff",
+    "black",
+    "isort",
+    "architecture",
+    "strict mypy agents/core"
+  ]
+}

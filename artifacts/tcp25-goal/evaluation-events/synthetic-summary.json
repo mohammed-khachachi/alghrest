@@ -1,0 +1,36 @@
+{
+  "conditional-pass": {
+    "outcome": "PASS",
+    "steps": 17,
+    "cash": "26792",
+    "days": 4,
+    "breaches": [],
+    "unknowns": [],
+    "replay_equal": true,
+    "rule_exact_verified": false
+  },
+  "censored": {
+    "outcome": "CENSORED",
+    "steps": 17,
+    "cash": "26792",
+    "days": 4,
+    "breaches": [],
+    "unknowns": [
+      "unknown_progression_schedule"
+    ],
+    "replay_equal": true,
+    "rule_exact_verified": false
+  },
+  "daily-fail": {
+    "outcome": "FAIL",
+    "steps": 2,
+    "cash": "24450",
+    "days": 1,
+    "breaches": [
+      "daily_loss_boundary"
+    ],
+    "unknowns": [],
+    "replay_equal": true,
+    "rule_exact_verified": false
+  }
+}

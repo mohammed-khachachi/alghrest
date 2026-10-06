@@ -1,3 +1,4 @@
+import { getAccessToken } from '@/lib/access';
 import {
   WsMessageSchema,
   PortfolioSnapshotSchema,
@@ -10,7 +11,9 @@ import {
 } from '@/types/ws';
 import { useDashboardStore } from '@/store/useStore';
 
-const WS_URL = import.meta.env['VITE_WS_URL'] ?? 'ws://localhost:8000/ws/dashboard';
+const defaultUrl = new URL('/ws/dashboard', window.location.href);
+defaultUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL = import.meta.env['VITE_WS_URL'] || defaultUrl.toString();
 const RECONNECT_DELAY_MS = 3000;
 
 class DashboardWebSocketClient {
@@ -53,7 +56,7 @@ class DashboardWebSocketClient {
     }
 
     try {
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(WS_URL, getAccessToken('api') ? ['alghrest.v1', `auth.${getAccessToken('api')}`] : []);
       ws.binaryType = 'arraybuffer';
       this.ws = ws;
     } catch {

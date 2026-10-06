@@ -2,235 +2,89 @@ name: ALGHREST Test Suite
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+  workflow_dispatch:
   schedule:
-    # Run nightly tests at 2 AM UTC
     - cron: '0 2 * * *'
+
+permissions:
+  contents: read
 
 env:
   PYTHON_VERSION: "3.12"
-  ENVIRONMENT: development
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  POETRY_INSTALLER_MAX_WORKERS: "4"
 
 jobs:
-  lint:
-    name: Code Quality
+  quality:
+    name: Lint, types and complete coverage
     runs-on: ubuntu-latest
-
+    timeout-minutes: 45
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install --with dev
-
-    - name: Run linting
-      run: |
-        python scripts/run_tests.py lint --skip-mypy
-
-    - name: Run type checking
-      run: |
-        poetry run mypy agents/ core/ --ignore-missing-imports
-
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    needs: lint
-
-    strategy:
-      matrix:
-        python-version: ["3.12"]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install
-
-    - name: Run unit tests
-      run: |
-        python scripts/run_tests.py unit --coverage --junit-xml --json-report
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./htmlcov/coverage.xml
-        flags: unit
-        name: codecov-umbrella
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: unit-test-results
-        path: |
-          test-results.xml
-          test-report.json
-          htmlcov/
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: unit-tests
-
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      zookeeper:
-        image: confluentinc/cp-zookeeper:7.6.1
-        ports:
-          - 2181:2181
-        env:
-          ZOOKEEPER_CLIENT_PORT: 2181
-          ZOOKEEPER_TICK_TIME: 2000
-
-      kafka:
-        image: confluentinc/cp-kafka:7.6.1
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_BROKER_ID: 1
-          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-        options: >-
-          --health-cmd "kafka-broker-api-versions --bootstrap-server localhost:9092"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      postgres:
-        image: timescale/timescaledb:pg16
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_PASSWORD: alghrest_test_pass
-          POSTGRES_DB: alghrest_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install
-
-    - name: Wait for services
-      run: |
-        sleep 30
-
-    - name: Setup test environment
-      run: |
-        cp .env.example .env
-        echo "REDIS_URL=redis://localhost:6379" >> .env
-        echo "KAFKA_BOOTSTRAP_SERVERS=localhost:9092" >> .env
-        echo "DATABASE_URL=postgresql+asyncpg://postgres:alghrest_test_pass@localhost:5432/alghrest_test" >> .env
-
-    - name: Run integration tests
-      run: |
-        python scripts/run_tests.py integration --coverage --junit-xml --parallel
-
-    - name: Upload integration test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: integration-test-results
-        path: |
-          test-results.xml
-          test-report.json
-
-  backtest-tests:
-    name: Backtesting Tests
-    runs-on: ubuntu-latest
-    needs: integration-tests
-    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[full-test]')
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install --with backtesting
-
-    - name: Run backtesting tests
-      run: |
-        python scripts/run_tests.py backtest --junit-xml
-
-    - name: Upload backtest results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: backtest-results
-        path: |
-          test-results.xml
-          test-report.json
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install all locked dependency groups
+        run: |
+          python -m pip install poetry==2.4.1
+          poetry check --lock
+          poetry sync --all-groups --no-interaction
+      - name: Architecture, lint, formatting and strict types
+        run: |
+          poetry run python scripts/check_architecture.py
+          poetry run ruff check .
+          poetry run black --check .
+          poetry run isort --check-only .
+          MYPYPATH=src poetry run mypy --explicit-package-bases src/agents/ src/core/ src/backtesting/ src/connectors/advisory/ src/api/advisor.py src/api/services/advisory.py src/api/security.py
+      - name: Configure isolated paper services
+        run: |
+          python - <<'PYTHON'
+          import secrets
+          from pathlib import Path
+          database_password = secrets.token_hex(24)
+          redis_password = secrets.token_hex(24)
+          for secret in (database_password, redis_password):
+              print(f"::add-mask::{secret}")
+          values = {
+              "ENVIRONMENT": "paper_trading",
+              "ENABLE_DEFI_AGENTS": "false",
+              "PAPER_POSTGRES_PASSWORD": database_password,
+              "PAPER_REDIS_PASSWORD": redis_password,
+              "PAPER_KAFKA_CLUSTER_ID": secrets.token_urlsafe(16),
+              "DATABASE_URL": f"postgresql://alghrest_paper:{database_password}@127.0.0.1:15432/alghrest_paper",
+              "REDIS_URL": f"redis://:{redis_password}@127.0.0.1:16379",
+              "KAFKA_BOOTSTRAP_SERVERS": "127.0.0.1:19092",
+          }
+          with Path(".env").open("x") as config:
+              config.write("".join(f"{key}={value}\n" for key, value in values.items()))
+          PYTHON
+          docker compose -f docker-compose.paper.yml up -d --wait --wait-timeout 180
+          poetry run python -m scripts.paper provision
+      - name: Full suite with the configured 70 percent branch coverage gate
+        run: |
+          mkdir -p artifacts/quality
+          KAFKA_AUTH_TESTS=1 poetry run python -m scripts.test_with_services --timeout=90 --timeout-method=thread -q --tb=short --junitxml=artifacts/quality/tests.xml --cov-report=xml:artifacts/quality/coverage.xml --cov-report=json:artifacts/quality/coverage.json
+      - name: Upload test and coverage evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-results
+          path: |
+            artifacts/quality/tests.xml
+            artifacts/quality/coverage.xml
+            artifacts/quality/coverage.json
+            htmlcov/
+      - name: Stop CI services
+        if: always()
+        run: docker compose -f docker-compose.paper.yml down
 
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: quality
 
     steps:
     - uses: actions/checkout@v4
@@ -238,7 +92,7 @@ jobs:
     - name: Run Bandit security scan
       uses: gauravmishraitbhu/bandit-action@v3
       with:
-        path: "agents/ core/ api/"
+        path: "src/agents/ src/core/ src/api/"
         level: medium
         confidence: medium
         exclude: tests/,migrations/
@@ -249,80 +103,10 @@ jobs:
         safety check --json --output safety-report.json || true
 
     - name: Upload security scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-scan-results
         path: |
           bandit-report.json
           safety-report.json
-
-  performance-tests:
-    name: Performance Tests
-    runs-on: ubuntu-latest
-    needs: integration-tests
-    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf-test]')
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry pytest-benchmark
-        poetry install
-
-    - name: Run performance benchmarks
-      run: |
-        pytest tests/ -m "benchmark" --benchmark-json=benchmark-results.json
-
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: benchmark-results
-        path: benchmark-results.json
-
-  deploy-readiness:
-    name: Deployment Readiness
-    runs-on: ubuntu-latest
-    needs: [lint, unit-tests, integration-tests, security-scan]
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Check deployment readiness
-      run: |
-        echo "✅ All tests passed"
-        echo "✅ Security scans completed"
-        echo "✅ Code quality checks passed"
-        echo "🚀 Ready for deployment"
-
-    - name: Create deployment artifact
-      run: |
-        echo "DEPLOYMENT_READY=true" >> $GITHUB_ENV
-        echo "BUILD_SHA=${{ github.sha }}" >> $GITHUB_ENV
-        echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
-
-  notification:
-    name: Notify Results
-    runs-on: ubuntu-latest
-    needs: [lint, unit-tests, integration-tests]
-    if: always()
-
-    steps:
-    - name: Notify on success
-      if: ${{ needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success' }}
-      run: |
-        echo "🎉 All tests passed successfully!"
-
-    - name: Notify on failure
-      if: ${{ needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' }}
-      run: |
-        echo "❌ Some tests failed. Check the logs for details."

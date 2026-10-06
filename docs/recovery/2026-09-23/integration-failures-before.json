@@ -1,0 +1,284 @@
+[
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_multi_tier_signal_propagation",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: BaseStrategy.__init__() got an unexpected keyword argument 'tier'\"",
+    "traceback": "tests/integration/test_agent_coordination.py:226: in mock_agents\n    \"trend_strategy\": MockTrendStrategy(),\n                      ^^^^^^^^^^^^^^^^^^^\ntests/integration/test_agent_coordination.py:124: in __init__\n    super().__init__(agent_id=14, name=\"mock_trend_strategy\", tier=4)\nE   TypeError: BaseStrategy.__init__() got an unexpected keyword argument 'tier'"
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_risk_governor_emergency_coordination",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: BaseStrategy.__init__() got an unexpected keyword argument 'tier'\"",
+    "traceback": "tests/integration/test_agent_coordination.py:226: in mock_agents\n    \"trend_strategy\": MockTrendStrategy(),\n                      ^^^^^^^^^^^^^^^^^^^\ntests/integration/test_agent_coordination.py:124: in __init__\n    super().__init__(agent_id=14, name=\"mock_trend_strategy\", tier=4)\nE   TypeError: BaseStrategy.__init__() got an unexpected keyword argument 'tier'"
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentCoordination::test_message_ordering_and_causality",
+    "outcome": "failure",
+    "message": "AttributeError: type object 'KafkaTopic' has no attribute 'MARKET_DATA'",
+    "traceback": "tests/integration/test_agent_coordination.py:455: in test_message_ordering_and_causality\n    await producer_agent.publish(KafkaTopic.MARKET_DATA, message)\n                                 ^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: type object 'KafkaTopic' has no attribute 'MARKET_DATA'"
+  },
+  {
+    "test": "tests.integration.test_agent_coordination.TestAgentRecoveryAndRebalancing::test_workload_rebalancing",
+    "outcome": "failure",
+    "message": "AssertionError: assert 5 < 5\n +  where 5 = len([{'data': 'work_25', 'id': 25}, {'data': 'work_26', 'id': 26}, {'data': 'work_27', 'id': 27}, {'data': 'work_28', 'id': 28}, {'data': 'work_29', 'id': 29}])",
+    "traceback": "tests/integration/test_agent_coordination.py:727: in test_workload_rebalancing\n    assert len(failed_work) < 5   # Minimal failures\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   AssertionError: assert 5 < 5\nE    +  where 5 = len([{'data': 'work_25', 'id': 25}, {'data': 'work_26', 'id': 26}, {'data': 'work_27', 'id': 27}, {'data': 'work_28', 'id': 28}, {'data': 'work_29', 'id': 29}])"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestAPIEndpoints::test_api_cors_headers",
+    "outcome": "failure",
+    "message": "assert 405 in [200, 204]\n +  where 405 = <Response [405 Method Not Allowed]>.status_code",
+    "traceback": "tests/integration/test_api_dashboard_integration.py:302: in test_api_cors_headers\n    assert response.status_code in [200, 204]\nE   assert 405 in [200, 204]\nE    +  where 405 = <Response [405 Method Not Allowed]>.status_code"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestWebSocketFeeds::test_websocket_connection_handling",
+    "outcome": "failure",
+    "message": "Failed: DID NOT RAISE <class 'Exception'>",
+    "traceback": "tests/integration/test_api_dashboard_integration.py:367: in test_websocket_connection_handling\n    with pytest.raises(Exception):\n         ^^^^^^^^^^^^^^^^^^^^^^^^\nE   Failed: DID NOT RAISE <class 'Exception'>"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestWebSocketFeeds::test_websocket_message_rate",
+    "outcome": "failure",
+    "message": "assert 0 > 0\n +  where 0 = len([])",
+    "traceback": "tests/integration/test_api_dashboard_integration.py:400: in test_websocket_message_rate\n    assert len(messages) > 0\nE   assert 0 > 0\nE    +  where 0 = len([])"
+  },
+  {
+    "test": "tests.integration.test_api_dashboard_integration.TestAPIDashboardIntegration::test_dashboard_error_handling",
+    "outcome": "failure",
+    "message": "ModuleNotFoundError: No module named 'app'",
+    "traceback": "tests/integration/test_api_dashboard_integration.py:501: in test_dashboard_error_handling\n    with patch('app.get_portfolio', side_effect=Exception(\"Database error\")):\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:1451: in __enter__\n    self.target = self.getter()\n                  ^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/pkgutil.py:513: in resolve_name\n    mod = importlib.import_module(modname)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n<frozen importlib._bootstrap>:1387: in _gcd_import\n    ???\n<frozen importlib._bootstrap>:1360: in _find_and_load\n    ???\n<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked\n    ???\nE   ModuleNotFoundError: No module named 'app'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_complete_backtesting_pipeline",
+    "outcome": "failure",
+    "message": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'",
+    "traceback": "tests/integration/test_backtesting_validation.py:502: in test_complete_backtesting_pipeline\n    backtest_result = backtest_engine.run_backtest(\ntests/integration/test_backtesting_validation.py:283: in run_backtest\n    ohlcv_data = self.generate_historical_data(symbol, start_date, end_date)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:97: in generate_historical_data\n    low_price = min(open_price, current_price) * (1 - abs(np.random.normal(0, 0.005)))\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_strategy_qualification_thresholds",
+    "outcome": "failure",
+    "message": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'",
+    "traceback": "tests/integration/test_backtesting_validation.py:594: in test_strategy_qualification_thresholds\n    backtest_result = backtest_engine.run_backtest(**weak_strategy_data)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:283: in run_backtest\n    ohlcv_data = self.generate_historical_data(symbol, start_date, end_date)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:97: in generate_historical_data\n    low_price = min(open_price, current_price) * (1 - abs(np.random.normal(0, 0.005)))\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_walk_forward_analysis_degradation",
+    "outcome": "failure",
+    "message": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'",
+    "traceback": "tests/integration/test_backtesting_validation.py:614: in test_walk_forward_analysis_degradation\n    backtest_result = backtest_engine.run_backtest(**historical_data_config)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:283: in run_backtest\n    ohlcv_data = self.generate_historical_data(symbol, start_date, end_date)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:97: in generate_historical_data\n    low_price = min(open_price, current_price) * (1 - abs(np.random.normal(0, 0.005)))\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_monte_carlo_risk_assessment",
+    "outcome": "failure",
+    "message": "pydantic_core._pydantic_core.ValidationError: 10 validation errors for MonteCarloResult\nstrategy_id\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nsimulations\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nvar_95\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nvar_99\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ncvar_95\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nmedian_return_pct\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\npercentile_5_return_pct\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\npercentile_95_return_pct\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\npassed_validation\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nfailure_reasons\n  Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing",
+    "traceback": "tests/integration/test_backtesting_validation.py:677: in test_monte_carlo_risk_assessment\n    monte_carlo_result = backtest_engine.run_monte_carlo_simulation(\ntests/integration/test_backtesting_validation.py:414: in run_monte_carlo_simulation\n    result = MonteCarloResult(\nE   pydantic_core._pydantic_core.ValidationError: 10 validation errors for MonteCarloResult\nE   strategy_id\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   simulations\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   var_95\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   var_99\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   cvar_95\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   median_return_pct\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   percentile_5_return_pct\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   percentile_95_return_pct\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   passed_validation\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   failure_reasons\nE     Field required [type=missing, input_value={'num_simulations': 1000,...t64(671125.6256146021)}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_data_quality_validation",
+    "outcome": "failure",
+    "message": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'",
+    "traceback": "tests/integration/test_backtesting_validation.py:715: in test_data_quality_validation\n    backtest_result = backtest_engine.run_backtest(**short_data_config)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:283: in run_backtest\n    ohlcv_data = self.generate_historical_data(symbol, start_date, end_date)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:97: in generate_historical_data\n    low_price = min(open_price, current_price) * (1 - abs(np.random.normal(0, 0.005)))\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_performance_metrics_calculation",
+    "outcome": "failure",
+    "message": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'",
+    "traceback": "tests/integration/test_backtesting_validation.py:736: in test_performance_metrics_calculation\n    backtest_result = backtest_engine.run_backtest(**historical_data_config)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:283: in run_backtest\n    ohlcv_data = self.generate_historical_data(symbol, start_date, end_date)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:96: in generate_historical_data\n    high_price = max(open_price, current_price) * (1 + abs(np.random.normal(0, 0.005)))\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_backtesting_validation.TestBacktestingValidation::test_strategy_approval_workflow",
+    "outcome": "failure",
+    "message": "TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'",
+    "traceback": "tests/integration/test_backtesting_validation.py:762: in test_strategy_approval_workflow\n    backtest_result = backtest_engine.run_backtest(**historical_data_config)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:283: in run_backtest\n    ohlcv_data = self.generate_historical_data(symbol, start_date, end_date)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/integration/test_backtesting_validation.py:96: in generate_historical_data\n    high_price = max(open_price, current_price) * (1 + abs(np.random.normal(0, 0.005)))\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_happy_path_execution",
+    "outcome": "error",
+    "message": "failed on setup with \"AttributeError: Mock object has no attribute 'get_positions'\"",
+    "traceback": "tests/integration/test_execution_pipeline.py:62: in mock_state_manager\n    mock_state.get_positions.return_value = []\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:660: in __getattr__\n    raise AttributeError(\"Mock object has no attribute %r\" % name)\nE   AttributeError: Mock object has no attribute 'get_positions'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_position_limit_rejection",
+    "outcome": "error",
+    "message": "failed on setup with \"AttributeError: Mock object has no attribute 'get_positions'\"",
+    "traceback": "tests/integration/test_execution_pipeline.py:62: in mock_state_manager\n    mock_state.get_positions.return_value = []\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:660: in __getattr__\n    raise AttributeError(\"Mock object has no attribute %r\" % name)\nE   AttributeError: Mock object has no attribute 'get_positions'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_kill_switch_halts_pipeline",
+    "outcome": "error",
+    "message": "failed on setup with \"AttributeError: Mock object has no attribute 'get_positions'\"",
+    "traceback": "tests/integration/test_execution_pipeline.py:62: in mock_state_manager\n    mock_state.get_positions.return_value = []\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:660: in __getattr__\n    raise AttributeError(\"Mock object has no attribute %r\" % name)\nE   AttributeError: Mock object has no attribute 'get_positions'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_optimization_flags_prevent_reentry",
+    "outcome": "error",
+    "message": "failed on setup with \"AttributeError: Mock object has no attribute 'get_positions'\"",
+    "traceback": "tests/integration/test_execution_pipeline.py:62: in mock_state_manager\n    mock_state.get_positions.return_value = []\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:660: in __getattr__\n    raise AttributeError(\"Mock object has no attribute %r\" % name)\nE   AttributeError: Mock object has no attribute 'get_positions'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_pipeline_with_ml_predictor_fallback",
+    "outcome": "error",
+    "message": "failed on setup with \"AttributeError: Mock object has no attribute 'get_positions'\"",
+    "traceback": "tests/integration/test_execution_pipeline.py:62: in mock_state_manager\n    mock_state.get_positions.return_value = []\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:660: in __getattr__\n    raise AttributeError(\"Mock object has no attribute %r\" % name)\nE   AttributeError: Mock object has no attribute 'get_positions'"
+  },
+  {
+    "test": "tests.integration.test_execution_pipeline.TestExecutionPipeline::test_execution_pipeline_performance",
+    "outcome": "error",
+    "message": "failed on setup with \"AttributeError: Mock object has no attribute 'get_positions'\"",
+    "traceback": "tests/integration/test_execution_pipeline.py:62: in mock_state_manager\n    mock_state.get_positions.return_value = []\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n../../../.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/unittest/mock.py:660: in __getattr__\n    raise AttributeError(\"Mock object has no attribute %r\" % name)\nE   AttributeError: Mock object has no attribute 'get_positions'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_producer_consumer_roundtrip",
+    "outcome": "error",
+    "message": "failed on setup with \"pydantic_core._pydantic_core.ValidationError: 5 validation errors for TradeProposal\nagent_id\n  Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nexchange\n  Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_class\n  Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nsize_usd\n  Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nconfidence_score\n  Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\"",
+    "traceback": "tests/integration/test_kafka_messaging.py:74: in sample_trade_proposals\n    proposal = TradeProposal(\nE   pydantic_core._pydantic_core.ValidationError: 5 validation errors for TradeProposal\nE   agent_id\nE     Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   exchange\nE     Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   asset_class\nE     Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   size_usd\nE     Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   confidence_score\nE     Field required [type=missing, input_value={'proposal_id': 'a59ab971...h': 'integration_test'}}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_message_ordering_guarantee",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:155: in test_message_ordering_guarantee\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_consumer_error_handling",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestConsumer.__init__() got an unexpected keyword argument 'group_id'",
+    "traceback": "tests/integration/test_kafka_messaging.py:189: in test_consumer_error_handling\n    consumer = AlghrestConsumer(\nE   TypeError: AlghrestConsumer.__init__() got an unexpected keyword argument 'group_id'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_schema_validation_and_evolution",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:248: in test_schema_validation_and_evolution\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_high_throughput_message_processing",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:290: in test_high_throughput_message_processing\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_consumer_group_load_balancing",
+    "outcome": "failure",
+    "message": "AttributeError: type object 'KafkaTopic' has no attribute 'MARKET_DATA'",
+    "traceback": "tests/integration/test_kafka_messaging.py:332: in test_consumer_group_load_balancing\n    topics=[KafkaTopic.MARKET_DATA],\n            ^^^^^^^^^^^^^^^^^^^^^^\nE   AttributeError: type object 'KafkaTopic' has no attribute 'MARKET_DATA'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestKafkaMessaging::test_dead_letter_queue_handling",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:369: in test_dead_letter_queue_handling\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestMessageBusReliability::test_connection_recovery",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:413: in test_connection_recovery\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestMessageBusReliability::test_message_durability",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:428: in test_message_durability\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_kafka_messaging.TestMessageBusReliability::test_exactly_once_semantics",
+    "outcome": "failure",
+    "message": "TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'",
+    "traceback": "tests/integration/test_kafka_messaging.py:466: in test_exactly_once_semantics\n    producer = AlghrestProducer(bootstrap_servers=\"localhost:9092\")\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: AlghrestProducer.__init__() got an unexpected keyword argument 'bootstrap_servers'"
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestMarketCrashKillSwitch::test_flash_crash_kill_switch_activation",
+    "outcome": "error",
+    "message": "failed on setup with \"pydantic_core._pydantic_core.ValidationError: 5 validation errors for Position\nexchange\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_class\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nstrategy_id\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nagent_id\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nopened_at\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\"",
+    "traceback": "tests/integration/test_market_crash_kill_switch.py:143: in mock_portfolio_with_positions\n    Position(\nE   pydantic_core._pydantic_core.ValidationError: 5 validation errors for Position\nE   exchange\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   asset_class\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   strategy_id\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   agent_id\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   opened_at\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing"
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestMarketCrashKillSwitch::test_kill_switch_escalation_levels",
+    "outcome": "error",
+    "message": "failed on setup with \"pydantic_core._pydantic_core.ValidationError: 5 validation errors for Position\nexchange\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nasset_class\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nstrategy_id\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nagent_id\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nopened_at\n  Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\"",
+    "traceback": "tests/integration/test_market_crash_kill_switch.py:143: in mock_portfolio_with_positions\n    Position(\nE   pydantic_core._pydantic_core.ValidationError: 5 validation errors for Position\nE   exchange\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   asset_class\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   strategy_id\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   agent_id\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing\nE   opened_at\nE     Field required [type=missing, input_value={'symbol': 'BTC/USDT', 's... <OrderSide.BUY: 'BUY'>}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.13/v/missing"
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestMarketCrashKillSwitch::test_kill_switch_recovery_procedures",
+    "outcome": "failure",
+    "message": "RuntimeError: StateManager not initialized \u2014 call initialize() first",
+    "traceback": "tests/integration/test_market_crash_kill_switch.py:425: in test_kill_switch_recovery_procedures\n    await kill_switch._trigger(\ncore/risk/kill_switch.py:142: in _trigger\n    await state_manager.activate_kill_switch(reason)\ncore/orchestrator/state_manager.py:121: in activate_kill_switch\n    await self.redis.setex(_NS_KILL_SWITCH, ttl_seconds, reason.encode())\n          ^^^^^^^^^^\ncore/orchestrator/state_manager.py:62: in redis\n    raise RuntimeError(\"StateManager not initialized \u2014 call initialize() first\")\nE   RuntimeError: StateManager not initialized \u2014 call initialize() first"
+  },
+  {
+    "test": "tests.integration.test_market_crash_kill_switch.TestKillSwitchPerformance::test_kill_switch_latency_benchmark",
+    "outcome": "failure",
+    "message": "RuntimeError: StateManager not initialized \u2014 call initialize() first",
+    "traceback": "tests/integration/test_market_crash_kill_switch.py:474: in test_kill_switch_latency_benchmark\n    event = await kill_switch.check(\ncore/risk/kill_switch.py:92: in check\n    return await self._trigger(\ncore/risk/kill_switch.py:142: in _trigger\n    await state_manager.activate_kill_switch(reason)\ncore/orchestrator/state_manager.py:121: in activate_kill_switch\n    await self.redis.setex(_NS_KILL_SWITCH, ttl_seconds, reason.encode())\n          ^^^^^^^^^^\ncore/orchestrator/state_manager.py:62: in redis\n    raise RuntimeError(\"StateManager not initialized \u2014 call initialize() first\")\nE   RuntimeError: StateManager not initialized \u2014 call initialize() first"
+  },
+  {
+    "test": "tests.integration.test_ml_failover.TestMLPredictorFailover::test_technical_analysis_fallback_accuracy",
+    "outcome": "failure",
+    "message": "AssertionError: assert 'BEARISH' in ['BULLISH', 'NEUTRAL']",
+    "traceback": "tests/integration/test_ml_failover.py:305: in test_technical_analysis_fallback_accuracy\n    assert prediction[\"signal\"] in [\"BULLISH\", \"NEUTRAL\"]  # Should detect uptrend\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   AssertionError: assert 'BEARISH' in ['BULLISH', 'NEUTRAL']"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_agent_heartbeat_tracking",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_unhealthy_agent_detection",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_kill_switch_state_propagation",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_price_cache_performance",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_portfolio_state_persistence",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_state_corruption_recovery",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_memory_usage_optimization",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_connection_pool_management",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestRedisStateManagement::test_redis_failover_handling",
+    "outcome": "error",
+    "message": "failed on setup with \"TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'\"",
+    "traceback": "tests/integration/test_redis_state_management.py:68: in state_manager\n    sm = StateManager(redis_url=\"redis://localhost:6379\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestCrossAgentStateSync::test_state_consistency_across_agents",
+    "outcome": "failure",
+    "message": "TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'",
+    "traceback": "tests/integration/test_redis_state_management.py:446: in test_state_consistency_across_agents\n    sm = StateManager(redis_url=f\"redis://localhost:6379/{i}\")\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  },
+  {
+    "test": "tests.integration.test_redis_state_management.TestCrossAgentStateSync::test_state_version_conflicts",
+    "outcome": "failure",
+    "message": "TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'",
+    "traceback": "tests/integration/test_redis_state_management.py:474: in test_state_version_conflicts\n    state_manager = StateManager(redis_url=\"redis://localhost:6379\")\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   TypeError: StateManager.__init__() got an unexpected keyword argument 'redis_url'"
+  }
+]
