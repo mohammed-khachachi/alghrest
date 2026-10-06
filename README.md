@@ -89,6 +89,8 @@ poetry run mypy src/agents/ src/core/ src/backtesting/
 
 ## Research and contributions
 
+For invited collaborators, see [private repository development](docs/private-collaboration.md) for access, setup, included model assets, and a branch/pull-request workflow.
+
 [HMM research](research/README.md) has separate environments and test commands. Static examples are documented [here](examples/README.md). Neither belongs in the runtime wheel or Docker image.
 
 Place new modules in the package that owns their responsibility. Update contracts, migrations, tests, and documentation together when a message or persistence contract changes. Read [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md) for agent conventions and hard risk limits. The [layout migration record](docs/maintenance/structure-migration.md) lists moved and removed files.
