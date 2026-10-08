@@ -1,0 +1,86 @@
+# Isolated local paper infrastructure. Agents run from the host Python environment.
+# No portfolio is created or funded by this stack.
+name: alghrest-paper
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alghrest_paper
+      POSTGRES_DB: alghrest_paper
+      POSTGRES_PASSWORD: ${PAPER_POSTGRES_PASSWORD:?Set PAPER_POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - paper-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alghrest_paper -d alghrest_paper"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${PAPER_REDIS_PASSWORD:?Set PAPER_REDIS_PASSWORD in .env}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    ports:
+      - "127.0.0.1:16379:6379"
+    volumes:
+      - paper-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka-storage-init:
+    image: apache/kafka:4.3.1
+    user: "0:0"
+    network_mode: none
+    entrypoint: ["/bin/sh", "-c", "chown 1000:1000 /var/lib/kafka"]
+    volumes:
+      - paper-kafka:/var/lib/kafka
+
+  kafka:
+    image: apache/kafka:4.3.1
+    restart: unless-stopped
+    environment:
+      CLUSTER_ID: ${PAPER_KAFKA_CLUSTER_ID:?Set PAPER_KAFKA_CLUSTER_ID in .env}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:19092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://127.0.0.1:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    ports:
+      - "127.0.0.1:19092:19092"
+    volumes:
+      - paper-kafka:/var/lib/kafka
+    depends_on:
+      kafka-storage-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 15s
+
+volumes:
+  paper-postgres:
+  paper-redis:
+  paper-kafka:

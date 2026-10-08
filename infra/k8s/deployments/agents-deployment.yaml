@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alghrest-agent-tier2-marketdata
+  namespace: alghrest
+  labels:
+    app: alghrest-agent
+    tier: tier2
+    agent_name: market_data_hub
+spec:
+  replicas: 1 # Agents are usually singletons to avoid duplicate message processing
+  selector:
+    matchLabels:
+      agent_name: market_data_hub
+  template:
+    metadata:
+      labels:
+        app: alghrest-agent
+        agent_name: market_data_hub
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9203" # Agent ID 3 -> 9203
+    spec:
+      containers:
+      - name: agent
+        image: alghrest/agent:latest
+        command: ["python", "-m", "agents.tier2_intelligence.market_data_hub"]
+        envFrom:
+        - configMapRef:
+            name: alghrest-config
+        - secretRef:
+            name: alghrest-secrets
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"

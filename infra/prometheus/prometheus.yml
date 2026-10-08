@@ -1,0 +1,143 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    system: alghrest
+    env: development
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+
+  - job_name: portfolio_accountant
+    static_configs:
+      - targets: [alghrest-agent-portfolio-accountant:9237]
+        labels:
+          tier: "7"
+
+  # ─────────────────────────────────────────────────────────
+  # Self-monitoring
+  # ─────────────────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+        labels:
+          service: prometheus
+
+  # ─────────────────────────────────────────────────────────
+  # Infrastructure
+  # ─────────────────────────────────────────────────────────
+  - job_name: node-exporter
+    static_configs:
+      - targets: [node-exporter:9100]
+        labels:
+          service: node-exporter
+
+  - job_name: timescaledb
+    static_configs:
+      - targets: [postgres-exporter:9187]
+        labels:
+          service: timescaledb
+
+  - job_name: redis
+    static_configs:
+      - targets: [redis-exporter:9121]
+        labels:
+          service: redis
+
+  # ─────────────────────────────────────────────────────────
+  # Kafka JMX (one entry per broker)
+  # Requires JMX exporter running alongside each broker
+  # ─────────────────────────────────────────────────────────
+  # - job_name: kafka
+  #   static_configs:
+  #     - targets: [kafka-1:9101, kafka-2:9102, kafka-3:9103]
+  #       labels:
+  #         service: kafka
+
+  # ─────────────────────────────────────────────────────────
+  # ALGHREST Application Agents (32 Agents Total)
+  # Each agent exposes /metrics on port = 9200 + AGENT_ID
+  # Updated with correct container names and reassigned IDs
+  # ─────────────────────────────────────────────────────────
+
+  # Tier 1 — Executive (IDs: 1-4)
+  - job_name: tier1_executive
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - alghrest-agent-cio:9201                    # ID: 1
+          - alghrest-agent-risk-governor:9202          # ID: 2
+          - alghrest-agent-proposal-approver:9203      # ID: 3
+          - alghrest-agent-price-publisher:9204        # ID: 4
+        labels:
+          tier: "1"
+          tier_name: executive
+
+  # Tier 4 — Strategies (with correct reassigned IDs)
+  - job_name: tier4_strategies
+    static_configs:
+      - targets:
+          - alghrest-agent-trend-follower:9212         # ID: 12
+          - alghrest-agent-mean-reversion:9213         # ID: 13
+          - alghrest-agent-breakout-hunter:9216        # ID: 16 (was ML Predictor)
+          - alghrest-agent-momentum:9217               # ID: 17 (reassigned from 14)
+          - alghrest-agent-arb-cross-exchange:9218     # ID: 18
+          - alghrest-agent-stat-arb:9221               # ID: 21 (reassigned from 15)
+          - alghrest-agent-macro-rotator:9234          # ID: 34 (reassigned from 18)
+        labels:
+          tier: "4"
+          tier_name: strategies
+
+  # Tier 5 — Execution (IDs: 20, 22-26)
+  - job_name: tier5_execution
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - alghrest-agent-order-router:9220           # ID: 20
+          - alghrest-agent-slippage-minimizer:9222     # ID: 22
+          - alghrest-agent-hedge-manager:9223          # ID: 23
+          - alghrest-agent-fee-optimizer:9224          # ID: 24
+          - alghrest-agent-liquidation-guard:9225      # ID: 25
+          - alghrest-agent-exchange-executor:9226      # ID: 26
+        labels:
+          tier: "5"
+          tier_name: execution
+
+  # Tier 7 — Monitoring (IDs: 30-33, 36)
+  - job_name: tier7_monitoring
+    static_configs:
+      - targets:
+          - alghrest-agent-portfolio-tracker:9230      # ID: 30
+          - alghrest-agent-alert-manager:9231          # ID: 31
+          - alghrest-agent-compliance:9232             # ID: 32
+        labels:
+          tier: "7"
+          tier_name: monitoring
+
+  # Missing Agents (to be implemented)
+  # - ML Predictor (ID: 16) - needs inference server
+  # - Auditor (ID: 33) - exists but may need special config
+  # - Yield Farmer (ID: 35) - DeFi agent
+  # - Copy Trading Channel (ID: 36) - Telegram integration
+
+  # ─────────────────────────────────────────────────────────
+  # FastAPI application
+  # ─────────────────────────────────────────────────────────
+  - job_name: alghrest_api
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/api_access_token
+    scrape_interval: 10s
+    static_configs:
+      - targets: [alghrest-api:8000]
+        labels:
+          service: api
+    metrics_path: /metrics

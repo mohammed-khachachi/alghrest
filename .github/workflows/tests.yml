@@ -1,0 +1,112 @@
+name: ALGHREST Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  POETRY_INSTALLER_MAX_WORKERS: "4"
+
+jobs:
+  quality:
+    name: Lint, types and complete coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install all locked dependency groups
+        run: |
+          python -m pip install poetry==2.4.1
+          poetry check --lock
+          poetry sync --all-groups --no-interaction
+      - name: Architecture, lint, formatting and strict types
+        run: |
+          poetry run python scripts/check_architecture.py
+          poetry run ruff check .
+          poetry run black --check .
+          poetry run isort --check-only .
+          MYPYPATH=src poetry run mypy --explicit-package-bases src/agents/ src/core/ src/backtesting/ src/connectors/advisory/ src/api/advisor.py src/api/services/advisory.py src/api/security.py
+      - name: Configure isolated paper services
+        run: |
+          python - <<'PYTHON'
+          import secrets
+          from pathlib import Path
+          database_password = secrets.token_hex(24)
+          redis_password = secrets.token_hex(24)
+          for secret in (database_password, redis_password):
+              print(f"::add-mask::{secret}")
+          values = {
+              "ENVIRONMENT": "paper_trading",
+              "ENABLE_DEFI_AGENTS": "false",
+              "PAPER_POSTGRES_PASSWORD": database_password,
+              "PAPER_REDIS_PASSWORD": redis_password,
+              "PAPER_KAFKA_CLUSTER_ID": secrets.token_urlsafe(16),
+              "DATABASE_URL": f"postgresql://alghrest_paper:{database_password}@127.0.0.1:15432/alghrest_paper",
+              "REDIS_URL": f"redis://:{redis_password}@127.0.0.1:16379",
+              "KAFKA_BOOTSTRAP_SERVERS": "127.0.0.1:19092",
+          }
+          with Path(".env").open("x") as config:
+              config.write("".join(f"{key}={value}\n" for key, value in values.items()))
+          PYTHON
+          docker compose -f docker-compose.paper.yml up -d --wait --wait-timeout 180
+          poetry run python -m scripts.paper provision
+      - name: Full suite with the configured 70 percent branch coverage gate
+        run: |
+          mkdir -p artifacts/quality
+          KAFKA_AUTH_TESTS=1 poetry run python -m scripts.test_with_services --timeout=90 --timeout-method=thread -q --tb=short --junitxml=artifacts/quality/tests.xml --cov-report=xml:artifacts/quality/coverage.xml --cov-report=json:artifacts/quality/coverage.json
+      - name: Upload test and coverage evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-results
+          path: |
+            artifacts/quality/tests.xml
+            artifacts/quality/coverage.xml
+            artifacts/quality/coverage.json
+            htmlcov/
+      - name: Stop CI services
+        if: always()
+        run: docker compose -f docker-compose.paper.yml down
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Bandit security scan
+      uses: gauravmishraitbhu/bandit-action@v3
+      with:
+        path: "src/agents/ src/core/ src/api/"
+        level: medium
+        confidence: medium
+        exclude: tests/,migrations/
+
+    - name: Run Safety check
+      run: |
+        pip install safety
+        safety check --json --output safety-report.json || true
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-scan-results
+        path: |
+          bandit-report.json
+          safety-report.json
