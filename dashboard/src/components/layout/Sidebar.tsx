@@ -15,31 +15,21 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useDashboardStore } from '@/store/useStore';
+import { navigationForScope, type NavigationId } from '@/lib/navigation';
 
-interface NavItem {
-  to: string;
-  label: string;
-  Icon: LucideIcon;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { to: '/assistant', label: 'مساعد التداول اليدوي', Icon: BookOpen },
-  { to: '/overview',  label: 'Overview',  Icon: LayoutDashboard },
-  { to: '/agents',    label: 'Agents',    Icon: Bot },
-  { to: '/positions', label: 'Positions', Icon: TrendingUp },
-  { to: '/kafka',     label: 'Kafka',     Icon: Activity },
-  { to: '/risk',      label: 'Risk',      Icon: Shield },
-  { to: '/investor',  label: 'Investor',  Icon: Presentation },
-  { to: '/auditor',   label: 'Auditor',   Icon: ShieldCheck },
-  { to: '/backtest',  label: 'Backtest',  Icon: BarChart2 },
-];
+const ICONS: Record<NavigationId, LucideIcon> = {
+  assistant: BookOpen, research: BarChart2, overview: LayoutDashboard, agents: Bot,
+  positions: TrendingUp, kafka: Activity, risk: Shield,
+  investor: Presentation, auditor: ShieldCheck, backtest: BarChart2,
+};
 
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  researchOnly?: boolean;
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
   const wsStatus = useDashboardStore((s) => s.wsStatus);
   const activeAgents = useDashboardStore((s) => s.activeAgentCount);
   const riskAlerts = useDashboardStore((s) => s.riskAlerts);
@@ -63,7 +53,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
           <div>
             <div className="text-sm font-bold tracking-widest text-white">ALGHREST</div>
-            <div className="text-[10px] text-white/40 font-mono">v0.3 · 32 AGENTS</div>
+            <div className="text-[10px] text-white/40 font-mono">{researchOnly ? 'مساعد التقييم · قرار بشري' : 'v0.3 · 32 AGENTS'}</div>
           </div>
         </div>
         <button
@@ -76,10 +66,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map(({ to, label, Icon }) => (
+        {navigationForScope(researchOnly ? 'advisory' : 'api').map(({ id, path, label }) => {
+          const Icon = ICONS[id];
+          return (
           <NavLink
-            key={to}
-            to={to}
+            key={id}
+            to={path}
             onClick={onClose}
             className={({ isActive }) =>
               clsx(
@@ -107,12 +99,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </>
             )}
           </NavLink>
-        ))}
+        );})}
       </nav>
 
       {/* WS Status */}
       <div className="px-4 py-3 border-t border-border">
-        <div className="flex items-center gap-2 text-xs font-mono">
+        {researchOnly ? <p className="text-xs text-white/50">بحث استشاري · دون تنفيذ آلي</p> : <div className="flex items-center gap-2 text-xs font-mono">
           <span
             className={clsx('w-1.5 h-1.5 rounded-full', {
               'bg-profit animate-pulse': wsStatus === 'connected',
@@ -121,7 +113,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             })}
           />
           <span className="text-white/40 capitalize">{wsStatus}</span>
-        </div>
+        </div>}
       </div>
     </aside>
   );

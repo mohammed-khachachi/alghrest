@@ -1,0 +1,17 @@
+node_modules/
+.next/
+dist/
+out/
+*.log
+.env
+.env.local
+.DS_Store
+
+
+# Database
+data/*.db*
+data/.api-key
+
+# Keep every generated journal, key and SQLite sidecar local.
+data/*
+!data/.gitkeep

@@ -1,0 +1,72 @@
+{
+  "schema": "alghrest-openterminal-watchlist-verification-v1",
+  "verified_at": "2026-10-15T19:28:26.197087+00:00",
+  "scope": "Persistent research watchlist, immutable per-symbol snapshots, current/previous comparison, source and timestamp visibility.",
+  "implementation": [
+    "Separate watchlist and snapshot tables in the existing local advisory SQLite database; no migration to legacy futures watchlist.",
+    "Server fetches public reports on explicit save; idempotency identity prevents duplicate records on retries.",
+    "Unwatch preserves snapshots. No automatic pruning or background fetching.",
+    "Archived reports validated against original save time; live 90-second expiry remains intact.",
+    "Before/after indicators and availability; headline URL additions, missing returned URLs and metadata edits; provider/timeframe caveats."
+  ],
+  "tests": {
+    "python_persistence_and_API_regressions": 124,
+    "new_journal_python_included": 16,
+    "dashboard_regressions": 161,
+    "new_comparison_tests_included": 13,
+    "final_comparison_rerun": 13
+  },
+  "checks": {
+    "ruff": "passed",
+    "black": "passed",
+    "strict_mypy_three_new_sources": "passed",
+    "architecture_boundaries": "passed",
+    "dashboard_typecheck_and_production_build": "passed",
+    "git_diff_whitespace": "passed",
+    "linux_startup_shutdown": "passed",
+    "four_ports_free_after_stop": "passed"
+  },
+  "browser": {
+    "account": "isolated synthetic account database and token; public OpenTerminal market data",
+    "symbol": "MSFT",
+    "snapshots_saved": 2,
+    "all_three_sources_available": true,
+    "snapshot_comparison_visible": true,
+    "watchlist_and_history_survived_reload": true,
+    "saved_symbol_navigation": "AAPL -> saved MSFT button; research and native chart synchronized",
+    "historical_snapshot_reopened_with_original_clocks": true,
+    "live_comparison_also_observed": true,
+    "screenshots": [
+      "watchlist.jpg",
+      "comparison.jpg"
+    ]
+  },
+  "limits": [
+    "Numeric deltas withheld for unknown/differing candle provider or timeframe; Nasdaq timeframe remained unreported.",
+    "A newly returned headline is not necessarily a newly published event. Missing response headlines do not prove articles were deleted.",
+    "Public freshness and event completeness remain unverified.",
+    "Watchlist limit 50; snapshots limit 100 per symbol and 5000 total, rejecting further saves without deleting old data.",
+    "Full infrastructure suite, repository-wide coverage gate and Windows runtime not run.",
+    "Native terminal unchanged; native tests not rerun."
+  ],
+  "verification_recovery": [
+    "Initial local-port approval review unavailable due usage limit; succeeded after user resume.",
+    "Sandboxed API test run stopped; full focused suite passed with local-network permission.",
+    "Mypy rerun with the project src namespace using explicit package bases."
+  ],
+  "artifacts": "artifacts/openterminal-watchlist-20261015",
+  "source_sha256": {
+    "src/core/advisory/research_journal.py": "41e68c936bbb73a0a1a684079a64a3834710d66f4aa0c1a2669551521a500735",
+    "src/connectors/advisory/research_journal.py": "73546b615ca3385f439a176a8595e1e52c73641b6d10f269b929c7fd59efbd54",
+    "src/api/routes/research_journal.py": "1df69d5fc74699f346e63d22e5c675dadb9940a6be1dc3b238d226b0868b3322",
+    "src/api/advisor.py": "2d03cd82b1b3ccbe7a994cc235db30579cddb71d1f367a554482a7306a5af6a6",
+    "dashboard/src/lib/researchJournal.ts": "a017cfe3f2c89c473d2c9ec69497ab96ea57716e61c9534d6bf6d9c2181c0ada",
+    "dashboard/src/components/advisory/ResearchJournalPanel.tsx": "75c9a10d265d0cfabe3a796666225f4f0093ccb5579b2bc3875a5bf3cf2bfa2b",
+    "dashboard/src/components/advisory/ResearchComparison.tsx": "b5e00996afa7846b735be51f5efd9f9c195b863c05c999624259154c51a25d73",
+    "dashboard/src/components/advisory/TerminalResearchPanel.tsx": "572b5e6942750f9663e43451a967a97e70736274d7b7ef404ea4d9fb94765f95",
+    "dashboard/src/pages/ResearchTerminal.tsx": "c678835e1eb9513529e2dca9fb751211fbe934ffb5e5173697a18c4f14140e93",
+    "dashboard/tests/research-journal.test.ts": "0e376896886a947bf559f5cdf68c26bf83c6f3905e7db9ea941fe3394bdcc7be",
+    "tests/unit/test_research_journal.py": "f71985425c29379dd03304d62ddeef2fddf9956eb8b24f8d8698b796c850e64e",
+    "docs/maintenance/openterminal-integration.md": "bc8df51e6100e885a5d01b88d5b99f69c69241cbf66363288cdae6e2263adebc"
+  }
+}

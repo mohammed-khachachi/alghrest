@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { AccessGate } from '@/components/common/AccessGate';
 import { wsClient } from '@/lib/websocket';
 import { useDashboardStore } from '@/store/useStore';
+import { DEFAULT_ROUTE, accessScopeForPath } from '@/lib/navigation';
 
 const Overview = lazy(() => import('@/pages/Overview').then(m => ({ default: m.Overview })));
 const Agents = lazy(() => import('@/pages/Agents').then(m => ({ default: m.Agents })));
@@ -17,15 +18,17 @@ const AuditorDashboard = lazy(() => import('@/pages/AuditorDashboard').then(m =>
 const BacktestSimulation = lazy(() => import('@/pages/BacktestSimulation').then(m => ({ default: m.BacktestSimulation })));
 const InvestorPitch = lazy(() => import('@/pages/InvestorPitch').then(m => ({ default: m.InvestorPitch })));
 const ManualAssistant = lazy(() => import('@/pages/ManualAssistant').then(m => ({ default: m.ManualAssistant })));
+const ResearchTerminal = lazy(() => import('@/pages/ResearchTerminal').then(m => ({ default: m.ResearchTerminal })));
 
 
 export default function App() {
   const [authorized, setAuthorized] = useState({ api: false, advisory: false });
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const assistantPage = useLocation().pathname === '/assistant';
-  const scope = assistantPage ? 'advisory' : 'api';
+  const scope = accessScopeForPath(useLocation().pathname);
+  const assistantPage = scope === 'advisory';
   const ready = authorized[scope];
   const wsStatus = useDashboardStore((s) => s.wsStatus);
+  const demoMode = useDashboardStore((s) => s.systemStatus?.status === 'DEMO');
 
   useEffect(() => {
     if (ready && !assistantPage) wsClient.connect();
@@ -45,10 +48,17 @@ export default function App() {
         />
       )}
 
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar researchOnly={assistantPage} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex flex-1 flex-col min-w-0">
         <Header researchOnly={assistantPage} onMenuClick={() => setSidebarOpen((o) => !o)} />
+
+        {!assistantPage && demoMode && (
+          <div role="status" className="bg-indigo-500/10 border-b border-indigo-500/20 px-4 py-3 text-sm text-indigo-200">
+            <strong>Demo data — paper account not connected.</strong>{' '}
+            Agent activity and portfolio values are simulated. This feed has no account positions or trade history.
+          </div>
+        )}
 
         {/* Reconnecting banner */}
         {!assistantPage && wsStatus !== 'connected' && (
@@ -62,7 +72,8 @@ export default function App() {
           <Suspense fallback={<p role="status">تحميل الصفحة…</p>}>
             <Routes>
               <Route path="/assistant" element={<ErrorBoundary><ManualAssistant /></ErrorBoundary>} />
-              <Route path="/" element={<Navigate to="/overview" replace />} />
+              <Route path="/research" element={<ErrorBoundary><ResearchTerminal /></ErrorBoundary>} />
+              <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />
               <Route
                 path="/overview"
                 element={

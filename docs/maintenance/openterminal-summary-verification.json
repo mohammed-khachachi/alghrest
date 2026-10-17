@@ -1,0 +1,45 @@
+{
+  "schema": "alghrest-openterminal-summary-verification-v1",
+  "verified_at": "2026-10-15T09:24:19.623914+00:00",
+  "scope": "Per-symbol plain-language trend, momentum, volatility and headline research summary.",
+  "implementation": "Deterministic presentation of the existing validated snapshot. No additional data requests, API changes, dependencies or model calls.",
+  "tests": {
+    "dashboard_regressions": 148,
+    "new_summary_tests_included": 11,
+    "final_focused_rerun": 11
+  },
+  "checks": {
+    "dashboard_types_and_production_build": "passed",
+    "git_diff_whitespace": "passed",
+    "live_browser_symbol_switch": "AAPL -> MSFT; old summary cleared during load; distinct calculations and headlines displayed",
+    "temporary_services_stopped_and_ports_free": true
+  },
+  "browser": {
+    "symbols": [
+      "AAPL",
+      "MSFT"
+    ],
+    "candle_provider": "nasdaq",
+    "account": "isolated synthetic account database and token; public market data",
+    "screenshots": [
+      "summary-aapl.jpg",
+      "summary-msft.jpg"
+    ],
+    "source_numbers": "SMA20/SMA50, simple RSI14, simple ATR14, historical close; derived distance from SMA20 and ATR/close percentage"
+  },
+  "limits": [
+    "Headline relevance is a title-based symbol/name heuristic, not verified entity resolution.",
+    "Reading cues describe title topics; article bodies are not fetched or summarized. No causal price-move claims.",
+    "Market freshness, unknown candle intervals and event coverage remain unverified.",
+    "No trading signals or automated orders.",
+    "Backend/native tests not rerun for this frontend-only increment; full infrastructure, coverage gate and Windows runtime not tested."
+  ],
+  "artifacts": "artifacts/openterminal-summary-20261015",
+  "source_sha256": {
+    "dashboard/src/lib/terminalSummary.ts": "5c5ce7e603556088c514c7d0f753c9375f7fcbe0eff8b8edcd12543ddc4b291d",
+    "dashboard/src/components/advisory/TerminalResearchSummary.tsx": "41ccf2cd98196e1756a4130cff0f3f8dbd371866c300ea357206d9c0de90e2f0",
+    "dashboard/src/components/advisory/TerminalResearchPanel.tsx": "a0f3f3b73516bd49080ea7cea9385d906ec892776b5c674fe06458db51742902",
+    "dashboard/tests/terminal-summary.test.ts": "fce6ef20b81b3c3e6ffc785532450628d7ecd1f6be81807ac91d3c3bf2588b9c",
+    "docs/maintenance/openterminal-integration.md": "75867d11816cfe21e70233627a8a62a94c29d45205f8ea382af0efaa20035b3a"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-14",
+  "status": "IMPLEMENTED_AND_VERIFIED_LOCAL",
+  "scope": "Keep ALGHREST; add isolated local OpenTerminal research workspace and advisory navigation entry.",
+  "upstream": {
+    "repository": "https://github.com/ErTasselli/OpenTerminal",
+    "commit": "aed097c680cd8ec1c391ae06966babe7d6d91fc6",
+    "license": "MIT",
+    "imported_files": 80,
+    "documented_local_changes": [
+      "server/src/index.ts",
+      "web/package.json",
+      "web/app/layout.tsx",
+      ".gitignore",
+      "package.json",
+      "web/components/Terminal.tsx",
+      "web/next.config.ts"
+    ],
+    "all_other_imported_bytes_match": true
+  },
+  "checks": {
+    "dashboard": {
+      "typescript": "PASS",
+      "production_build": "PASS",
+      "tests_passed": 112,
+      "tests_failed": 0,
+      "tests_skipped": 0,
+      "tests_by_file": {
+        "briefings": 15,
+        "navigation": 19,
+        "news_events": 12,
+        "observations": 10,
+        "user_policy": 30,
+        "user_risk": 26
+      },
+      "build_output": "/tmp/alghrest-openterminal-dashboard-build"
+    },
+    "launcher": {
+      "tests_passed": 3,
+      "tests_failed": 0,
+      "tests_skipped": 0,
+      "checks": [
+        "credential allowlist",
+        "Windows environment casing",
+        "busy-port rejection without stopping owner"
+      ]
+    },
+    "openterminal": {
+      "test_files_passed": 8,
+      "tests_passed": 26,
+      "tests_failed": 0,
+      "api_build": "PASS",
+      "web_production_build": "PASS"
+    },
+    "architecture": "PASS for six ALGHREST application packages",
+    "git_diff_check": "PASS",
+    "upstream_source_provenance": "PASS",
+    "http_startup": {
+      "api_status": 200,
+      "ai_disabled_status": 503,
+      "unauthenticated_journal_status": 401,
+      "web_proxy_status": 200,
+      "web_page_status": 200,
+      "execution_enabled": false
+    },
+    "browser": {
+      "research_entry": "PASS with synthetic health fixture; existing advisory gate and research navigation rendered",
+      "terminal": "PASS with real public-source candles, quotes, watchlist, news and macro panels rendered",
+      "source_label_and_return_link": "PASS"
+    }
+  },
+  "runtime": {
+    "startup": "PASS on 127.0.0.1:3001 and 127.0.0.1:4001",
+    "shutdown": "PASS via Ctrl+C; both ports free afterward",
+    "temporary_preview_cleanup": "PASS; port 5199 free",
+    "services_left_running_by_this_increment": false,
+    "ai_enabled": false,
+    "execution_enabled": false,
+    "ALGHREST_credentials_passed": false,
+    "data_location": "vendor/openterminal/data/; ignored including key and SQLite sidecars"
+  },
+  "installation": {
+    "initial_npm_ci": "FAILED with network ETIMEDOUT",
+    "reduced_concurrency_retry": "Stopped after further timeouts; isolated installer only",
+    "resolution": "Four missing packages downloaded resumably from established Yarn registry; every SHA-512 matched unchanged upstream npm lockfile; cached packages installed with npm ci --offline.",
+    "installed_packages": 311
+  },
+  "warnings_and_limits": [
+    "Initial public provider fetches returned some 502 errors before succeeding; slow/variable public endpoint availability remains.",
+    "Prices are public/indicative, not certified as execution-grade or qualified dated MES/MNQ evidence.",
+    "Recharts 2.15.4 deprecation warning during dependency installation.",
+    "Existing ALGHREST Browserslist dataset age warning remains.",
+    "Windows runtime startup/shutdown not exercised; environment casing and portable path tests passed on Linux.",
+    "Full ALGHREST Python/infra suite and 70 percent coverage gate not rerun for this UI and separate Node-workspace increment; no Python runtime or risk calculations changed.",
+    "Engineering tests do not establish trading readiness, edge or passing probability."
+  ],
+  "before_sha256": {
+    "dashboard/src/App.tsx": "3ab3a9a5c7470e6f1cee71145e2cbe00c01119fb9c1d95db71d429f033b29f2f",
+    "dashboard/src/components/layout/Sidebar.tsx": "9dacc2404997d9cb265e919fd5239fc9a43050d4aaecdda693a88c416f494972",
+    "dashboard/src/lib/navigation.ts": "862abfc045674b5c04a6a9650efacfeda469d526363b7decf8877348046c8686",
+    "dashboard/tests/navigation.test.ts": "3ebb0aa8034eda6aedd68e7d9542fb9d9bb8d736e2d676dcf262867517771009"
+  },
+  "source_sha256": {
+    "dashboard/src/App.tsx": "90deff66471bcad7ff8a895968502dc0081717907051ec32fd6fe456ec33dbff",
+    "dashboard/src/components/layout/Sidebar.tsx": "d5a33b4fbaf1e5d02bf4dc0005b092b11f7f3dc28982136c7137a147989a8903",
+    "dashboard/src/lib/navigation.ts": "7607ff48a3a9f28bb22d2ba40dbeb67d0a02ff9d69ef65d4da7c6ab93544e33f",
+    "dashboard/tests/navigation.test.ts": "713617472215c65f5499cc6694d4c8fdd9f2adc6b6fdb1285da17f1c549f4b33",
+    "dashboard/src/pages/ResearchTerminal.tsx": "c4947c3491874eb2af2acdd79535c187881f09243a20224435a16ca64f09fcc6",
+    "scripts/openterminal.mjs": "293e590cbcbf5b72babe28934432522b07fe349e2bcba20cb18c3112b5040e73",
+    "tests/openterminal-launcher.test.mjs": "ee367b81c0ee1fe6e7898cf8405bb0d31270a13a61d38dddfc06e8c242fa3a19",
+    "docs/maintenance/openterminal-integration.md": "20d442a319c19a5b29231c27af39425b4423333aaa7343bab56db8aca3e0cd4d",
+    "vendor/openterminal/UPSTREAM.json": "78f5b7be9354e915c8a50ff2258b2e71dda518a3b44735f3d540e0e4d83c297a",
+    "vendor/openterminal/INTEGRATION.md": "e74e00868b5268ba1ba19a3d1a913a488b1482e8a42e93832cd59df987ca42ad",
+    "vendor/openterminal/server/src/index.ts": "05df76e35768f6dbe38da0db064b2239c755d7d58d483a3ce2728aef698fe7a4",
+    "vendor/openterminal/web/package.json": "c1a6f205121df9266482da21925127ab69e3e308e656dba46529e91e56461318",
+    "vendor/openterminal/web/app/layout.tsx": "6b74c0a1eed6793b7200b87de7b279dbe8e9d4c25a95469e8953a196d4cb3baa",
+    "vendor/openterminal/.gitignore": "6f475f6d711e4b3b0df329ccfdf1db1acc226f81cc0588c1f8dbe4dee5af2eb4",
+    "vendor/openterminal/package.json": "aef12bfe13b10b7dfa595c52c9dda82cf0736951ba54ed9900864124bfd4b9eb",
+    "vendor/openterminal/web/components/Terminal.tsx": "1262da4548de71eeba94103ff3019cb7749d5c0779f3b11a8181bcfd6b4af33d",
+    "vendor/openterminal/web/next.config.ts": "b6d54ff3a5d7d38d767f98934ffa139db1b6162c7e40ba231f7af87804bf9c98"
+  },
+  "evidence_files": {
+    "dashboard-tests.log": "33ce83bed8d6ea883cb8958df48b3b40248b9692d64ee2d11fc817ebdde1a45b",
+    "launcher-tests.log": "7871dbfefb6ca725e51baaf35a19179d0591243902fe4ef202a2df79d1723813",
+    "openterminal-tests.log": "dd84a6bd83f3cba58c9e786ce51bdea96f28a90e411c4733930cca608651f01e",
+    "openterminal-build.log": "cee47766b1abe8f37fdd4263c3928ffcdfa02cbb5e26b9861af581a6c2ee8eb5",
+    "startup-smoke.json": "6a26fbaadfe659185699dc52f5216376621eeb1b675af11aee087e819c5a9b76",
+    "research-entry.jpg": "06fec1dc8a6b79e6a0f307bbef07373106d247735e5ea26d24208963595c7d0b",
+    "terminal-workspace.jpg": "6114912e6ef12af117ce5725578552060873d57c872e5290555ee952ac567c08",
+    "dashboard-increment.patch": "baeb063debd9de0c8889037216d2eb50245d1fe9e4db1b540a6ad69badb10595"
+  }
+}

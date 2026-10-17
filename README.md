@@ -104,6 +104,25 @@ confirmed account/policy evidence must be supplied explicitly. Missing or
 unhealthy inputs remain UNKNOWN/NO TRADE. No broker feed/API entitlement or
 account capital is assumed.
 
+## Check the integrated research workspace
+
+With the local research services stopped, run this from the repository root:
+
+```powershell
+node scripts/check_research.mjs
+```
+
+The check runs focused regressions, starts all four research services with an
+isolated temporary journal, verifies snapshots and PDF export during a market
+service outage, then restarts the workspace and checks that saved records are
+unchanged. It stops its own processes and saves a dated verification receipt
+under `artifacts/research-check-*/`. Occupied ports are rejected without stopping
+their owners. A pass verifies application behavior; it does not certify public
+market-data freshness or trading readiness.
+
+See [OpenTerminal integration](docs/maintenance/openterminal-integration.md)
+for dependency setup, normal startup and manual browser verification.
+
 ## Run the dashboard demo
 
 For ordinary UI development, start the mock backend on loopback port **8000**:

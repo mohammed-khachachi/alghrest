@@ -111,9 +111,9 @@ class MockDashboardManager:
                     "daily_pnl_usd": self.pnl - 100000,
                     "daily_pnl_pct": (self.pnl - 100000) / 1000,
                     "portfolio_value": self.pnl,
-                    "open_positions": random.randint(5, 15),
-                    "unrealized_pnl": random.uniform(-1000, 1000),
-                    "leverage": random.uniform(1.0, 2.5),
+                    "open_positions": 0,
+                    "unrealized_pnl": 0.0,
+                    "leverage": 0.0,
                     "pnl_history": self.history,
                 },
             )
@@ -150,23 +150,23 @@ class MockDashboardManager:
             await self.broadcast(
                 "system.status",
                 {
-                    "status": "PAPER",
+                    "status": "DEMO",
                     "kill_switch_active": False,
                     "kill_switch_reason": None,
-                    "environment": "paper_trading",
+                    "environment": "demo",
                     "uptime_seconds": 3600,
                 },
             )
 
-            # 4. Positions (for exposure bar)
+            # 4. No account is connected; exposure must match the empty position list.
             await self.broadcast(
                 "positions.updates",
                 {
                     "open_positions": [],
                     "closed_trades": [],
-                    "long_exposure": random.uniform(40000, 60000),
-                    "short_exposure": random.uniform(20000, 35000),
-                    "net_delta": random.uniform(10000, 25000),
+                    "long_exposure": 0.0,
+                    "short_exposure": 0.0,
+                    "net_delta": 0.0,
                 },
             )
 

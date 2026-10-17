@@ -1,0 +1,82 @@
+{
+  "schema": "alghrest-openterminal-data-status-verification-v1",
+  "verified_at": "2026-10-15T09:07:38.695184+00:00",
+  "user_scope": "Show candle provider, timeframe, update clocks and missing or delayed data using OpenTerminal metadata.",
+  "changes": [
+    "Opt-in history metadata tracks the actual successful fallback provider and declared request interval. Legacy chart array responses preserved.",
+    "Original successful fetch time travels with cached candles; failed refresh is explicitly stale.",
+    "Research status cards distinguish provider, timeframe, candle time/age, fetch time, receipt time, missing data and stale cache.",
+    "Unreported intervals and source timestamps remain unknown; metadata identity and clock coherence validated."
+  ],
+  "tests": {
+    "python_regressions": 410,
+    "dashboard_regressions": 137,
+    "native_terminal": 33,
+    "focused_python_subset_included": 66
+  },
+  "checks": {
+    "ruff": "passed",
+    "strict_mypy_three_changed_sources": "passed",
+    "six_package_architecture": "passed",
+    "dashboard_type_check_build": "passed",
+    "native_type_check_build": "passed",
+    "git_diff_whitespace": "passed",
+    "upstream_hash_preservation": "passed",
+    "linux_startup_shutdown": "passed",
+    "four_ports_free_after_stop": "passed"
+  },
+  "live_verification": {
+    "symbol": "AAPL",
+    "bars": 132,
+    "candle_provider": "nasdaq",
+    "interval": "UNVERIFIED",
+    "quote_market_time": null,
+    "original_fetch_clock_preserved_on_cache_hit": true,
+    "legacy_array_preserved": true,
+    "all_three_sources_available_on_final_check": true,
+    "account": "isolated synthetic test database and token; no real account data requested",
+    "receipt": "live-data-status.json"
+  },
+  "browser": {
+    "status_cards_visible": true,
+    "actual_provider_and_distinct_fetch_candle_receipt_clocks_visible": true,
+    "unknown_timeframe_and_quote_time_visible": true,
+    "preview": "data-status.jpg"
+  },
+  "limits": [
+    "Public market freshness and event coverage remain UNKNOWN.",
+    "Provider request interval is not a certification of candle continuity or completeness. Nasdaq and FRED adapters do not declare a request interval.",
+    "The 15-minute quote age warning is a display threshold, not a trading-calendar or provider-latency diagnosis.",
+    "Stale cache and missing-data rendering verified by deterministic tests; final browser preview shows available public data.",
+    "Public feeds intermittently returned errors before the successful live check.",
+    "Full infrastructure tests and repository-wide coverage gate not rerun. Windows runtime not tested."
+  ],
+  "warnings": [
+    "36 existing datetime.utcnow deprecation warnings",
+    "Existing Browserslist age warning"
+  ],
+  "artifacts": "artifacts/openterminal-data-status-20261015",
+  "source_sha256": {
+    "tests/unit/test_openterminal_research.py": "ea2647f36c4ae4a9e09ab2703d0b938a41d7f09806181419c4afdb2447e8face",
+    "docs/maintenance/openterminal-integration.md": "f71a271c06cfe2f655ad2b2da32f4b8123421cc0f9176394701b2a8d7a7148a2",
+    "dashboard/src/lib/terminalResearch.ts": "dfde8a615aa05d4d61887930d1432c6458e75c8bfba73da7246de47e5c0344d0",
+    "dashboard/src/components/advisory/TerminalResearchPanel.tsx": "e9dcb6c30f06599fd9a3668bca5fbf96609b8de735d0793e6b8dbeac4d7a3004",
+    "src/connectors/advisory/openterminal_research.py": "306cf373e9431b9113ebb4b8117408799b094abc8256a57f1a1d60e12e4feac7",
+    "src/connectors/advisory/openterminal.py": "1be09a5537d1e99c1f18996f911a9ba3e1d0baf8cc548bfb8110641cddd6b47c",
+    "src/core/advisory/openterminal_research.py": "65e6a214addae7032c568aa38c27762280abc461f12d6352220414b3506ef854",
+    "vendor/openterminal/UPSTREAM.json": "758dca75c1923d7190555abe135c0de358c24dbab50d32914e4672ff5a5d4589",
+    "vendor/openterminal/server/src/routes/market.ts": "566fb178c0695a5725beaef89bd7b0522506a7c9b2cc44bb96abaa23a99be3d6",
+    "vendor/openterminal/server/src/providers/binance.ts": "b4d6dc62583fa817ed021cc1aa71d850416f7ce118d282da61b959d1c1fc8344",
+    "vendor/openterminal/server/src/historyStatus.ts": "a73f79cf067be350b131774aa393f36dee6fcd4dd597ce75392ce01383b01ada",
+    "vendor/openterminal/server/src/historyStatus.test.ts": "337f1e824b6883d0793d820859a306f3c2ded3644db3ceb8d6884eeee5ba4660",
+    "vendor/openterminal/server/src/routes/historyMetadata.test.ts": "fd57849eb1ee2d00b714360e1451c571e3d5493e97a2fc8857e2605379b2e4fe",
+    "dashboard/src/lib/terminalDataStatus.ts": "b322cce0bd0c6f329cb7ed7e1680eb0f535b5b89ea2be36083353a83fa7dd020",
+    "dashboard/src/components/advisory/TerminalDataStatus.tsx": "bd92777e07edc663e8a35a89f1ab824a5d840ad9516154d8b71a4cdb959fa52e",
+    "dashboard/tests/terminal-data-status.test.ts": "dbb10903a48569e3ecfbe9a60a96097c060aad2d37b94e47c74af0085706239c"
+  },
+  "historical_receipts": [
+    "docs/maintenance/openterminal-verification.json",
+    "docs/maintenance/openterminal-complementary-verification.json",
+    "docs/maintenance/openterminal-data-first-verification.json"
+  ]
+}

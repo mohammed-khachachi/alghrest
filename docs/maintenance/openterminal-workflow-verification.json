@@ -1,0 +1,108 @@
+{
+  "schema": "alghrest-research-workflow-verification-v1",
+  "verified_at_utc": "2026-10-16T01:12:30.546Z",
+  "status": "passed",
+  "scope": "Integrated advisory research workflow verification and owned-process cleanup fix; no trading execution changes",
+  "command": "node scripts/check_research.mjs",
+  "test_counts": {
+    "python_research_api": 141,
+    "dashboard": 180,
+    "native_terminal": 33,
+    "node_launcher_supervisor_check": 10,
+    "total": 364
+  },
+  "automated_receipt": "artifacts/research-check-2026-10-16T01-11-36Z/verification.json",
+  "automated_checks": [
+    {
+      "name": "dependencies and free ports",
+      "status": "passed",
+      "elapsed_ms": 86
+    },
+    {
+      "name": "focused regression suites",
+      "status": "passed",
+      "elapsed_ms": 14997
+    },
+    {
+      "name": "four-service startup",
+      "status": "passed",
+      "elapsed_ms": 7430
+    },
+    {
+      "name": "authentication and workspace boundaries",
+      "status": "passed",
+      "elapsed_ms": 1624
+    },
+    {
+      "name": "symbol isolation, snapshots and safe retries",
+      "status": "passed",
+      "elapsed_ms": 12787,
+      "public_data_quality": "not certified; partial/unavailable feeds remain explicit"
+    },
+    {
+      "name": "market service outage with saved research and PDF intact",
+      "status": "passed",
+      "elapsed_ms": 467
+    },
+    {
+      "name": "market service recovery",
+      "status": "passed",
+      "elapsed_ms": 7949
+    },
+    {
+      "name": "complete restart and durable history",
+      "status": "passed",
+      "elapsed_ms": 8301
+    },
+    {
+      "name": "owned service shutdown and free ports",
+      "status": "passed"
+    }
+  ],
+  "browser_verification": [
+    {
+      "check": "Rapid AAPL to MSFT symbol changes show the final selected symbol in chart and summary",
+      "status": "passed",
+      "screenshot": "artifacts/research-reliability-20261016/normal-workflow.jpg"
+    },
+    {
+      "check": "Manual refresh during native API outage labels current values unavailable and retains historical comparisons; dated saved snapshot remains readable; PDF export succeeds",
+      "status": "passed",
+      "screenshot": "artifacts/research-reliability-20261016/market-outage.jpg"
+    },
+    {
+      "check": "After full restart, watchlist and saved AAPL/MSFT snapshots persist; protected login still applies",
+      "status": "passed",
+      "screenshot": "artifacts/research-reliability-20261016/restarted-workflow.jpg"
+    }
+  ],
+  "regression_fixed": {
+    "problem": "Exited npm/Node leader could leave a child listener occupying its port",
+    "red_evidence": "artifacts/research-reliability-20261016/supervisor-before.log",
+    "green_evidence": "artifacts/research-reliability-20261016/supervisor-after.log",
+    "resolution": "Supervisors signal and await cleanup of their owned process groups even after the leader exits"
+  },
+  "interrupt_verification": {
+    "status": "passed",
+    "method": "Deliberate Ctrl+C at final interactive preview checkpoint; owned services stopped and all four ports released",
+    "receipt": "artifacts/research-check-2026-10-16T01-07-46Z/verification.json",
+    "expected_receipt_status": "failed because the preview was deliberately interrupted, not a workflow regression"
+  },
+  "isolation": "temporary synthetic local journal and terminal data; no user account database or credentials",
+  "artifacts": {
+    "scoped_patch": "artifacts/research-reliability-20261016/workflow-check.patch",
+    "source_hashes": "artifacts/research-reliability-20261016/source-hashes.json"
+  },
+  "limits": [
+    "public freshness and event coverage are not certified",
+    "browser interactions are verified separately; the command checks service/API behavior and frontend contracts",
+    "full infrastructure, coverage gate and real trading are outside this check",
+    "Native Windows process cleanup not runtime-tested; Windows command plans tested.",
+    "Full build and repository-wide coverage gate not rerun for this workflow-check increment."
+  ],
+  "historical_runs": [
+    "artifacts/research-check-2026-10-16T01-03-20Z/verification.json (initial checker build-tool invocation failure, corrected)",
+    "artifacts/research-check-2026-10-16T01-03-53Z/verification.json (full successful run)",
+    "artifacts/research-check-2026-10-16T01-07-46Z/verification.json (deliberate interruption)"
+  ]
+}

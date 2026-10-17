@@ -3,7 +3,13 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceL
 import { RefreshCw, BookOpen, ShieldCheck, Upload } from 'lucide-react';
 
 import { advisoryApi as api } from '../lib/advisoryApi';
+import { personalRiskRequest, validatePersonalRisk, personalRiskCurrent, type UserRiskResult } from '../lib/userRisk';
+import { UserPolicyPanel } from '../components/advisory/UserPolicyPanel';
+import { NewsEventsPanel } from '../components/advisory/NewsEventsPanel';
+import { BriefingPanel } from '../components/advisory/BriefingPanel';
+import { ObservationPanel } from '../components/advisory/ObservationPanel';
 import { EvaluationPanel, type Evaluation } from '../components/advisory/EvaluationPanel';
+import { OpenTerminalContextPanel } from '../components/advisory/OpenTerminalContextPanel';
 
 type Instrument = { id: string; name: string; symbol: string; currency: string; market: string; point_value: string; tick_size: string; source_required: string | null };
 type Candle = { close_time: string; close: string };
@@ -33,11 +39,11 @@ const indicatorLabel: Record<string, string> = { last_close: 'آخر إغلاق'
 const date = (v: string) => new Date(v).toLocaleString('ar-MA', { timeZoneName: 'short' });
 const number = (v: string) => Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 8 }) : v;
 
-export function ManualAssistant() {
+export function ManualAssistant({ linkedInstrument, onInstrumentChange }: { linkedInstrument?: string; onInstrumentChange?: (id: string) => void } = {}) {
   const [catalog, setCatalog] = useState<Instrument[]>([]);
   const [watchlist, setWatchlist] = useState<Watchlist>({ instruments: [], interests: [] });
   const [interests, setInterests] = useState('');
-  const [selected, setSelected] = useState('MNQ');
+  const [selected, setSelected] = useState(linkedInstrument ?? 'MNQ');
   const [interval, setIntervalValue] = useState('15m');
   const [report, setReport] = useState<Research | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -52,21 +58,31 @@ export function ManualAssistant() {
   const [risk, setRisk] = useState('0.5');
   const [entry, setEntry] = useState('');
   const [stop, setStop] = useState('');
-  const [fees, setFees] = useState('0');
-  const [slippage, setSlippage] = useState('0');
-  const [worksheet, setWorksheet] = useState<Record<string, string> | null>(null);
+  const [fees, setFees] = useState('');
+  const [slippage, setSlippage] = useState('');
   const [source, setSource] = useState('');
   const [contract, setContract] = useState('');
   const [evaluationDirty, setEvaluationDirty] = useState(false);
   const worksheetRevision = useRef(0);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
-  const [contractCap, setContractCap] = useState('');
-  const [existingContracts, setExistingContracts] = useState('');
+  const [riskContract, setRiskContract] = useState('');
+  const [costReference, setCostReference] = useState('');
+  const [costSource, setCostSource] = useState<'user_declared' | 'synthetic'>('user_declared');
+  const [costsReviewed, setCostsReviewed] = useState(false);
+  const [personalResult, setPersonalResult] = useState<UserRiskResult | null>(null);
+  const [riskNow, setRiskNow] = useState(Date.now());
   const [buffer, setBuffer] = useState('');
-  const [scheduleChecked, setScheduleChecked] = useState(false);
-  const evaluationChanged = useCallback((v: Evaluation | null) => { worksheetRevision.current += 1; setEvaluation(v); setEvaluationDirty(false); setWorksheet(null); if (v) setCapital(v.balance); }, []);
-  const evaluationDirtyChanged = useCallback(() => { worksheetRevision.current += 1; setEvaluationDirty(true); setWorksheet(null); }, []);
-  useEffect(() => { worksheetRevision.current += 1; setWorksheet(null); }, [selected, capital, risk, entry, stop, fees, slippage, contractCap, existingContracts, buffer, scheduleChecked]);
+  const riskKey = JSON.stringify([evaluation, evaluationDirty, selected, riskContract, risk, entry, stop, fees, slippage, buffer, costReference, costSource, costsReviewed]);
+  const riskKeyRef = useRef(riskKey); riskKeyRef.current = riskKey;
+  const [resultKey, setResultKey] = useState('');
+  const evaluationChanged = useCallback((v: Evaluation | null) => { worksheetRevision.current += 1; setEvaluation(v); setEvaluationDirty(false); setPersonalResult(null); if (v) setCapital(v.balance); }, []);
+  const evaluationDirtyChanged = useCallback(() => { worksheetRevision.current += 1; setEvaluationDirty(true); setPersonalResult(null); }, []);
+  useEffect(() => { worksheetRevision.current += 1; }, [selected, capital, risk, entry, stop, fees, slippage, riskContract, buffer, costReference, costSource, costsReviewed]);
+  useEffect(() => { worksheetRevision.current += 1; setPersonalResult(null); }, [riskKey]);
+  useEffect(() => { const timer = window.setInterval(() => setRiskNow(Date.now()), 500); return () => window.clearInterval(timer); }, []);
+  useEffect(() => { if (personalResult?.state === 'CALCULATED' && !personalRiskCurrent(personalResult, riskNow)) { setPersonalResult(null); setError('انتهت صلاحية الحساب أو نافذة الدخول؛ حدّث الملاحظة وأعد الحساب.'); } }, [personalResult, riskNow]);
+  const visiblePersonal = resultKey === riskKey && !evaluationDirty && personalResult && (personalResult.state !== 'CALCULATED' || personalRiskCurrent(personalResult, riskNow)) ? personalResult : null;
+  useEffect(() => { setCostsReviewed(false); }, [fees, slippage, buffer, costReference, costSource]);
   const current = catalog.find(i => i.id === selected);
   const analysisAllowed = report?.data_health?.state === 'HEALTHY';
   const eventsClear = report?.event_risk?.state === 'CLEAR';
@@ -84,7 +100,7 @@ export function ManualAssistant() {
   }, []);
 
   async function refresh() {
-    setBusy(true); setError(''); setNotice(''); setWorksheet(null); setReport(null);
+    setBusy(true); setError(''); setNotice(''); setReport(null);
     try {
       const value = await api<Research>(`report/${selected}?interval=${interval}`);
       setReport(value); setEntry(value.data_health?.state === 'HEALTHY' ? value.indicators['last_close'] ?? '' : '');
@@ -107,16 +123,19 @@ export function ManualAssistant() {
     } catch (e) { setError(String(e)); }
   }
   async function calculate() {
-    setError('');
-    const revision = ++worksheetRevision.current;
+    setError(''); setPersonalResult(null);
+    const revision = ++worksheetRevision.current; const capturedKey = riskKey;
     try {
-      if (evaluation && evaluationDirty) throw new Error('احفظ ملاحظة الحساب المعدلة قبل إعادة حساب الحجم.');
-      const payload = { instrument_id: selected, account_value: capital, risk_percent: risk, entry, stop, fees_per_unit: fees, slippage_points: slippage };
-      const extra = evaluation ? { allowed_standard_contracts_at_stop: contractCap, existing_standard_contracts: existingContracts, safety_buffer: buffer, schedule_checked: scheduleChecked } : {};
-      const result = await api<Record<string, string>>(evaluation ? `evaluations/${evaluation.profile.id}/plan` : 'risk-worksheet', { method: 'POST', body: JSON.stringify({ ...payload, ...extra }) });
-      if (worksheetRevision.current === revision) setWorksheet(result);
-    }
-    catch (e) { if (worksheetRevision.current === revision) setError(String(e)); }
+      if (!evaluation || evaluationDirty || !evaluation.account_revision) throw new Error('اختر سجلًا شخصيًا واحفظ ملاحظة الحساب أولًا.');
+      const payload = personalRiskRequest({ instrument_id: selected, contract: riskContract, risk_percent: risk,
+        entry, stop, fees_per_unit: fees, slippage_points: slippage, safety_buffer: buffer,
+        cost_source: costSource, cost_reference: costReference, costs_reviewed: costsReviewed,
+        expected_account_revision: evaluation.account_revision });
+      const raw = await api<unknown>(`evaluations/${evaluation.profile.id}/personal-plan`, { method: 'POST', body: JSON.stringify(payload) });
+      if (worksheetRevision.current !== revision || riskKeyRef.current !== capturedKey) return;
+      const value = validatePersonalRisk(raw, { ...evaluation, account_revision: evaluation.account_revision }, payload, Date.now());
+      setRiskNow(Date.now()); setResultKey(capturedKey); setPersonalResult(value);
+    } catch (e) { if (worksheetRevision.current === revision && riskKeyRef.current === capturedKey) setError(String(e)); }
   }
   async function upload(file: File) {
     setError('');
@@ -129,7 +148,8 @@ export function ManualAssistant() {
       setReport(null); setNotice('حُفظت البيانات. اضغط تحديث التحليل لبناء تقرير جديد.');
     } catch (e) { setError(String(e)); }
   }
-  function choose(id: string) { setSelected(id); setReport(null); setWorksheet(null); setEntry(''); setStop(''); }
+  function choose(id: string, notify = true) { setSelected(id); setReport(null); setEntry(''); setStop(''); if (notify) onInstrumentChange?.(id); }
+  useEffect(() => { if (linkedInstrument && linkedInstrument !== selected) choose(linkedInstrument, false); }, [linkedInstrument]);
 
   return <div dir="rtl" className="space-y-5 max-w-7xl mx-auto pb-8">
     <header className="flex flex-wrap justify-between gap-4 items-center">
@@ -165,6 +185,9 @@ export function ManualAssistant() {
         <div className="grid md:grid-cols-3 gap-3"><label>رابط مصدر البيانات<input className={`${input} mt-1`} value={source} onChange={e => setSource(e.target.value)} /></label><label>العقد المؤرخ، إن وجد<input className={`${input} mt-1`} value={contract} onChange={e => setContract(e.target.value)} placeholder={selected === "MNQ" ? "MNQZ26" : "NQZ26"} /></label><label className="cursor-pointer flex items-center gap-2 text-indigo-300"><Upload size={16} />استيراد CSV / JSON<input type="file" accept=".csv,.json" className="max-w-48" onChange={e => { const f = e.target.files?.[0]; if (f) void upload(f); }} /></label></div>
       </details>}
     </section>
+    <OpenTerminalContextPanel instrument={selected} />
+    <ObservationPanel />
+    <NewsEventsPanel />
     {!report && <div className={`${panel} py-12 text-center text-white/40`}>اختر الأداة ثم حدّث التحليل. سيظهر مصدر كل معلومة وحالة حداثتها هنا.</div>}
     {report && <>
       <section className={panel}>
@@ -186,13 +209,30 @@ export function ManualAssistant() {
           <div className="mt-4 border-t border-white/10 pt-4">{!report.agent_context.length ? <p className="text-sm text-white/40">لا توجد مخرجات حديثة من الوكلاء لهذه الأداة. يستمر التحليل المستقل.</p> : report.agent_context.map(c => <div key={c.id} className="text-xs my-3"><span className="text-white/40">{c.topic} · {date(c.timestamp)}</span><p className="mt-1 break-words">{c.summary}</p></div>)}</div>
         </div></section>
     </>}
-    <EvaluationPanel onChange={evaluationChanged} onDirty={evaluationDirtyChanged} />
+    <EvaluationPanel personal onChange={evaluationChanged} onDirty={evaluationDirtyChanged} />
+    <UserPolicyPanel evaluation={evaluation} dirty={evaluationDirty} />
+    <BriefingPanel evaluation={evaluation} dirty={evaluationDirty} />
     {evaluation && evaluationDirty && <p role="status" className="text-sm text-amber-200">ملاحظة الحساب معدلة ولم تُحفظ؛ احفظها قبل إعادة حساب الحجم.</p>}
     <section className={panel}><h2 className="text-lg mb-2">ورقة تخطيط المخاطرة</h2><p className="text-sm text-white/50 mb-4">هذه أرقام تخطيطية مستقلة عن رصيد النظام. العملة: {current?.currency ?? '—'}، وقيمة النقطة: {current?.point_value ?? '—'}. لن يُرسل أي أمر.</p>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{[['قيمة حسابك', capital, setCapital], ['المخاطرة % — حتى 1%', risk, setRisk], ['الدخول المخطط', entry, setEntry], ['مستوى الإلغاء / الوقف', stop, setStop], ['الرسوم لكل وحدة / عقد', fees, setFees], ['الانزلاق بالنقاط', slippage, setSlippage]].map(([label, value, setter]) => <label key={String(label)} className="text-sm text-white/60">{String(label)}<input className={`${input} mt-1`} inputMode="decimal" value={String(value)} onChange={e => (setter as (v: string) => void)(e.target.value)} /></label>)}</div>
-      {evaluation && <div className="mt-4 border-t border-white/10 pt-4 space-y-3"><p className="text-sm text-indigo-200">التخطيط مقيد بحدود سجل {evaluation.profile.id} ويتطلب ملاحظة حساب مكتملة وخالية من المراكز والأوامر. حد العقود يُراجع عند سعر الوقف.</p><div className="grid md:grid-cols-3 gap-3">{[['سقف العقود القياسية عند الوقف', contractCap, setContractCap], ['العقود الحالية المكافئة (10 MNQ = 1)', existingContracts, setExistingContracts], ['هامش أمان بالدولار فوق حد الخسارة', buffer, setBuffer]].map(([label, value, setter]) => <label key={String(label)} className="text-sm text-white/60">{String(label)}<input className={`${input} mt-1`} value={String(value)} onChange={e => (setter as (v: string) => void)(e.target.value)} /></label>)}</div><label className="text-sm text-white/60 flex gap-2"><input type="checkbox" checked={scheduleChecked} onChange={e => setScheduleChecked(e.target.checked)} />راجعت تقويم CME والعطلات وساعات التداول لهذا اليوم</label></div>}
-      <button className="mt-4 px-4 py-2 bg-indigo-600 rounded-lg disabled:opacity-40" onClick={() => void calculate()} disabled={Boolean(evaluation && evaluationDirty) || !online || current?.market === 'index'}>حساب الحجم التخطيطي</button>
-      {worksheet && <div className="mt-4 p-4 bg-indigo-500/10 rounded-lg"><p>الحجم: <strong dir="ltr">{worksheet['size']}</strong> · ميزانية المخاطرة: {worksheet['risk_budget']} {worksheet['currency']} · الخسارة المقدرة عند الوقف: {worksheet['estimated_loss_at_stop']}</p><p className="text-sm text-white/50 mt-2">{worksheet['note']}</p></div>}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{[['قيمة حسابك', capital, setCapital], ['المخاطرة % — حتى 1%', risk, setRisk], ['الدخول المخطط', entry, setEntry], ['مستوى الإلغاء / الوقف', stop, setStop], ['رسوم الذهاب والإياب لكل عقد USD', fees, setFees], ['الانزلاق بالنقاط', slippage, setSlippage]].map(([label, value, setter]) => <label key={String(label)} className="text-sm text-white/60">{String(label)}<input disabled={setter === setCapital} className={`${input} mt-1`} inputMode="decimal" value={String(value)} onChange={e => (setter as (v: string) => void)(e.target.value)} /></label>)}</div>
+      <div className="mt-4 border-t border-white/10 pt-4 space-y-3">
+        <p className="text-sm text-indigo-200">حساب قواعدك الشخصية فقط · MES/MNQ · أقصى حجم 20 Micro لحساب مؤكد خالٍ. الخطر لا يتجاوز 1% ولا الهامش المتبقي. لا إذن لتنفيذ أمر.</p>
+        <div className="grid md:grid-cols-3 gap-3">
+          <label>عقد التخطيط المؤرخ<input className={input} value={riskContract} onChange={e => setRiskContract(e.target.value)} placeholder="MESZ26" /></label>
+          <label>هامش الأمان USD<input className={input} value={buffer} onChange={e => setBuffer(e.target.value)} /></label>
+          <label>مرجع الرسوم والانزلاق<input className={input} maxLength={500} value={costReference} onChange={e => setCostReference(e.target.value)} /></label>
+          <label>نوع التكاليف<select className={input} value={costSource} onChange={e => setCostSource(e.target.value as 'user_declared' | 'synthetic')}><option value="user_declared">مدخلات راجعتها شخصيًا</option><option value="synthetic">افتراضات صناعية للاختبار فقط</option></select></label>
+        </div>
+        <label className="flex gap-2 text-sm"><input type="checkbox" checked={costsReviewed} onChange={e => setCostsReviewed(e.target.checked)} />راجعت رسوم الذهاب والإياب لكل عقد والانزلاق وهامش الأمان؛ القيم افتراضات تخطيط معلنة وليست رسومًا مؤكدة من شركة.</label>
+      </div>
+      <button className="mt-4 px-4 py-2 bg-indigo-600 rounded-lg disabled:opacity-40" onClick={() => void calculate()} disabled={!evaluation || evaluationDirty || !online || !['MES','MNQ'].includes(selected)}>حساب الحجم الشخصي</button>
+      {visiblePersonal && <div data-testid="personal-risk-result" role="status" className="mt-4 p-4 bg-indigo-500/10 rounded-lg">
+        <p>USER POLICY · الحالة: {visiblePersonal.state} · الحجم: <strong data-testid="personal-size">{visiblePersonal.contracts}</strong> Micro</p>
+        <p>ميزانية المخاطرة: {visiblePersonal.risk_budget} USD · الخسارة لكل عقد: {visiblePersonal.loss_per_unit} · الخسارة المقدرة عند الوقف: {visiblePersonal.estimated_loss_at_stop}</p>
+        <p>{visiblePersonal.reasons.join(', ')}</p><p className="text-xs text-white/50">{visiblePersonal.request.cost_source === 'synthetic' ? 'SYNTHETIC MECHANICS ONLY · مثال صناعي فقط' : 'تكاليف صرّح بها المستخدم'} · {visiblePersonal.request.cost_reference} · صلاحية النتيجة حتى {visiblePersonal.expires_at}</p>
+        <p className="text-xs">trade_permitted=false · execution_enabled=false · الفجوات قد تتجاوز الوقف. ليس دليل عائد أو احتمال اجتياز.</p>
+      </div>}
+
     </section>
     <details className={panel}><summary className="cursor-pointer">التقارير المحفوظة</summary><div className="flex flex-wrap gap-3 mt-4">{history.map(h => <button key={h.id} className="text-xs border border-white/10 px-3 py-2 rounded-lg" onClick={() => { void api<Research>(`saved/${h.id}`).then(value => { choose(value.instrument.id); setIntervalValue(value.interval); setReport(value); setNotice('تقرير محفوظ للمراجعة التاريخية؛ ليس تحديثًا لحظيًا.'); }).catch(e => setError(String(e))); }}>{h.instrument} · {date(h.created)}</button>)}</div></details>
     <footer className="text-xs text-white/35 leading-6">السيناريوهات مشروطة وليست تنبؤًا مؤكدًا. تحقق من مواصفات العقد والهامش والأحداث الاقتصادية في منصتك قبل اتخاذ قرارك. <a className="text-indigo-300" href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noreferrer">تقويم FOMC</a> · <a className="text-indigo-300" href="https://www.bls.gov/schedule/" target="_blank" rel="noreferrer">تقويم BLS</a></footer>

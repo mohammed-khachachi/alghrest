@@ -1,0 +1,210 @@
+{
+  "schema": "research-stabilization-evidence-v1",
+  "collected_at": "2026-10-16T10:33:07.660072+00:00",
+  "status": "passed",
+  "source_preservation": {
+    "original_files_checked": 428,
+    "changed_existing_files": [
+      "src/api/advisor.py",
+      "src/core/advisory/openterminal_research.py",
+      "src/core/advisory/research_journal.py",
+      "src/connectors/advisory/openterminal.py",
+      "src/connectors/advisory/openterminal_research.py",
+      "src/connectors/advisory/research_journal.py",
+      "src/api/routes/research_journal.py",
+      "src/api/services/research_pdf.py",
+      "scripts/check_research.mjs",
+      "tests/unit/test_openterminal_research.py",
+      "dashboard/src/lib/terminalResearch.ts",
+      "dashboard/src/lib/terminalDataStatus.ts",
+      "dashboard/src/lib/researchJournal.ts",
+      "dashboard/src/components/advisory/ResearchJournalPanel.tsx",
+      "docs/maintenance/openterminal-integration.md",
+      "vendor/openterminal/server/src/routes/market.ts"
+    ],
+    "all_other_recorded_sources_unchanged": true
+  },
+  "verification": {
+    "current_workspace": {
+      "passed": 2838,
+      "skipped": 53,
+      "coverage_gate": 70,
+      "coverage_percent": 81.99601733630081
+    },
+    "scoped_checkpoint_candidate": {
+      "passed": 2470,
+      "skipped": 53,
+      "coverage_gate": 70,
+      "coverage_percent": 80.80743351489907,
+      "focused_python": 177,
+      "dashboard_contracts": 105,
+      "native_contracts": 35,
+      "node_launcher_contracts": 10
+    },
+    "workflow_receipt": "artifacts/research-check-2026-10-16T09-37-33Z/verification.json",
+    "workflow_status": "passed",
+    "current_workspace_focused_tests": 430,
+    "static_checks": {
+      "ruff": "passed",
+      "black": "288 files unchanged",
+      "isort": "passed",
+      "strict_mypy": "138 source files passed",
+      "architecture": "all six application packages passed",
+      "diff_whitespace": "Four original-source exceptions preserved: font license trailing space and unchanged upstream cache/Nasdaq/Yahoo EOF blank lines; upstream SHA-256 identities verified"
+    },
+    "builds": {
+      "dashboard": "passed",
+      "native_api": "passed",
+      "native_web": "passed"
+    },
+    "standalone_candidate_http": {
+      "status": "passed",
+      "source_root": "/tmp/alghrest-research-release/src",
+      "isolated_ephemeral_port": true,
+      "auth_enforced": true,
+      "execution_and_agent_tap_disabled": true,
+      "watch_capture_backup_restore_pdf": "passed",
+      "original_snapshot_unchanged": true,
+      "pdf_sha256": "de97c7f613921230d6750bcc36726f6c59e7b552c1d5ac997e5b99852ca82c9d",
+      "user_journal_untouched": true,
+      "owned_process_stopped": true
+    },
+    "pdf_visual_review": {
+      "pages": 5,
+      "status": "passed",
+      "file": "output/pdf/ALGHREST-research-stabilization-example.pdf"
+    },
+    "packaging_check": "not rerun; Poetry build backend unavailable in this environment; no dependency installation attempted"
+  },
+  "observation": {
+    "schema": "research-observation-v1",
+    "started_at": "2026-10-16T10:01:31.004583+00:00",
+    "requested_seconds": 1800.0,
+    "symbols": [
+      "AAPL",
+      "MSFT",
+      "BTC",
+      "^VIX"
+    ],
+    "interval_seconds": 60.0,
+    "isolation": "Live HTTP reads only; snapshot/PDF/backup operations use a separate disposable journal",
+    "status": "passed",
+    "finished_at": "2026-10-16T10:31:51.265585+00:00",
+    "observed_seconds": 1820.2610144219943,
+    "max_sample_gap_seconds": 60.00101,
+    "limits": [
+      "Only the recorded interval and source/session states were observed; no 24-hour or multi-session stability claim",
+      "Feed failures remain explicit; market freshness/event completeness are not certified",
+      "No service restart, broker, execution or user-journal mutation"
+    ],
+    "cycles": 31,
+    "elapsed_seconds": 1820.2610285440169,
+    "last_sample_at": "2026-10-16T10:31:31.005854+00:00",
+    "source_states": {
+      "MSFT:quotes:available": 31,
+      "MSFT:news:available": 31,
+      "MSFT:history:available": 31,
+      "AAPL:quotes:available": 31,
+      "AAPL:news:available": 31,
+      "AAPL:history:available": 31,
+      "BTC:quotes:available": 31,
+      "BTC:news:available": 31,
+      "BTC:history:available": 31,
+      "^VIX:quotes:unavailable": 31,
+      "^VIX:news:available": 31,
+      "^VIX:history:unavailable": 31
+    },
+    "reported_sessions": {
+      "MSFT:pre": 31,
+      "AAPL:pre": 31,
+      "BTC:unknown": 31,
+      "^VIX:unknown": 31
+    },
+    "failure": null
+  },
+  "per_symbol_observation": {
+    "AAPL": {
+      "samples": 31,
+      "max_latency_seconds": 5.837279364001006,
+      "history_providers": [
+        "nasdaq"
+      ],
+      "quality_states": {
+        "limited": 31
+      },
+      "quote_context_states": {
+        "unknown": 31
+      }
+    },
+    "MSFT": {
+      "samples": 31,
+      "max_latency_seconds": 5.365068181999959,
+      "history_providers": [
+        "nasdaq"
+      ],
+      "quality_states": {
+        "limited": 31
+      },
+      "quote_context_states": {
+        "unknown": 31
+      }
+    },
+    "BTC": {
+      "samples": 31,
+      "max_latency_seconds": 1.3045223339868244,
+      "history_providers": [
+        "binance"
+      ],
+      "quality_states": {
+        "usable": 31
+      },
+      "quote_context_states": {
+        "unknown": 31
+      }
+    },
+    "^VIX": {
+      "samples": 31,
+      "max_latency_seconds": 16.02574029599782,
+      "history_providers": [
+        "unavailable"
+      ],
+      "quality_states": {
+        "unavailable": 31
+      },
+      "quote_context_states": {
+        "unavailable": 31
+      }
+    }
+  },
+  "observation_restore": {
+    "sha256": "be00cc0fe5ce6c57d609a41c9b189a7c3fb1b95bafce110d70dae03f297d86c1",
+    "watches_in_file": 4,
+    "snapshots_in_file": 124,
+    "watches_added": 4,
+    "snapshots_added": 124,
+    "snapshots_unchanged": 0,
+    "raw_snapshot_sha256": "4c5533027ccb4335333f1a70a5cb7f50f29dc70597c7cb6f8356e0eec79b23af",
+    "pdf_bytes": 60965,
+    "pdf_sha256": "1be15cb8cbf3355e1db7c35efaa3050bae97e2a4f1d6141f935d90214ca604ca"
+  },
+  "operator_backup": {
+    "status": "passed",
+    "backup_file": "artifacts/private-research-backups/research-backup-20261016T100025Z.json",
+    "watches": 0,
+    "snapshots": 0,
+    "sha256": "35e6284405241d4f7a36d187b3aff6d8d806744f780251173d3e46e43afc447a",
+    "file_mode": "0o600",
+    "exact_restore_into_isolated_database": true,
+    "account_tables_and_credentials_excluded": true,
+    "original_snapshot_payloads_unchanged": true
+  },
+  "limits": [
+    "Infrastructure-dependent tests require disposable PostgreSQL/Redis, Docker/Kafka or explicit paper-runtime settings; 53 skipped",
+    "Only the recorded thirty-minute interval is observed; no multiple-session or 24-hour claim",
+    "Market-data freshness, event completeness and trading readiness remain unverified",
+    "Native Windows runtime cleanup remains unverified"
+  ],
+  "review": "docs/maintenance/research-stabilization-review.md",
+  "checkpoint_branch": "codex/research-stabilization",
+  "checkpoint_receipt": "artifacts/research-stabilization-20261016/checkpoint.json"
+}

@@ -1,0 +1,69 @@
+{
+  "schema": "alghrest-openterminal-overview-verification-v1",
+  "verified_at": "2026-10-16T00:34:42.287236+00:00",
+  "scope": "Watchlist overview with per-symbol indicators, saved-snapshot comparisons, data-status warnings, detail navigation and manual bounded refresh.",
+  "changes": [
+    "One row per saved watch symbol, using latest two historical snapshots on initial load.",
+    "Manual Refresh all and individual retry use the existing read-only research endpoint with two workers.",
+    "Progress distinguishes responses, request errors and skipped symbols; stopping drains running requests and skips queued work.",
+    "Current readings expire after 90 seconds and fall back to labelled saved snapshots. Failed requests preserve original reading clocks.",
+    "Details synchronizes the selected native chart, scrolls to the research panel and refreshes its reading.",
+    "Optional bounded history query limit preserves the existing API default and stored history."
+  ],
+  "tests": {
+    "backend_API_and_research_regressions": 126,
+    "dashboard_regressions": 174,
+    "new_overview_dashboard_tests_included": 13,
+    "new_history_limit_backend_tests_included": 2
+  },
+  "checks": {
+    "dashboard_typecheck_and_production_build": "passed",
+    "ruff": "passed",
+    "black": "passed",
+    "strict_mypy_two_changed_sources": "passed",
+    "six_package_architecture": "passed",
+    "git_diff_whitespace": "passed",
+    "linux_startup_shutdown": "passed",
+    "four_ports_free_after_stop": "passed"
+  },
+  "browser": {
+    "account": "isolated synthetic local journal and token; public OpenTerminal market responses",
+    "symbols": [
+      "AAPL",
+      "MSFT"
+    ],
+    "initial_saved_snapshot_rendered": true,
+    "refresh_all_responses": 2,
+    "refresh_all_request_errors": 0,
+    "both_rows_displayed_current_indicators_and_status": true,
+    "changed_MSFT_indicators_and_headline_count_highlighted": true,
+    "unknown_timeframe_qualification_visible": true,
+    "expired_rows_reverted_to_saved_or_unavailable_readings": true,
+    "details_selected_MSFT_and_loaded_its_research_summary": true,
+    "refresh_created_no_snapshots": true,
+    "screenshots": [
+      "overview.jpg",
+      "expired-overview.jpg"
+    ]
+  },
+  "limits": [
+    "Market freshness, event coverage and unreported candle timeframes remain unverified.",
+    "Newly returned headline URLs are not necessarily newly published events.",
+    "Request errors and stop/worker behavior verified by deterministic tests; public browser refresh completed without request errors.",
+    "Full infrastructure suite, repository-wide coverage gate and Windows runtime not run.",
+    "Native OpenTerminal unchanged; native tests not rerun."
+  ],
+  "artifacts": "artifacts/openterminal-overview-20261015",
+  "source_sha256": {
+    "src/connectors/advisory/research_journal.py": "fe046858ee561f3c964a7ce07ee4d990add1b95195e2efa4c594ae3910ff04a5",
+    "src/api/routes/research_journal.py": "f7aaffa76b868dd1cb5dda6542e92e2d76dc1c0b2f97209f9052ab28d43e226e",
+    "tests/unit/test_research_journal.py": "dd01ad6ed9c92df1e59896d5c2b1bd2b8a73ec58a231036af556eeb37b980ca2",
+    "dashboard/src/components/advisory/ResearchJournalPanel.tsx": "51aa9991fa052731b01595e86b8e01d75ed6c233d59595ee51d6257a1843c877",
+    "dashboard/src/pages/ResearchTerminal.tsx": "28bbb5463032045ec963009a14115e69cbc7b2a2b7e1b01e6f2b36a654df701d",
+    "dashboard/src/components/advisory/TerminalResearchPanel.tsx": "eb3ac7e2edfdd74552e2102cdb72faaed40ae4f61e9c6f91806a9f4d9880e99f",
+    "docs/maintenance/openterminal-integration.md": "6103254f4795f30d259eacbff7bd06f56433b9487569f57c3768bbc8e81f2524",
+    "dashboard/src/lib/watchlistOverview.ts": "bf12daa51dac73fe4bfd05d1e4da000dc50a92db090f8db216535606ffb52e8f",
+    "dashboard/src/components/advisory/WatchlistOverview.tsx": "a0b42d1f506edc151cc96868912da1d6203b741f0be52f1860fa6727477a41b1",
+    "dashboard/tests/watchlist-overview.test.ts": "ddb87de7d6a9c4a348d768514b269b35a4d6d68d68a5c3f7d85e7e533257cbdc"
+  }
+}

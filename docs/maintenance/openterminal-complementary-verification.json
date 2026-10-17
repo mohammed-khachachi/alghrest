@@ -1,0 +1,75 @@
+{
+  "schema": "alghrest-openterminal-complementary-verification-v1",
+  "verified_at": "2026-10-14T23:56:56.568089+00:00",
+  "upstream_commit": "aed097c680cd8ec1c391ae06966babe7d6d91fc6",
+  "integration": [
+    "embedded terminal and manual assistant on /research",
+    "bidirectional public-symbol bridge MES/SPY and MNQ/QQQ",
+    "authenticated read-only Python consumption of terminal quotes/news",
+    "single supervisor starts four local services"
+  ],
+  "tests": {
+    "python_focused": 373,
+    "dashboard": 122,
+    "terminal_server": 26,
+    "combined_launcher": 3,
+    "isolated_launcher": 3
+  },
+  "checks": {
+    "python_ruff": "passed",
+    "python_strict_mypy": "passed",
+    "architecture": "passed",
+    "dashboard_types": "passed",
+    "terminal_types": "passed",
+    "dashboard_build": "passed",
+    "terminal_build": "passed",
+    "linux_supervisor_startup": "passed",
+    "linux_ctrl_c_shutdown_four_ports_free": "passed"
+  },
+  "browser": {
+    "fixture": "isolated synthetic token and empty synthetic account database",
+    "observed": [
+      "QQQ public quote and headlines consumed in ALGHREST",
+      "MES selection changed iframe to SPY and source context to SPY",
+      "risk entry/stop remained empty",
+      "context expiry hid old quote",
+      "refresh fetched a new source context"
+    ],
+    "reverse_symbol_selection": "implemented and protocol-tested; automated iframe clicks failed in browser tool, so reverse UI action was not confirmed"
+  },
+  "limits": [
+    "ETF quotes are not qualified dated futures prices",
+    "source market freshness and event risk UNKNOWN",
+    "no trade permission or execution",
+    "full Python infrastructure suite and coverage gate not rerun",
+    "Windows runtime not tested",
+    "public providers may be slow/unavailable"
+  ],
+  "warnings": [
+    "36 existing datetime.utcnow deprecation warnings in Python tests",
+    "existing Browserslist data age warning during dashboard build",
+    "initial combined Node test subprocess invocation failed in sandbox; both test files subsequently passed individually with local-port access"
+  ],
+  "source_sha256": {
+    "src/api/advisor.py": "9693df542470c309266ffc2ee8634bc3a5f91b499d331b2eabc89ae6329ced02",
+    "dashboard/src/pages/ResearchTerminal.tsx": "9596fd2b688a5225f28f4aa96dee09b9c97b8ff398a3496e9c3edf5f643446c2",
+    "dashboard/src/pages/ManualAssistant.tsx": "c3dc994e43983092a10ba8b9d3db1c95b2f1ba798dc5608d88882cf47eec1aa2",
+    "vendor/openterminal/web/components/Terminal.tsx": "3ba82694ad7c978d2b4e51329ac1310d2726b03a6034ef82845a09a41778286a",
+    "vendor/openterminal/web/app/layout.tsx": "4b8589d5602a111bb035292b5263e8c96b2e4f617fe2e8edd17821bcbffb77e3",
+    "vendor/openterminal/UPSTREAM.json": "f9682c6a6127fc0d889857ab99e81d78b80b5600ba6f6d5d150c9aa730168bc0",
+    "vendor/openterminal/INTEGRATION.md": "5a0c15791fc1ed94ef936340aab0f7de6c67fab342a40986b919a43c6199d9dc",
+    "docs/maintenance/openterminal-integration.md": "bfe8368455afb1c897c4d3feb82c56dfbde7720a292f4fdca1c4bd207bf0a70e",
+    "src/core/advisory/openterminal_context.py": "6682a594c0cbb77836c36a4995c2786930550b7d1e53187c7bba02be3e685e65",
+    "src/connectors/advisory/openterminal.py": "aa7a7e035a5d456563bb3738e349858093358e786704bd087ee70ffb111f11de",
+    "src/api/routes/openterminal_context.py": "e7fb87678db3d14a2877b49e46726f04f31cb6e7796fcfc3217adfcf0c153851",
+    "dashboard/src/lib/terminalBridge.ts": "8920dd4c706162ace1bca8bf3f383424ec75b9101e37df083827b84f06bb9bd2",
+    "dashboard/src/components/advisory/OpenTerminalContextPanel.tsx": "a28462e16ddbca6e2ee4a44fca5599ff45c7e72ba11bdc6986d653f8ac9bbaab",
+    "vendor/openterminal/web/components/IntegrationBridge.tsx": "e603b90c49d23d3df56d240ac350b547f7bdd98cd0fddd1b944b8fec5ac01589",
+    "scripts/run_research.mjs": "5cff4f4a02c0b89737f2d86b588761e551f996022c581c5caa2ba8dd8dbce958",
+    "tests/unit/test_openterminal_context.py": "65907d8218b5ef252cd6b4a2e25698f5cc29ba496807fe016f6bd08db895048b",
+    "dashboard/tests/terminal-bridge.test.ts": "333417eadf1b669210798f78697ad1cfdd668c61b2459affe8ff8408565ee9b6",
+    "tests/research-launcher.test.mjs": "bf50588470708d4372d6614c6037c80ec56db514743efcf3f4361f416819370a"
+  },
+  "evidence_directory": "artifacts/openterminal-complementary-20261014",
+  "historical_receipt": "docs/maintenance/openterminal-verification.json retained unchanged"
+}

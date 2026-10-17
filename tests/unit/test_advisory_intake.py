@@ -159,7 +159,7 @@ def test_cli_exit_codes_and_read_only_output(tmp_path, capsys):
     path = tmp_path / "snapshot.json"
     payload = value.model_dump_json().encode()
     path.write_bytes(payload)
-    assert main(arguments(path, value) + ["--origin", "synthetic"]) == 0
+    assert main([*arguments(path, value), "--origin", "synthetic"]) == 0
     assert_abstains(json.loads(capsys.readouterr().out))
     value.quality = None
     path.write_text(value.model_dump_json())
@@ -185,7 +185,7 @@ def test_cli_oversized_input_has_no_false_full_file_identity(tmp_path, capsys):
 @pytest.mark.parametrize("option", ["--execute", "--cancel", "--submit", "--allow-trading"])
 def test_cli_rejects_order_options(tmp_path, option):
     with pytest.raises(SystemExit) as raised:
-        main(arguments(tmp_path / "missing.json", snapshot()) + [option])
+        main([*arguments(tmp_path / "missing.json", snapshot()), option])
     assert raised.value.code == 2
 
 

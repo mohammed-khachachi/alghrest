@@ -1,0 +1,89 @@
+{
+  "schema": "alghrest-research-brief-verification-v1",
+  "verified_at": "2026-10-16T00:53:58.547047+00:00",
+  "scope": "Exportable dated PDF research brief from the saved watchlist with historical comparisons, source links and explicit missing-data labels.",
+  "implementation": [
+    "Authenticated offline GET PDF endpoint; one SQLite read transaction over membership and latest two snapshots.",
+    "Arabic font embedded with license and shipped in the wheel. Shaping and manual word wrapping preserve visible layout.",
+    "Watchlist index includes missing snapshots; summaries use saved historical closes and indicators.",
+    "Original snapshot IDs, providers, unknown intervals, cache status, market/receipt/fetch/publication clocks and source hashes preserved.",
+    "Browser validates authenticated PDF bytes, bounded size and safe server filename; ready-file link reuses the same bytes.",
+    "Renderer serialized for shared dynamic font safety. No market fetch or snapshot writes during export."
+  ],
+  "tests": {
+    "backend_API_and_research_regressions": 141,
+    "new_brief_backend_tests_included": 15,
+    "dashboard_regressions": 180,
+    "new_download_tests_included": 6
+  },
+  "checks": {
+    "ruff": "passed",
+    "black": "passed",
+    "strict_mypy_four_sources": "passed",
+    "six_package_architecture": "passed",
+    "dashboard_typecheck_build": "passed",
+    "poetry_lock_check": "passed",
+    "existing_dependency_versions_preserved": "passed",
+    "wheel_embedded_font_and_license": "passed",
+    "git_diff_whitespace": "passed",
+    "linux_startup_shutdown": "passed",
+    "all_four_ports_free_after_stop": "passed"
+  },
+  "dependencies_added": {
+    "arabic-reshaper": "3.0.1",
+    "python-bidi": "0.6.11",
+    "reportlab": "4.5.1"
+  },
+  "browser": {
+    "account": "isolated synthetic test journal with saved public market snapshots; no real account or credentials in report",
+    "download_button": "\u062a\u062d\u0645\u064a\u0644 \u0645\u0648\u062c\u0632 \u0627\u0644\u0628\u062d\u062b PDF",
+    "download_filename": "ALGHREST-research-2026-10-16.pdf",
+    "actual_browser_download_observed": true,
+    "ready_link_visible": true,
+    "history_unchanged": true,
+    "screenshot": "pdf-download.jpg"
+  },
+  "example": {
+    "path": "output/pdf/ALGHREST-research-example.pdf",
+    "sha256": "9c1872ff76fc2dc2f742ee77de240fc6656144ac345b2c01c34798a779ca729e",
+    "pages": 3,
+    "symbols": [
+      "AAPL",
+      "MSFT"
+    ],
+    "missing_snapshot_symbol": "AAPL",
+    "source_links": 3,
+    "all_pages_rendered_and_visually_reviewed": true,
+    "numeric_data_checked_with_pdfplumber": true,
+    "snapshot_example": "historical public data; not a current live report"
+  },
+  "limits": [
+    "Only saved snapshots enter the brief; unsaved refresh-all readings are excluded and the UI explains how to save them.",
+    "Freshness, event coverage and unreported candle intervals remain unverified.",
+    "Headline selection is title-based and article bodies are not fetched.",
+    "PDF text extraction varies by RTL-aware reader; pypdf omitted mixed numeric text while pdfplumber and visual rendering confirmed the original values.",
+    "Full infrastructure tests, repository-wide coverage gate and Windows runtime not run. Native terminal unchanged."
+  ],
+  "warnings": [
+    "Existing Poetry metadata deprecations",
+    "Existing Browserslist age warning"
+  ],
+  "artifacts": "artifacts/openterminal-brief-20261016",
+  "source_sha256": {
+    "pyproject.toml": "f539018b9889921f03309a99cb1716398cb49aa780b8e25a8d49ae0a9652ebbc",
+    "poetry.lock": "97de2c3fd60f7b063c0fd9858af9f2126e9d287cacad3d76b69457cc80335e91",
+    "src/api/advisor.py": "b203365a4814742a9519e007b1a485a1e1c4541dee00d24d790e059717400fca",
+    "src/connectors/advisory/research_journal.py": "799a6940acb6c820471ab5868f358590da237ebe11fe3a710b148c9c857d89a3",
+    "dashboard/src/components/advisory/ResearchJournalPanel.tsx": "b5d1b2c4f856fd259b2b43f34fc00fabe2d6684ec7be9b7444649216975a4b3d",
+    "docs/maintenance/openterminal-integration.md": "360e01de869279f80d174795e50d13dd7fd967e818b233094696d5fd3e57732c",
+    "src/core/advisory/research_brief.py": "2b52c8aae6218282282af4f2a48958b7f682332eea203c9e55fb16e7b700cd46",
+    "src/api/services/research_pdf.py": "1da28448503cc93f765dba1fa5746a89f730ceda5ff96073da0cfa2836862e23",
+    "src/api/routes/research_brief.py": "77f24bdca8e1f11d754fc33b49d26cb66aff101cf3c443d0078beb63114ef4e1",
+    "src/api/assets/research_pdf/DejaVuSans.ttf": "f0d9a390aa7cf43999a2fd1502a47c381bc7809ab5fac6937f0f6dd6524096cd",
+    "src/api/assets/research_pdf/FONT-LICENSE.txt": "7a083b136e64d064794c3419751e5c7dd10d2f64c108fe5ba161eae5e5958a93",
+    "dashboard/src/lib/researchBrief.ts": "417d1b575171937b4c59d387c62b9dddd1f4d62812bc299f98937ad3f35a1929",
+    "dashboard/src/components/advisory/ResearchBriefExport.tsx": "de4106cbd871eb8e9c9d3d863ea1c0429cefed03a12a351fa7153faa13125b5a",
+    "tests/unit/test_research_brief.py": "3b03264f29d5e51b827e679acea895faa49b7697b610a4dc4ab063950f867b9b",
+    "dashboard/tests/research-brief.test.ts": "4223a5e7d12585b96028ce02ae23cfcdc095b8353a12c430cdd454c263d099b3"
+  }
+}

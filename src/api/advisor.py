@@ -11,8 +11,16 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from api.routes.advisory_briefings import router as briefings_router
+from api.routes.advisory_capabilities import router as capabilities_router
+from api.routes.advisory_context import router as context_router
+from api.routes.advisory_observations import router as observations_router
+from api.routes.openterminal_context import router as openterminal_router
+from api.routes.research_brief import router as research_brief_router
+from api.routes.research_journal import router as research_journal_router
 from api.security import AccessTokenMiddleware
 from api.services.advisory import AdvisoryService
+from connectors.advisory.economic_calendar import CalendarCache
 from connectors.advisory.intelligence import consume
 from connectors.advisory.storage import AdvisoryStore
 from core.advisory.account import assess_account_role
@@ -30,7 +38,16 @@ from core.advisory.evaluation import (
 from core.advisory.imports import CSVImport
 from core.advisory.models import CATALOG, Interval, MarketSnapshot, RiskWorksheet, Watchlist, utcnow
 from core.advisory.policy import PolicyAssessment, PolicyControls, TCP25Policy, TCP50Policy
+from core.advisory.research_backup import MAX_BACKUP_BYTES
 from core.advisory.risk import RiskDecision, RiskRequest
+from core.advisory.user_policy import UserPolicyAssessment, UserPolicyRequest, assess_user_policy
+from core.advisory.user_risk import (
+    UserRiskAssessment,
+    UserRiskRequest,
+    assess_user_risk,
+    personal_account_status,
+    personal_rules,
+)
 from core.config import settings
 from core.kafka.security import aiokafka_security
 
@@ -64,6 +81,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             else None
         )
         app.state.service = AdvisoryService(store, client, evaluation_policy=policy)
+        app.state.calendars = CalendarCache()
         task = (
             asyncio.create_task(consume(store, settings.advisory_kafka_servers))
             if settings.advisory_kafka_servers
@@ -98,10 +116,25 @@ async def local_writes(request: Request, call_next: Any) -> Any:
             )
         # Check bytes received, including chunked requests, before JSON parsing.
         body = bytearray()
+        limit = (
+            MAX_BACKUP_BYTES
+            if request.url.path
+            in {"/assistant-api/research-backup/preview", "/assistant-api/research-backup/restore"}
+            else 500000
+        )
         async for chunk in request.stream():
             body.extend(chunk)
-            if len(body) > 500000:
-                return JSONResponse({"detail": "Request exceeds 500 KB"}, status_code=413)
+            if len(body) > limit:
+                return JSONResponse(
+                    {
+                        "detail": (
+                            "Request exceeds 500 KB"
+                            if limit == 500000
+                            else "Research backup exceeds 32 MiB"
+                        )
+                    },
+                    status_code=413,
+                )
         request._body = bytes(body)
     return await call_next(request)
 
@@ -109,6 +142,13 @@ async def local_writes(request: Request, call_next: Any) -> Any:
 # Added after the body middleware so unauthorized requests never enter handlers
 # or buffer an import body. Host checks still apply to authenticated requests.
 app.add_middleware(AccessTokenMiddleware, service="advisory")
+app.include_router(observations_router)
+app.include_router(context_router)
+app.include_router(briefings_router)
+app.include_router(capabilities_router)
+app.include_router(openterminal_router)
+app.include_router(research_journal_router)
+app.include_router(research_brief_router)
 
 
 @app.get("/health/live", include_in_schema=False)
@@ -307,6 +347,45 @@ async def risk_decision(evaluation_id: str, value: RiskRequest, request: Request
         raise HTTPException(400, str(exc)) from exc
     except TimeoutError as exc:
         raise HTTPException(504, "Risk evidence timed out; no trade permitted") from exc
+
+
+@app.post("/assistant-api/evaluations/{evaluation_id}/user-policy-check")
+async def user_policy_check(
+    evaluation_id: str, value: UserPolicyRequest, request: Request
+) -> UserPolicyAssessment:
+    try:
+        advisor = service(request)
+        profile, rows = await asyncio.to_thread(advisor.store.evaluation, evaluation_id)
+        return assess_user_policy(profile, rows, value, now=advisor.clock())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/assistant-api/user-policy-rules")
+async def user_rules() -> dict[str, Any]:
+    return personal_rules()
+
+
+@app.get("/assistant-api/evaluations/{evaluation_id}/personal-status")
+async def personal_status(evaluation_id: str, request: Request) -> dict[str, Any]:
+    try:
+        advisor = service(request)
+        profile, rows = await asyncio.to_thread(advisor.store.evaluation, evaluation_id)
+        return personal_account_status(profile, rows, now=advisor.clock())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/assistant-api/evaluations/{evaluation_id}/personal-plan")
+async def personal_plan(
+    evaluation_id: str, value: UserRiskRequest, request: Request
+) -> UserRiskAssessment:
+    try:
+        advisor = service(request)
+        profile, rows = await asyncio.to_thread(advisor.store.evaluation, evaluation_id)
+        return assess_user_risk(profile, rows, value, now=advisor.clock())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.get("/assistant-api/risk-decision/{decision_id}")

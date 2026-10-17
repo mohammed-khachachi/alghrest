@@ -1,0 +1,84 @@
+{
+  "schema": "alghrest-openterminal-data-first-verification-v1",
+  "verified_at": "2026-10-15T00:11:25.976106+00:00",
+  "user_scope": "Use OpenTerminal instruments/data as the research foundation; do not impose the ALGHREST futures data requirements on that workspace.",
+  "integration": [
+    "selected native terminal symbol is the actual research identity",
+    "generic public-symbol synchronization without futures substitution",
+    "authenticated read-only quotes/history/news connector",
+    "SMA20/SMA50, simple-window RSI14/ATR14 and 20-bar extrema",
+    "partial availability without fake candles, quote substitution or automatic orders"
+  ],
+  "tests": {
+    "focused_python_regressions": 397,
+    "new_terminal_research_python": 24,
+    "dashboard_regressions": 129,
+    "terminal_server": 26,
+    "research_launcher": 3
+  },
+  "checks": {
+    "ruff": "passed",
+    "strict_python_mypy_five_sources": "passed",
+    "six_package_architecture": "passed",
+    "dashboard_type_check_and_build": "passed",
+    "terminal_type_check_and_build": "passed",
+    "git_diff_whitespace": "passed",
+    "linux_startup_and_ctrl_c_shutdown": "passed",
+    "all_four_ports_free_after_stop": "passed"
+  },
+  "live_verification": {
+    "symbol": "AAPL",
+    "bars": 131,
+    "history_response_sha256_matches": true,
+    "independent_sma20_and_sma50_replay": true,
+    "account": "isolated synthetic test token/database; no account data requested"
+  },
+  "browser": {
+    "actual_terminal_initial_symbol": "SPY",
+    "selected_analysis_symbol": "AAPL",
+    "native_chart_acknowledged_AAPL": true,
+    "public_quotes_history_news_displayed": true,
+    "manual_futures_import_form_absent_on_research": true,
+    "reverse_iframe_click": "not confirmed: browser tool could read iframe but failed native iframe click; protocol and native acknowledgment checks passed"
+  },
+  "limits": [
+    "public market freshness and event completeness remain UNKNOWN",
+    "effective history provider/frequency not supplied by upstream",
+    "indicators are descriptive, not qualified trade signals",
+    "unavailable feeds remain unavailable",
+    "full infrastructure tests and repository-wide coverage gate not rerun",
+    "Windows runtime not tested"
+  ],
+  "resolved_verification_issues": [
+    "synthetic history fixture Decimal JSON serialization corrected",
+    "sum initial Decimal typing corrected",
+    "Next build and dev process briefly overlapped; dev stopped and isolated build passed",
+    "sandbox restricted a local test server; owned stalled test run stopped and suite passed with local-port permission"
+  ],
+  "warnings": [
+    "36 existing datetime.utcnow deprecation warnings",
+    "existing Browserslist data age warning"
+  ],
+  "artifacts": "artifacts/openterminal-data-first-20261015",
+  "source_sha256": {
+    "dashboard/src/pages/ResearchTerminal.tsx": "95cd1c5c71025800ae01850c6812c93587b5a90182309d3444e9cc770b3e6a4a",
+    "dashboard/src/lib/terminalBridge.ts": "31b0ceb240d0161cc4e0abf18eec65ada822e00a9ca04c880fe8474b71fe8249",
+    "vendor/openterminal/web/components/IntegrationBridge.tsx": "81edb686007bb26e5d009f7726c52237bd58454795e67aa9dec1caae21993f51",
+    "src/api/routes/openterminal_context.py": "8dad278d5ae7ebe0f4ec21084430056ea6283f7583edf7ac1007415b7a21a147",
+    "src/connectors/advisory/openterminal.py": "d175b1871b98ee7d4876e89a4d829fa37772615b08bcda5b3cdb39302d2ac390",
+    "src/core/advisory/openterminal_context.py": "519af0ea99af16be6ff3007f6eda02350629a673e6f8aaf8928ba371ac0750ea",
+    "docs/maintenance/openterminal-integration.md": "bf3ef18778844d34f6b6dee56ed840324e5d88bb83ee443c4fdfba0d3824d1d7",
+    "vendor/openterminal/INTEGRATION.md": "84daa1914554d2d7a527b8a3f24a2760d8e517ca8070357e938e7f5b6b7b0571",
+    "vendor/openterminal/UPSTREAM.json": "f9682c6a6127fc0d889857ab99e81d78b80b5600ba6f6d5d150c9aa730168bc0",
+    "src/core/advisory/openterminal_research.py": "50a451b646bb9a14744c3228f4f79f9e5aff3e8c036e6add84f89fb7250b5ae6",
+    "src/connectors/advisory/openterminal_research.py": "36a11307c1f71b68ad68629efea78b509ce6c2dda350bee7cc138743299c6469",
+    "dashboard/src/lib/terminalResearch.ts": "4f80e99f11e3a863bb5023879e3130d67a1cc8702edf7f65ba08c73112d31f52",
+    "dashboard/src/components/advisory/TerminalResearchPanel.tsx": "3e197aea4b34e7bed8caf1a5229725cfba677297e01493a459eb10b39cd36da9",
+    "tests/unit/test_openterminal_research.py": "56d279ea6216a67d4b89c5575582945a08dc23f237e3e1373994b4d285d17a3c",
+    "dashboard/tests/terminal-research.test.ts": "a6dc1ae674ab37880a78022484799573d3cc569b3b68b8b2d140e440dc612825"
+  },
+  "historical_receipts": [
+    "docs/maintenance/openterminal-verification.json",
+    "docs/maintenance/openterminal-complementary-verification.json"
+  ]
+}

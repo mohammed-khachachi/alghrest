@@ -1,0 +1,73 @@
+{
+  "schema": "alghrest-openterminal-quality-verification-v1",
+  "verified_at_utc": "2026-10-16T01:32:05.135Z",
+  "status": "passed",
+  "scope": "Candle integrity counts and window-specific conclusion suppression in read-only research, summaries, snapshots, comparisons and PDF briefs",
+  "data_contract": "candle-quality-v1; optional additive data_quality field on openterminal-research-v1 for legacy snapshots",
+  "checks": [
+    "Malformed OHLC/volume and invalid/missing, duplicate, out-of-order or future timestamps expose counts and block the series without repairing source rows",
+    "Fetch clocks must follow returned candles and not exceed collection clocks",
+    "Declared fixed intervals report long gaps; only Binance fixed intervals permit continuous missing-slot and off-grid checks",
+    "Missing intervals outside the trailing 50/15-candle windows do not suppress unaffected calculations",
+    "Confirmed gaps inside windows, insufficient samples and reported stale cache suppress only the affected conclusions",
+    "Quality status, sample eligibility, source/interval identity and exposed metrics must be consistent in Python and frontend contracts",
+    "Quote and headline results remain independent when history fails",
+    "Old snapshots remain readable with an explicit unassessed quality label, and their stored payload bytes remain unchanged",
+    "New quality assessments persist across a complete restart; PDF exports remain available during a native API outage"
+  ],
+  "tests": {
+    "python_research_api": 163,
+    "dashboard": 188,
+    "native_terminal": 33,
+    "node_launcher_check_supervisor": 10,
+    "total": 394,
+    "new_quality_cases": {
+      "python": 22,
+      "dashboard": 8
+    }
+  },
+  "targeted_static_checks": {
+    "ruff": "passed",
+    "black": "passed",
+    "mypy": "passed (5 source files with explicit package bases)",
+    "dashboard_production_build": "passed"
+  },
+  "workflow_receipt": "artifacts/research-check-2026-10-16T01-31-14Z/verification.json",
+  "preview_receipt": "artifacts/research-check-2026-10-16T01-24-35Z/verification.json",
+  "browser_checks": [
+    {
+      "status": "passed",
+      "check": "MSFT returned 132 candles; zero observed timestamp/row defects; unknown interval/calendar remained limited rather than a missing-bar claim",
+      "screenshot": "artifacts/openterminal-quality-20261016/quality-limited.jpg"
+    },
+    {
+      "status": "passed",
+      "check": "Native API outage shows unknown counts and blocked trend/momentum/volatility, with an explanation",
+      "screenshot": "artifacts/openterminal-quality-20261016/quality-unavailable.jpg"
+    },
+    {
+      "status": "passed",
+      "check": "Saved MSFT quality evidence reopened after full restart with original assessment time and counts",
+      "screenshot": "artifacts/openterminal-quality-20261016/quality-saved-after-restart.jpg"
+    },
+    {
+      "status": "passed",
+      "check": "Saved research PDF downloaded during outage; quality evidence and subsequent page content rendered and visually inspected",
+      "evidence": "artifacts/openterminal-quality-20261016/browser-export.pdf",
+      "rendered_pages": [
+        "artifacts/openterminal-quality-20261016/pdf-page-2.png",
+        "artifacts/openterminal-quality-20261016/pdf-page-3.png"
+      ]
+    }
+  ],
+  "isolation": "temporary synthetic local journal and terminal data; no user account database or credentials",
+  "source_hashes": "artifacts/openterminal-quality-20261016/source-hashes.json",
+  "scoped_patch": "artifacts/openterminal-quality-20261016/quality-check.patch",
+  "cleanup": "Final automated check confirmed all four owned services stopped and their ports were free; the temporary browser tab was closed",
+  "limits": [
+    "Freshness, provider latency, session/holiday calendars and event completeness remain unverified.",
+    "Usable means the returned series passed these integrity/eligibility checks; it does not certify current prices or trading readiness.",
+    "Synthetic defect fixtures exercise failure paths; public AAPL/MSFT snapshots verify the actual integration independently.",
+    "Full infrastructure/coverage gate and native Windows runtime were not rerun in this increment."
+  ]
+}

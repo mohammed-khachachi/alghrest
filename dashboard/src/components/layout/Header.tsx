@@ -52,7 +52,7 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
     }
   }, [addToast]);
 
-  const status = researchOnly ? 'RESEARCH' : systemStatus?.status ?? 'PAPER';
+  const status = researchOnly ? 'RESEARCH' : systemStatus?.status ?? 'CONNECTING';
 
   return (
     <header className="flex items-center gap-3 px-4 py-3 bg-bg-surface border-b border-border flex-shrink-0">
@@ -71,6 +71,7 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
           {
             'bg-profit/10 border-profit/30 text-profit': status === 'LIVE',
             'bg-warning/10 border-warning/30 text-warning': status === 'PAPER',
+            'bg-indigo-500/10 border-indigo-500/30 text-indigo-300': status === 'DEMO',
             'bg-loss/10 border-loss/30 text-loss': status === 'HALTED',
           },
         )}
@@ -79,6 +80,7 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
           className={clsx('w-1.5 h-1.5 rounded-full', {
             'bg-profit animate-pulse': status === 'LIVE',
             'bg-warning': status === 'PAPER',
+            'bg-indigo-400': status === 'DEMO',
             'bg-loss animate-pulse': status === 'HALTED',
           })}
         />
@@ -99,7 +101,7 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
       </div>
 
       {/* Kill switch */}
-      {!researchOnly && <Dialog.Root open={killDialogOpen} onOpenChange={setKillDialogOpen}>
+      {!researchOnly && systemStatus && status !== 'DEMO' && <Dialog.Root open={killDialogOpen} onOpenChange={setKillDialogOpen}>
         <Dialog.Trigger asChild>
           <button
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-loss/10 border border-loss/30 text-loss text-xs font-mono font-bold hover:bg-loss/20 transition-colors"

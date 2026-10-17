@@ -135,7 +135,7 @@ export const RiskAlertPayloadSchema = z.object({
 
 // ── SYSTEM STATUS ─────────────────────────────────────────────────────────────
 
-export const SystemStatusValueSchema = z.enum(['LIVE', 'PAPER', 'HALTED']);
+export const SystemStatusValueSchema = z.enum(['LIVE', 'PAPER', 'HALTED', 'DEMO']);
 export type SystemStatusValue = z.infer<typeof SystemStatusValueSchema>;
 
 export const SystemStatusSchema = z.object({
