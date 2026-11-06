@@ -89,3 +89,5 @@ Thumbs.db
 /research/hmm_legacy/
 .kilo/
 .hypothesis/
+.chart-data-*/
+output/
