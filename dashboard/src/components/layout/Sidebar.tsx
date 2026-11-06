@@ -12,6 +12,7 @@ import {
   BarChart2,
   Presentation,
   BookOpen,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -19,7 +20,8 @@ import { useDashboardStore } from '@/store/useStore';
 import { navigationForScope, type NavigationId } from '@/lib/navigation';
 
 const ICONS: Record<NavigationId, LucideIcon> = {
-  assistant: BookOpen, research: BarChart2, overview: LayoutDashboard, agents: Bot,
+  assistant: BookOpen, research: BarChart2, overview: LayoutDashboard,
+  chat: Sparkles, agents: Bot,
   positions: TrendingUp, kafka: Activity, risk: Shield,
   investor: Presentation, auditor: ShieldCheck, backtest: BarChart2,
 };

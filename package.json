@@ -1,0 +1,30 @@
+{
+  "name": "alghrest",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "dashboard",
+    "packages/client"
+  ],
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "npm --prefix dashboard run build",
+    "lint": "npm --prefix dashboard run lint",
+    "start": "tsx server.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^3.0.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "express": "^4.21.2",
+    "vite": "^5.4.8",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.1",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.2"
+  }
+}

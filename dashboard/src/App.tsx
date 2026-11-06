@@ -20,11 +20,12 @@ const BacktestSimulation = lazy(() => import('@/pages/BacktestSimulation').then(
 const InvestorPitch = lazy(() => import('@/pages/InvestorPitch').then(m => ({ default: m.InvestorPitch })));
 const ManualAssistant = lazy(() => import('@/pages/ManualAssistant').then(m => ({ default: m.ManualAssistant })));
 const ResearchTerminal = lazy(() => import('@/pages/ResearchTerminal').then(m => ({ default: m.ResearchTerminal })));
+const GeminiChat = lazy(() => import('@/pages/GeminiChat').then(m => ({ default: m.GeminiChat })));
 
 
 export default function App() {
   useLanguage();
-  const [authorized, setAuthorized] = useState({ api: false, advisory: false });
+  const [authorized, setAuthorized] = useState({ api: true, advisory: true });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const scope = accessScopeForPath(useLocation().pathname);
   const assistantPage = scope === 'advisory';
@@ -33,12 +34,12 @@ export default function App() {
   const demoMode = useDashboardStore((s) => s.systemStatus?.status === 'DEMO');
 
   useEffect(() => {
-    if (ready && !assistantPage) wsClient.connect();
+    if (ready) wsClient.connect();
 
     return () => wsClient.disconnect();
-  }, [assistantPage, ready]);
+  }, [ready]);
 
-    if (!ready) return <AccessGate key={scope} scope={scope} onReady={() => setAuthorized(current => ({ ...current, [scope]: true }))} />;
+  if (!ready) return <AccessGate key={scope} scope={scope} onReady={() => setAuthorized(current => ({ ...current, [scope]: true }))} />;
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg-dark text-white">
@@ -50,10 +51,10 @@ export default function App() {
         />
       )}
 
-      <Sidebar researchOnly={assistantPage} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar researchOnly={false} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex flex-1 flex-col min-w-0">
-        <Header researchOnly={assistantPage} onMenuClick={() => setSidebarOpen((o) => !o)} />
+        <Header researchOnly={false} onMenuClick={() => setSidebarOpen((o) => !o)} />
 
         {!assistantPage && demoMode && (
           <div role="status" className="bg-indigo-500/10 border-b border-indigo-500/20 px-4 py-3 text-sm text-indigo-200">
@@ -79,6 +80,14 @@ export default function App() {
                 element={
                   <ErrorBoundary>
                     <Overview />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <ErrorBoundary>
+                    <GeminiChat />
                   </ErrorBoundary>
                 }
               />
