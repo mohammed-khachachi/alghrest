@@ -91,3 +91,4 @@ Thumbs.db
 .hypothesis/
 .chart-data-*/
 output/
+graphify-out/
