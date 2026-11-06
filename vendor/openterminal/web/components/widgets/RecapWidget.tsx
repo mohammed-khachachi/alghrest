@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, currentLocale, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, fmt, pctClass } from "../../lib/api";
@@ -23,6 +24,7 @@ type Recap = {
 };
 
 export default function RecapWidget() {
+  useLanguage();
   const setActiveSymbol = useTerminal((s) => s.setActiveSymbol);
   const { data, error } = useQuery({
     queryKey: ["recap"],
@@ -30,15 +32,14 @@ export default function RecapWidget() {
     refetchInterval: 15_000,
   });
 
-  if (error) return <div className="p-2 down">Error: {(error as Error).message}</div>;
-  if (!data) return <div className="p-2 dim">Loading market recap…</div>;
+  if (error) return <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>;
+  if (!data) return <div className="p-2 dim">{tr("Loading market recap…")}</div>;
 
   return (
     <div>
       <div className="px-2 py-1 flex justify-between items-baseline">
-        <span className="dim text-[10px] uppercase">Market Recap</span>
-        <span className="dim text-[9px]">
-          Updated {new Date(data.updatedAt).toLocaleTimeString()}
+        <span className="dim text-[10px] uppercase">{tr("Market Recap")}</span>
+        <span className="dim text-[9px]">{tr("Updated ")}{tr(new Date(data.updatedAt).toLocaleTimeString(currentLocale()))}
         </span>
       </div>
 
@@ -47,29 +48,29 @@ export default function RecapWidget() {
       <table className="data-table">
         <thead>
           <tr>
-            <th>Index</th>
-            <th>Last</th>
-            <th>Chg%</th>
+            <th>{tr("Index")}</th>
+            <th>{tr("Last")}</th>
+            <th>{tr("Chg%")}</th>
           </tr>
         </thead>
         <tbody>
           {data.indexes.map((q) => (
             <tr key={q.symbol} onClick={() => setActiveSymbol(q.symbol)}>
-              <td>{q.label}</td>
+              <td>{tr(q.label)}</td>
               <td>
-                <Flash value={q.price}>{fmt(q.price)}</Flash>
+                <Flash value={q.price}>{tr(fmt(q.price))}</Flash>
               </td>
               <td className={pctClass(q.changePercent)}>
-                <Flash value={q.changePercent}>{fmt(q.changePercent)}%</Flash>
+                <Flash value={q.changePercent}>{tr(fmt(q.changePercent))}%</Flash>
               </td>
             </tr>
           ))}
           {data.vix !== null && (
             <tr className="cursor-pointer" onClick={() => setActiveSymbol("^VIX")}>
-              <td>VIX</td>
+              <td>{tr("VIX")}</td>
               <td colSpan={2}>
                 <Flash value={data.vix} className="amber">
-                  {fmt(data.vix, 2)}
+                  {tr(fmt(data.vix, 2))}
                 </Flash>
               </td>
             </tr>
@@ -79,23 +80,23 @@ export default function RecapWidget() {
 
       <div className="grid grid-cols-2 gap-x-2 px-2 py-1">
         <div>
-          <div className="dim text-[10px] uppercase mb-1">Top gainers</div>
+          <div className="dim text-[10px] uppercase mb-1">{tr("Top gainers")}</div>
           {data.gainers.map((r) => (
             <div key={r.symbol} className="flex justify-between cursor-pointer hover:bg-[#161616]" onClick={() => setActiveSymbol(r.symbol)}>
               <span className="truncate mr-1">{r.symbol}</span>
               <span className={pctClass(r.changePercent)}>
-                <Flash value={r.changePercent}>{fmt(r.changePercent)}%</Flash>
+                <Flash value={r.changePercent}>{tr(fmt(r.changePercent))}%</Flash>
               </span>
             </div>
           ))}
         </div>
         <div>
-          <div className="dim text-[10px] uppercase mb-1">Top losers</div>
+          <div className="dim text-[10px] uppercase mb-1">{tr("Top losers")}</div>
           {data.losers.map((r) => (
             <div key={r.symbol} className="flex justify-between cursor-pointer hover:bg-[#161616]" onClick={() => setActiveSymbol(r.symbol)}>
               <span className="truncate mr-1">{r.symbol}</span>
               <span className={pctClass(r.changePercent)}>
-                <Flash value={r.changePercent}>{fmt(r.changePercent)}%</Flash>
+                <Flash value={r.changePercent}>{tr(fmt(r.changePercent))}%</Flash>
               </span>
             </div>
           ))}
@@ -103,17 +104,17 @@ export default function RecapWidget() {
       </div>
 
       <div className="px-2 py-1 border-t border-[#161616]">
-        <div className="dim text-[10px] uppercase mb-1">Sector performance</div>
+        <div className="dim text-[10px] uppercase mb-1">{tr("Sector performance")}</div>
         {data.sectors.map((s) => (
           <div key={s.sector} className="flex justify-between">
-            <span className="truncate mr-1">{s.sector}</span>
-            <span className={pctClass(s.avgChangePercent)}>{fmt(s.avgChangePercent)}%</span>
+            <span className="truncate mr-1">{tr(s.sector)}</span>
+            <span className={pctClass(s.avgChangePercent)}>{tr(fmt(s.avgChangePercent))}%</span>
           </div>
         ))}
       </div>
 
       <div className="border-t border-[#161616]">
-        <div className="dim text-[10px] uppercase px-2 pt-1">Headlines</div>
+        <div className="dim text-[10px] uppercase px-2 pt-1">{tr("Headlines")}</div>
         {data.news.map((n, i) => {
           const body = (
             <>
@@ -124,11 +125,11 @@ export default function RecapWidget() {
           const className = "block px-2 py-1 border-b border-[#161616] hover:bg-[#161616]";
           return isSafeHttpUrl(n.link) ? (
             <a key={i} href={n.link} target="_blank" rel="noreferrer" className={className}>
-              {body}
+              {tr(body)}
             </a>
           ) : (
             <div key={i} className={className}>
-              {body}
+              {tr(body)}
             </div>
           );
         })}

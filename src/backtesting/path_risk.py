@@ -53,7 +53,11 @@ def iid_loss_run_probability(probability: Decimal, horizon: int, loss_run: int) 
             states = [sum(states) * (1 - probability)] + [
                 value * probability for value in states[:-1]
             ]
-        return min(Decimal(1), max(Decimal(0), hit))
+        # Preserve the smaller tail: adding nearly all probability mass to
+        # `hit` accumulates rounding drift near one, while subtracting survival
+        # from one loses genuinely tiny hit probabilities near zero.
+        result = hit if hit <= Decimal("0.5") else Decimal(1) - sum(states)
+        return min(Decimal(1), max(Decimal(0), result))
 
 
 class LossStreakConfig(Evidence):

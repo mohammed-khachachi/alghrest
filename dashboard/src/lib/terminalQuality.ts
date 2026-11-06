@@ -1,3 +1,4 @@
+import { currentLocale } from '../i18n/core';
 import { z } from 'zod';
 import type { TerminalResearch } from './terminalResearch';
 
@@ -67,7 +68,7 @@ export function qualityReasons(q: CandleQuality | null | undefined): string[] {
   return q ? q.reasons.map(r => qualityReasonText[r]) : ['لقطة سابقة بلا فحص جودة؛ لم نعد تقييمها أو نغيّر بياناتها المحفوظة.'];
 }
 export function qualityEvidence(q: CandleQuality): Array<[string, string]> {
-  const n = (value: number | null) => value === null ? 'غير معلوم' : value.toLocaleString('ar-MA');
+  const n = (value: number | null) => value === null ? 'غير معلوم' : value.toLocaleString(currentLocale());
   return [
     ['الشموع المستلمة', n(q.received_candles)], ['شموع غير صالحة', n(q.invalid_candles)],
     ['أوقات غير صالحة', n(q.invalid_timestamps)], ['أوقات مكررة', n(q.duplicate_timestamps)],

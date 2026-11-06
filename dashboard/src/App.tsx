@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "./i18n";
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -22,6 +23,7 @@ const ResearchTerminal = lazy(() => import('@/pages/ResearchTerminal').then(m =>
 
 
 export default function App() {
+  useLanguage();
   const [authorized, setAuthorized] = useState({ api: false, advisory: false });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const scope = accessScopeForPath(useLocation().pathname);
@@ -55,21 +57,19 @@ export default function App() {
 
         {!assistantPage && demoMode && (
           <div role="status" className="bg-indigo-500/10 border-b border-indigo-500/20 px-4 py-3 text-sm text-indigo-200">
-            <strong>Demo data — paper account not connected.</strong>{' '}
-            Agent activity and portfolio values are simulated. This feed has no account positions or trade history.
-          </div>
+            <strong>{tr("Demo data — paper account not connected.")}</strong>{tr(' ')}{tr("Agent activity and portfolio values are simulated. This feed has no account positions or trade history.")}</div>
         )}
 
         {/* Reconnecting banner */}
         {!assistantPage && wsStatus !== 'connected' && (
           <div className="flex items-center gap-2 bg-warning/10 border-b border-warning/20 px-4 py-2 text-sm text-warning font-mono">
             <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse" />
-            {wsStatus === 'connecting' ? 'Connecting to data stream...' : 'Reconnecting...'}
+            {tr(wsStatus === 'connecting' ? 'Connecting to data stream...' : 'Reconnecting...')}
           </div>
         )}
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <Suspense fallback={<p role="status">تحميل الصفحة…</p>}>
+          <Suspense fallback={<p role="status">{tr("تحميل الصفحة…")}</p>}>
             <Routes>
               <Route path="/assistant" element={<ErrorBoundary><ManualAssistant /></ErrorBoundary>} />
               <Route path="/research" element={<ErrorBoundary><ResearchTerminal /></ErrorBoundary>} />

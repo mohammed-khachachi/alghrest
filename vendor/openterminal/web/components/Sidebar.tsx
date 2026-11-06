@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../i18n";
 
 import { useTerminal, type WidgetType } from "../store/terminal";
 
@@ -21,31 +22,28 @@ const ITEMS: Array<{ type: WidgetType; label: string; key: string }> = [
 ];
 
 export default function Sidebar() {
+  useLanguage();
   const addWidget = useTerminal((s) => s.addWidget);
   const resetWorkspace = useTerminal((s) => s.resetWorkspace);
 
   return (
-    <nav className="w-32 bg-[var(--panel)] border-r border-[var(--border)] flex flex-col shrink-0">
-      <div className="dim px-2 py-1 text-[10px] uppercase tracking-wider border-b border-[var(--border)]">
-        Add widget
-      </div>
+    <nav className="w-full md:w-32 bg-[var(--panel)] border-b md:border-b-0 md:border-e border-[var(--border)] flex flex-row md:flex-col shrink-0 overflow-x-auto md:overflow-x-visible">
+      <div className="dim px-2 py-1 text-[10px] uppercase tracking-wider md:border-b border-[var(--border)] shrink-0 whitespace-nowrap">{tr("Add widget")}</div>
       {ITEMS.map((item) => (
         <button
           key={item.type}
           onClick={() => addWidget(item.type)}
-          className="text-left px-2 py-1.5 text-[11px] hover:bg-[#1a1a1a] hover:text-[var(--amber)] flex justify-between"
+          className="text-start px-2 py-1.5 text-[11px] hover:bg-[#1a1a1a] hover:text-[var(--amber)] flex justify-between gap-2 shrink-0 whitespace-nowrap"
         >
-          <span>{item.label}</span>
-          <span className="dim text-[9px]">{item.key}</span>
+          <span>{tr(item.label)}</span>
+          <span className="dim text-[9px]">{tr(item.key)}</span>
         </button>
       ))}
-      <div className="mt-auto border-t border-[var(--border)]">
+      <div className="md:mt-auto md:border-t border-[var(--border)] shrink-0">
         <button
           onClick={resetWorkspace}
-          className="w-full text-left px-2 py-1.5 text-[11px] dim hover:text-[var(--down)]"
-        >
-          RESET LAYOUT
-        </button>
+          className="w-full text-start px-2 py-1.5 text-[11px] dim hover:text-[var(--down)] whitespace-nowrap"
+        >{tr("RESET LAYOUT")}</button>
       </div>
     </nav>
   );

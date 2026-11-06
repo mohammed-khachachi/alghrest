@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 const STRATEGIES = [
   'Trend', 'MeanRev', 'Momentum', 'StatArb',
   'ML', 'Options', 'MacroRot', 'Breakout',
@@ -33,6 +34,7 @@ function corrColor(v: number): string {
 }
 
 export function CorrelationHeatmap() {
+  useLanguage();
   const n = STRATEGIES.length;
 
   return (
@@ -47,7 +49,7 @@ export function CorrelationHeatmap() {
                 className="text-text-muted font-medium text-center px-1 py-1 whitespace-nowrap"
                 style={{ minWidth: 56 }}
               >
-                {s}
+                {tr(s)}
               </th>
             ))}
           </tr>
@@ -55,8 +57,8 @@ export function CorrelationHeatmap() {
         <tbody>
           {Array.from({ length: n }).map((_, row) => (
             <tr key={row}>
-              <td className="text-text-muted font-medium pr-2 text-right whitespace-nowrap">
-                {STRATEGIES[row]}
+              <td className="text-text-muted font-medium pr-2 text-end whitespace-nowrap">
+                {tr(STRATEGIES[row])}
               </td>
               {Array.from({ length: n }).map((_, col) => {
                 const v = BASE_CORR[row][col];
@@ -66,7 +68,7 @@ export function CorrelationHeatmap() {
                     key={col}
                     style={{ backgroundColor: bg }}
                     className="text-center rounded transition-all duration-300"
-                    title={`${STRATEGIES[row]} × ${STRATEGIES[col]}: ${v.toFixed(2)}`}
+                    title={tr(`${STRATEGIES[row]} × ${STRATEGIES[col]}: ${v.toFixed(2)}`)}
                   >
                     <span
                       className="block px-1 py-2 text-center"
@@ -75,7 +77,7 @@ export function CorrelationHeatmap() {
                         fontSize: '10px',
                       }}
                     >
-                      {v === 1.0 ? '1.0' : v.toFixed(2)}
+                      {tr(v === 1.0 ? '1.0' : v.toFixed(2))}
                     </span>
                   </td>
                 );

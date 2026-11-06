@@ -29,11 +29,16 @@ class Settings(BaseSettings):
 
     # ── SYSTEM ────────────────────────────────────────────
     environment: str = "development"  # development | paper_trading | live
+    live_trading: bool = False
+    live_preflight_verified: bool = False
+    live_max_db_latency_ms: float = Field(default=50.0, gt=0, le=5000)
     operating_profile: Literal["general", "earn2trade_tcp25", "earn2trade_tcp50"] = "general"
     log_level: str = "INFO"
     system_capital_usd: float = 10_000.0
     api_access_token: SecretStr = SecretStr("")
     advisory_access_token: SecretStr = SecretStr("")
+    risk_reset_token: SecretStr = SecretStr("")
+    risk_global_reset_token: SecretStr = SecretStr("")
     api_allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
@@ -98,6 +103,22 @@ class Settings(BaseSettings):
     dune_api_key: str = ""
     coingecko_api_key: str = ""
 
+    # ── OPENBB FINANCIAL DATA LAYER ───────────────────────
+    openbb_enabled: bool = False
+    openbb_fallback_to_mock: bool = True
+    openbb_default_equity_provider: str = "yfinance"
+    openbb_default_crypto_provider: str = "yfinance"
+    openbb_default_forex_provider: str = "yfinance"
+    openbb_default_macro_provider: str = "fred"
+    openbb_timeout_seconds: float = Field(default=15.0, gt=0.0, le=120.0)
+    openbb_cache_ttl_seconds: int = Field(default=300, ge=0, le=86400)
+    openbb_pat: SecretStr = SecretStr("")
+    openbb_fmp_api_key: SecretStr = SecretStr("")
+    openbb_polygon_api_key: SecretStr = SecretStr("")
+    openbb_tiingo_api_key: SecretStr = SecretStr("")
+    openbb_intrinio_api_key: SecretStr = SecretStr("")
+    openbb_alpha_vantage_api_key: SecretStr = SecretStr("")
+
     twitter_bearer_token: str = ""
     twitter_api_key: str = ""
     twitter_api_secret: str = ""
@@ -123,6 +144,7 @@ class Settings(BaseSettings):
     # ── INFRASTRUCTURE ────────────────────────────────────
     kafka_bootstrap_servers: str = "localhost:9092,localhost:9093,localhost:9094"
     kafka_security_protocol: Literal["PLAINTEXT", "SASL_PLAINTEXT", "SASL_SSL"] = "PLAINTEXT"
+    kafka_sasl_mechanism: Literal["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"] = "PLAIN"
     kafka_sasl_username: str = ""
     kafka_sasl_password: SecretStr = SecretStr("")
     kafka_ssl_cafile: str = ""
@@ -144,7 +166,11 @@ class Settings(BaseSettings):
     execution_recovery_page_budget: int = Field(default=30, ge=1, le=1000)
     execution_overlap_seconds: int = Field(default=86400, ge=60)
     execution_full_scan_seconds: int = Field(default=86400, ge=60)
+    execution_twap_num_slices: int = Field(default=6, ge=1, le=1000)
+    execution_twap_interval_seconds: int = Field(default=300, ge=1, le=86400)
     paper_fee_bps: Decimal = Field(default=Decimal("10"), ge=0, le=1000, allow_inf_nan=False)
+    # Deterministic simulated liquidity per match; no effect on live adapters.
+    paper_max_fill_size: Decimal | None = Field(default=None, gt=0, allow_inf_nan=False)
 
     @field_validator("execution_balance_tolerances")
     @classmethod
@@ -166,6 +192,7 @@ class Settings(BaseSettings):
     advisory_kafka_security_protocol: Literal["PLAINTEXT", "SASL_PLAINTEXT", "SASL_SSL"] = (
         "PLAINTEXT"
     )
+    advisory_kafka_sasl_mechanism: Literal["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"] = "PLAIN"
     advisory_kafka_sasl_username: str = ""
     advisory_kafka_sasl_password: SecretStr = SecretStr("")
     advisory_kafka_ssl_cafile: str = ""
@@ -210,7 +237,7 @@ class Settings(BaseSettings):
 
     @property
     def is_live(self) -> bool:
-        return self.environment == "live"
+        return self.environment == "live" or self.live_trading
 
     @property
     def is_paper(self) -> bool:

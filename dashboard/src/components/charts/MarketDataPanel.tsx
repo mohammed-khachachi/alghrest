@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clsx } from 'clsx';
@@ -52,6 +53,7 @@ function fmtAnchorDate(iso: string): string {
 }
 
 function Sparkline({ bars, up }: { bars: HistoricalBar[]; up: boolean }) {
+  useLanguage();
   const color = up ? '#4ade80' : '#f87171';
   return (
     <div className="h-14 w-full">
@@ -83,6 +85,7 @@ function Sparkline({ bars, up }: { bars: HistoricalBar[]; up: boolean }) {
 }
 
 function QuoteCard({ q }: { q: Quote }) {
+  useLanguage();
   const up = q.change_24h_pct > 0;
   const flat = q.change_24h_pct === 0;
   const Icon = flat ? Minus : up ? ArrowUp : ArrowDown;
@@ -99,7 +102,7 @@ function QuoteCard({ q }: { q: Quote }) {
         <div className="min-w-0">
           <div className="font-mono text-base font-semibold">{q.symbol}</div>
           <div className="text-[10px] uppercase tracking-wider text-text-muted">
-            {ASSET_CLASS_LABEL[q.asset_class]}
+            {tr(ASSET_CLASS_LABEL[q.asset_class])}
           </div>
         </div>
         <span
@@ -111,37 +114,37 @@ function QuoteCard({ q }: { q: Quote }) {
           )}
         >
           <Icon size={12} />
-          {q.change_24h_pct > 0 ? '+' : ''}
-          {q.change_24h_pct.toFixed(2)}%
+          {tr(q.change_24h_pct > 0 ? '+' : '')}
+          {tr(q.change_24h_pct.toFixed(2))}%
         </span>
       </div>
 
-      <div className="mt-3 font-mono text-2xl font-bold">{fmtPrice(q.price, q)}</div>
+      <div className="mt-3 font-mono text-2xl font-bold">{tr(fmtPrice(q.price, q))}</div>
 
       <div className="mt-3 grid grid-cols-3 gap-x-2 gap-y-1 font-mono text-[11px]">
         <div className="flex flex-col">
-          <span className="text-text-muted">Open</span>
-          <span>{fmtPrice(q.open, q)}</span>
+          <span className="text-text-muted">{tr("Open")}</span>
+          <span>{tr(fmtPrice(q.open, q))}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-text-muted">High</span>
-          <span className="text-green-300">{fmtPrice(q.high, q)}</span>
+          <span className="text-text-muted">{tr("High")}</span>
+          <span className="text-green-300">{tr(fmtPrice(q.high, q))}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-text-muted">Low</span>
-          <span className="text-red-300">{fmtPrice(q.low, q)}</span>
+          <span className="text-text-muted">{tr("Low")}</span>
+          <span className="text-red-300">{tr(fmtPrice(q.low, q))}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-text-muted">Bid</span>
-          <span>{fmtPrice(q.bid, q)}</span>
+          <span className="text-text-muted">{tr("Bid")}</span>
+          <span>{tr(fmtPrice(q.bid, q))}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-text-muted">Ask</span>
-          <span>{fmtPrice(q.ask, q)}</span>
+          <span className="text-text-muted">{tr("Ask")}</span>
+          <span>{tr(fmtPrice(q.ask, q))}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-text-muted">Vol</span>
-          <span>{fmtVolume(q.volume_24h)}</span>
+          <span className="text-text-muted">{tr("Vol")}</span>
+          <span>{tr(fmtVolume(q.volume_24h))}</span>
         </div>
       </div>
 
@@ -152,14 +155,14 @@ function QuoteCard({ q }: { q: Quote }) {
           <Skeleton className="h-14 rounded" />
         )}
         <div className="mt-1 text-center text-[10px] text-text-muted">
-          {HISTORY_DAYS}d trend
-        </div>
+          {tr(HISTORY_DAYS)}{tr("d trend")}</div>
       </div>
     </div>
   );
 }
 
 export function MarketDataPanel({ symbols }: Props) {
+  useLanguage();
   const { quotesBySymbol, asOf, quotesLoading, quotesFetching, quotesError } =
     useLiveQuotes();
 
@@ -174,9 +177,7 @@ export function MarketDataPanel({ symbols }: Props) {
 
   if (symbols.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-white/8 bg-bg-surface p-8 text-center text-sm text-text-muted">
-        Select one or more symbols above to see live market data.
-      </div>
+      <div className="rounded-xl border border-dashed border-white/8 bg-bg-surface p-8 text-center text-sm text-text-muted">{tr("Select one or more symbols above to see live market data.")}</div>
     );
   }
 
@@ -186,24 +187,19 @@ export function MarketDataPanel({ symbols }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-text-muted">
-            Market Data
-          </h2>
-          <span className="text-[11px] text-text-muted">As of {asOfLabel}</span>
+          <h2 className="text-sm font-medium uppercase tracking-wider text-text-muted">{tr("Market Data")}</h2>
+          <span className="text-[11px] text-text-muted">{tr("As of ")}{tr(asOfLabel)}</span>
         </div>
         {quotesFetching && !quotesError && (
-          <span className="font-mono text-[10px] text-text-muted">refreshing…</span>
+          <span className="font-mono text-[10px] text-text-muted">{tr("refreshing…")}</span>
         )}
       </div>
 
       {quotesError && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
           <AlertCircle size={14} className="mt-0.5 shrink-0" />
-          <div>
-            Live quotes unavailable. Start the mock API with{' '}
-            <code className="font-mono">python api/mock_server.py</code> (or
-            check that it&apos;s listening on port 8000).
-            <div className="mt-1 text-text-muted">{quotesError.message}</div>
+          <div>{tr("Live quotes unavailable. Start the mock API with")}{tr(' ')}
+            <code className="font-mono">{tr("python api/mock_server.py")}</code>{tr(" (or check that it's listening on port 8000).")}<div className="mt-1 text-text-muted">{tr(quotesError.message)}</div>
           </div>
         </div>
       )}

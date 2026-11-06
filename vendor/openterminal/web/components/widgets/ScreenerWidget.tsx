@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -13,6 +14,7 @@ type Row = {
 };
 
 export default function ScreenerWidget() {
+  useLanguage();
   const setActiveSymbol = useTerminal((s) => s.setActiveSymbol);
   const [market, setMarket] = useState<"us" | "eu">("us");
   const [sector, setSector] = useState("");
@@ -51,7 +53,7 @@ export default function ScreenerWidget() {
       }}
       className={sort === key ? "!text-[var(--amber)]" : ""}
     >
-      {label} {sort === key ? (dir === "desc" ? "▼" : "▲") : ""}
+      {tr(label)} {tr(sort === key ? (dir === "desc" ? "▼" : "▲") : "")}
     </th>
   );
 
@@ -61,46 +63,46 @@ export default function ScreenerWidget() {
         <div className="flex gap-1">
           {(["us", "eu"] as const).map((m) => (
             <button key={m} className={`term-btn ${market === m ? "active" : ""}`} onClick={() => setMarket(m)}>
-              {m.toUpperCase()}
+              {tr(m.toUpperCase())}
             </button>
           ))}
         </div>
         <select value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">All sectors</option>
+          <option value="">{tr("All sectors")}</option>
           {sectors.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>{tr(s)}</option>
           ))}
         </select>
-        <input className="w-20" placeholder="Chg% min" value={changeMin} onChange={(e) => setChangeMin(e.target.value)} />
-        <input className="w-24" placeholder="MCap min ($B)" value={marketCapMinB} onChange={(e) => setMarketCapMinB(e.target.value)} />
-        <input className="w-24" placeholder="Vol min (M)" value={volumeMinM} onChange={(e) => setVolumeMinM(e.target.value)} />
-        <span className="dim ml-auto">{isLoading ? "…" : `${data.length} results`}</span>
+        <input className="w-20" placeholder={tr("Chg% min")} value={changeMin} onChange={(e) => setChangeMin(e.target.value)} />
+        <input className="w-24" placeholder={tr("MCap min ($B)")} value={marketCapMinB} onChange={(e) => setMarketCapMinB(e.target.value)} />
+        <input className="w-24" placeholder={tr("Vol min (M)")} value={volumeMinM} onChange={(e) => setVolumeMinM(e.target.value)} />
+        <span className="dim ms-auto">{tr(isLoading ? "…" : `${data.length} results`)}</span>
       </div>
-      {error && <div className="p-2 down">Error: {(error as Error).message}</div>}
+      {error && <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>}
       <table className="data-table">
         <thead>
           <tr>
-            {th("symbol", "Sym")}
-            <th>Name</th>
-            <th>Sector</th>
-            {th("price", "Last")}
-            {th("changePercent", "Chg%")}
-            {th("volume", "Vol")}
-            {th("marketCap", "MCap")}
+            {tr(th("symbol", "Sym"))}
+            <th>{tr("Name")}</th>
+            <th>{tr("Sector")}</th>
+            {tr(th("price", "Last"))}
+            {tr(th("changePercent", "Chg%"))}
+            {tr(th("volume", "Vol"))}
+            {tr(th("marketCap", "MCap"))}
           </tr>
         </thead>
         <tbody>
           {data.map((q) => (
             <tr key={q.symbol} onClick={() => setActiveSymbol(q.symbol)}>
               <td className="font-bold">{q.symbol}</td>
-              <td className="!text-left max-w-40 truncate">{q.name}</td>
-              <td className="!text-left dim">{q.sector}</td>
-              <td><Flash value={q.price}>{fmt(q.price)}</Flash></td>
+              <td className="!text-start max-w-40 truncate">{q.name}</td>
+              <td className="!text-start dim">{tr(q.sector)}</td>
+              <td><Flash value={q.price}>{tr(fmt(q.price))}</Flash></td>
               <td className={pctClass(q.changePercent)}>
-                <Flash value={q.changePercent}>{fmt(q.changePercent)}%</Flash>
+                <Flash value={q.changePercent}>{tr(fmt(q.changePercent))}%</Flash>
               </td>
-              <td>{fmtBig(q.volume)}</td>
-              <td>{fmtBig(q.marketCap)}</td>
+              <td>{tr(fmtBig(q.volume))}</td>
+              <td>{tr(fmtBig(q.marketCap))}</td>
             </tr>
           ))}
         </tbody>

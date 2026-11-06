@@ -51,10 +51,14 @@ class Exchange(StrEnum):
     KRAKEN = "kraken"
     OKX = "okx"
     ALPACA = "alpaca"
+    OPENBB = "openbb"
 
 
 class AssetClass(StrEnum):
     CRYPTO = "CRYPTO"
+    EQUITY = "EQUITY"
+    FOREX = "FOREX"
+    MACRO = "MACRO"
 
 
 class Timeframe(StrEnum):
@@ -250,6 +254,7 @@ class MarketState(BaseModel):
 
 
 class TradeProposal(BaseModel):
+    accounting_book_id: str | None = None
     proposal_id: UUID = Field(default_factory=uuid4)
     created_at: datetime = Field(default_factory=_utcnow)
     strategy_id: str
@@ -276,6 +281,7 @@ class TradeProposal(BaseModel):
 
 
 class TradeProposalReview(BaseModel):
+    accounting_book_id: str | None = None
     proposal_id: UUID
     reviewer_agent_id: int
     decision: TradeProposalStatus
@@ -285,6 +291,8 @@ class TradeProposalReview(BaseModel):
 
 
 class Order(BaseModel):
+    accounting_book_id: str | None = None
+    authorization_id: UUID | None = None
     order_id: UUID = Field(default_factory=uuid4)
     client_order_id: UUID = Field(default_factory=uuid4)
     created_at: datetime = Field(default_factory=_utcnow)

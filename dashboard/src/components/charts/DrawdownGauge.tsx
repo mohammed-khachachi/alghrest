@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 interface DrawdownGaugeProps {
   value: number;
   max: number;
@@ -13,6 +14,7 @@ export function DrawdownGauge({
   unit = '%',
   color,
 }: DrawdownGaugeProps) {
+  useLanguage();
   const pct = Math.min(value / max, 1);
   const warnPct = warnAt / max;
   const isWarning = value >= warnAt;
@@ -23,10 +25,10 @@ export function DrawdownGauge({
     <div className="space-y-3">
       <div className="flex items-end justify-between">
         <span className="text-2xl font-bold font-mono" style={{ color: barColor }}>
-          {value.toFixed(1)}{unit}
+          {tr(value.toFixed(1))}{tr(unit)}
         </span>
         <span className="text-xs text-text-muted">
-          / {max}{unit}
+          / {tr(max)}{tr(unit)}
         </span>
       </div>
 
@@ -46,8 +48,8 @@ export function DrawdownGauge({
 
       <div className="flex justify-between text-xs text-text-muted">
         <span>0</span>
-        <span className="text-amber-500">{warnAt}{unit}</span>
-        <span className="text-red-500">{max}{unit}</span>
+        <span className="text-amber-500">{tr(warnAt)}{tr(unit)}</span>
+        <span className="text-red-500">{tr(max)}{tr(unit)}</span>
       </div>
     </div>
   );

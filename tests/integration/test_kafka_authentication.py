@@ -8,8 +8,14 @@ import subprocess
 from uuid import uuid4
 
 import pytest
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
-from aiokafka.errors import KafkaConnectionError, SaslAuthenticationFailed
+from aiokafka.errors import (
+    KafkaConnectionError,
+    SaslAuthenticationFailed,
+    TopicAuthorizationFailedError,
+)
+from aiokafka.structs import TopicPartition
 from pydantic import SecretStr
 
 from core.config import settings
@@ -27,7 +33,8 @@ async def test_real_broker_rejects_anonymous_and_wrong_key_allows_authenticated_
         port = sock.getsockname()[1]
     name = "alghrest-auth-test-" + uuid4().hex[:12]
     password = secrets.token_urlsafe(36)
-    jaas = f'org.apache.kafka.common.security.plain.PlainLoginModule required username="alghrest" password="{password}" user_alghrest="{password}";'
+    strategy_password = secrets.token_urlsafe(36)
+    jaas = f'org.apache.kafka.common.security.plain.PlainLoginModule required username="alghrest" password="{password}" user_alghrest="{password}" user_strategy="{strategy_password}";'
     config = {
         "KAFKA_NODE_ID": "1",
         "KAFKA_PROCESS_ROLES": "broker,controller",
@@ -45,6 +52,11 @@ async def test_real_broker_rejects_anonymous_and_wrong_key_allows_authenticated_
         "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS": "0",
         "KAFKA_AUTO_CREATE_TOPICS_ENABLE": "false",
         "KAFKA_HEAP_OPTS": "-Xmx256m -Xms256m",
+        "KAFKA_AUTHORIZER_CLASS_NAME": "org.apache.kafka.metadata.authorizer.StandardAuthorizer",
+        "KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND": "false",
+        # The anonymous principal exists only on the unexposed local controller
+        # channel; external listeners still require a successful SASL exchange.
+        "KAFKA_SUPER_USERS": "User:alghrest;User:ANONYMOUS",
     }
     # Values are passed through inherited env, never command arguments/log output.
     command = [
@@ -63,7 +75,7 @@ async def test_real_broker_rejects_anonymous_and_wrong_key_allows_authenticated_
         command += ["-e", key]
     command += ["apache/kafka:4.3.1"]
     clients = []
-    producer, consumer = AlghrestProducer(), None
+    producer, consumer, strategy, probe = AlghrestProducer(), None, None, None
     try:
         subprocess.run(
             command, env={**os.environ, **config}, check=True, capture_output=True, timeout=30
@@ -95,7 +107,54 @@ async def test_real_broker_rejects_anonymous_and_wrong_key_allows_authenticated_
                 async with asyncio.timeout(5):
                     await bad.start()
         topic = "isolated-auth-test"
-        await admin.create_topics([NewTopic(topic, num_partitions=1, replication_factor=1)])
+        forbidden = "orders.pending"
+        await admin.create_topics(
+            [NewTopic(t, num_partitions=1, replication_factor=1) for t in (topic, forbidden)]
+        )
+        properties = (
+            "security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config="
+            + jaas
+            + "\n"
+        )
+        subprocess.run(
+            [
+                "docker",
+                "exec",
+                "-i",
+                name,
+                "sh",
+                "-c",
+                "umask 077; cat > /tmp/auth-admin.properties",
+            ],
+            input=properties.encode(),
+            capture_output=True,
+            check=True,
+            timeout=15,
+        )
+        subprocess.run(
+            [
+                "docker",
+                "exec",
+                name,
+                "/opt/kafka/bin/kafka-acls.sh",
+                "--bootstrap-server",
+                "localhost:29092",
+                "--command-config",
+                "/tmp/auth-admin.properties",
+                "--add",
+                "--allow-principal",
+                "User:strategy",
+                "--operation",
+                "Write",
+                "--operation",
+                "Describe",
+                "--topic",
+                topic,
+            ],
+            capture_output=True,
+            check=True,
+            timeout=30,
+        )
         await producer.initialize()
         consumer = AlghrestConsumer("auth-test", [topic], auto_offset_reset="earliest")
         await consumer.initialize()
@@ -104,7 +163,37 @@ async def test_real_broker_rejects_anonymous_and_wrong_key_allows_authenticated_
             async for value in consumer.stream():
                 assert value == {"authenticated": True}
                 break
+        strategy = AIOKafkaProducer(
+            bootstrap_servers=settings.kafka_servers_list,
+            request_timeout_ms=2000,
+            **{
+                **aiokafka_security(),
+                "sasl_plain_username": "strategy",
+                "sasl_plain_password": strategy_password,
+            },
+        )
+        await strategy.start()
+        with pytest.raises(TopicAuthorizationFailedError):
+            async with asyncio.timeout(5):
+                await strategy.send_and_wait(forbidden, b'{"unauthorized":true}')
+        await strategy.send_and_wait(topic, b'{"role_authorized":true}')
+        async with asyncio.timeout(10):
+            async for value in consumer.stream():
+                assert value == {"role_authorized": True}
+                break
+        probe = AIOKafkaConsumer(
+            bootstrap_servers=settings.kafka_servers_list,
+            **aiokafka_security(),
+        )
+        await probe.start()
+        assert (await probe.end_offsets([TopicPartition(forbidden, 0)]))[
+            TopicPartition(forbidden, 0)
+        ] == 0
     finally:
+        if probe:
+            await probe.stop()
+        if strategy:
+            await strategy.stop()
         if consumer:
             await consumer.shutdown()
         await producer.shutdown()

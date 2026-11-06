@@ -39,9 +39,9 @@ class RecoveryCoordinator:
         self.tolerances = tolerances or {}
         self.order_lock = order_lock or asyncio.Lock()
 
-    async def flush(self) -> None:
+    async def flush(self, *, allow_new_risk: bool = False) -> None:
         settings.require_order_execution()
-        for event in await self.store.outbox():
+        for event in await self.store.outbox(include_execution_intents=allow_new_risk):
             await self.publish(
                 KafkaTopic(event["topic"]),
                 payload=json.loads(event["payload"]),
@@ -50,10 +50,17 @@ class RecoveryCoordinator:
             # A crash before this mark resends; the ledger's identity is permanent.
             await self.store.delivered(event["id"])
 
+    async def _ensure_writer(self) -> None:
+        ensure = getattr(self.store, "ensure_writer", None)
+        if callable(ensure):
+            await ensure()
+            return
+        await self.store.check_writer()
+
     async def recover_orders(self, halted: bool) -> list[str]:
         settings.require_order_execution()
         async with self.order_lock:
-            await self.store.check_writer()
+            await self._ensure_writer()
             return await self._recover_orders(halted)
 
     async def _recover_orders(self, halted: bool) -> list[str]:
@@ -136,7 +143,7 @@ class RecoveryCoordinator:
 
     async def run_once(self) -> dict[str, Any]:
         settings.require_order_execution()
-        await self.store.check_writer()
+        await self._ensure_writer()
         await self.store.block("reconciliation in progress")
         await self.state.set_reconciliation(
             {"book_id": self.store.book_id, "ready": False}, self.ttl
@@ -147,12 +154,18 @@ class RecoveryCoordinator:
         for account in self.accounts:
             venue = self.venues[account.key]
             try:
+                if hasattr(venue, "maintain_protection"):
+                    await venue.maintain_protection()
                 before = await venue.balances()
                 for symbol in ["*"] if account.exchange == Exchange.KRAKEN else account.symbols:
                     if not await self.history(account, symbol, target_ms):
                         issues.append(f"history page budget: {account.key} {symbol}")
-                if await venue.open_orders():
-                    issues.append(f"open exchange orders: {account.key}")
+                for opened in await venue.open_orders():
+                    if not (
+                        hasattr(venue, "verify_protection")
+                        and await venue.verify_protection(opened)
+                    ):
+                        issues.append(f"open exchange orders: {account.key}")
                 after = await venue.balances()
                 # Native zero entries may appear/disappear without a movement.
                 if {c: v for c, v in before.items() if v} != {c: v for c, v in after.items() if v}:
@@ -163,4 +176,9 @@ class RecoveryCoordinator:
         await self.flush()
         report = await self.store.verify(self.accounts, balances, issues, self.tolerances, self.ttl)
         await self.state.set_reconciliation(report, self.ttl)
+        # Fills/statuses must flow even when blocked. New execution instructions
+        # wait for both authoritative and shared readiness, otherwise the
+        # executor correctly rejects a child during this reconciliation pass.
+        if report["ready"]:
+            await self.flush(allow_new_risk=True)
         return report

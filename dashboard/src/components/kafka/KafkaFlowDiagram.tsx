@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import { TIER_COLORS } from '@/types/ws';
 
 interface TierNode {
@@ -42,6 +43,7 @@ function nodeCenter(n: TierNode): { x: number; y: number } {
 }
 
 export function KafkaFlowDiagram() {
+  useLanguage();
   const nodeMap = new Map(NODES.map((n) => [n.id, n]));
 
   return (
@@ -49,7 +51,7 @@ export function KafkaFlowDiagram() {
       <svg
         viewBox="0 0 700 270"
         className="w-full max-w-2xl mx-auto"
-        aria-label="Kafka message flow topology"
+        aria-label={tr("Kafka message flow topology")}
       >
         <defs>
           <marker
@@ -63,10 +65,10 @@ export function KafkaFlowDiagram() {
             <path d="M0,0 L0,6 L6,3 z" fill="rgba(99,102,241,0.8)" />
           </marker>
           {/* Animated dash */}
-          <style>{`
+          <style>{tr(`
             .flow-path { stroke-dasharray: 6 4; animation: dash 1.4s linear infinite; }
             @keyframes dash { to { stroke-dashoffset: -20; } }
-          `}</style>
+          `)}</style>
         </defs>
 
         {/* Edges */}
@@ -96,7 +98,7 @@ export function KafkaFlowDiagram() {
                 fontSize="8"
                 fontFamily="JetBrains Mono, monospace"
               >
-                {edge.label}
+                {tr(edge.label)}
               </text>
             </g>
           );
@@ -129,7 +131,7 @@ export function KafkaFlowDiagram() {
                   fontWeight={li === 0 ? '600' : '400'}
                   fontFamily="Inter, sans-serif"
                 >
-                  {line}
+                  {tr(line)}
                 </text>
               ))}
             </g>

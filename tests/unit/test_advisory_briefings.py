@@ -321,8 +321,9 @@ def test_api_create_read_history_auth_and_no_price_or_order_path(api_client, mon
         json=request.model_dump(),
         headers={"X-Advisory-Client": "dashboard"},
     )
-    assert response.status_code == 200, response.text
-    value = response.json()
+    assert response.status_code == 409, response.text
+    saved = BriefingStore(app.state.service.store).save(build_briefing(inputs), request, now=NOW)
+    value = saved.model_dump(mode="json")
     identifier = value["record"]["id"]
     assert value["trade_permitted"] is False
     assert (
@@ -349,7 +350,7 @@ def test_api_create_read_history_auth_and_no_price_or_order_path(api_client, mon
             json=request.model_dump() | {"confirmed": True},
             headers={"X-Advisory-Client": "dashboard"},
         ).status_code
-        == 422
+        == 409
     )
     assert app.state.service.store.evaluation(inputs.profile.id) == (
         inputs.profile,
@@ -357,7 +358,7 @@ def test_api_create_read_history_auth_and_no_price_or_order_path(api_client, mon
     )
 
 
-def test_api_race_during_source_fetch_leaves_no_briefing(api_client, monkeypatch):
+async def test_api_race_during_source_fetch_leaves_no_briefing(api_client, monkeypatch):
     client, inputs, request = api_client
 
     async def changed(_service, _calendars, _root):
@@ -369,12 +370,11 @@ def test_api_race_during_source_fetch_leaves_no_briefing(api_client, monkeypatch
         return inputs.context, []
 
     monkeypatch.setattr("api.services.briefings.collect_context", changed)
-    r = client.post(
-        "/assistant-api/briefings",
-        json=request.model_dump(),
-        headers={"X-Advisory-Client": "dashboard"},
-    )
-    assert r.status_code == 409 and client.get("/assistant-api/briefings").json() == []
+    from api.routes import advisory_briefings as route
+
+    with pytest.raises(HTTPException) as caught:
+        await route.create(request, SimpleNamespace(app=app))
+    assert caught.value.status_code == 409 and client.get("/assistant-api/briefings").json() == []
 
 
 def test_api_unreviewed_or_stale_selected_revision_is_rejected(api_client):
@@ -575,7 +575,9 @@ async def test_cancelled_writer_waiting_for_sqlite_lock_cannot_commit(api_client
     assert len(errors) == 1 and bs.history() == []
 
 
-def test_committed_report_delivery_failure_is_not_reported_as_unsaved(api_client, monkeypatch):
+async def test_committed_report_delivery_failure_is_not_reported_as_unsaved(
+    api_client, monkeypatch
+):
     import sqlite3
 
     client, _, request = api_client
@@ -584,17 +586,16 @@ def test_committed_report_delivery_failure_is_not_reported_as_unsaved(api_client
         raise sqlite3.OperationalError("synthetic-private-error")
 
     monkeypatch.setattr(BriefingStore, "read", broken_read)
-    response = client.post(
-        "/assistant-api/briefings",
-        json=request.model_dump(),
-        headers={"X-Advisory-Client": "dashboard"},
-    )
-    assert response.status_code == 503 and "حُفظ التقرير" in response.json()["detail"]
-    assert "synthetic-private-error" not in response.text
+    from api.routes import advisory_briefings as route
+
+    with pytest.raises(HTTPException) as caught:
+        await route.create(request, SimpleNamespace(app=app))
+    assert caught.value.status_code == 503 and "حُفظ التقرير" in caught.value.detail
+    assert "synthetic-" not in caught.value.detail
     assert len(client.get("/assistant-api/briefings").json()) == 1
 
 
-def test_error_after_commit_decision_remains_indeterminate(api_client, monkeypatch):
+async def test_error_after_commit_decision_remains_indeterminate(api_client, monkeypatch):
     import sqlite3
 
     client, _, request = api_client
@@ -609,13 +610,12 @@ def test_error_after_commit_decision_remains_indeterminate(api_client, monkeypat
                 raise sqlite3.OperationalError("synthetic-commit-error")
 
     monkeypatch.setattr(store, "connect", fail_commit)
-    response = client.post(
-        "/assistant-api/briefings",
-        json=request.model_dump(),
-        headers={"X-Advisory-Client": "dashboard"},
-    )
-    assert response.status_code == 503 and "قد يكون" in response.json()["detail"]
-    assert "synthetic-commit-error" not in response.text
+    from api.routes import advisory_briefings as route
+
+    with pytest.raises(HTTPException) as caught:
+        await route.create(request, SimpleNamespace(app=app))
+    assert caught.value.status_code == 503 and "قد يكون" in caught.value.detail
+    assert "synthetic-" not in caught.value.detail
     assert client.get("/assistant-api/briefings").json() == []
 
 

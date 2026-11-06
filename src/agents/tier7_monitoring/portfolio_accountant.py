@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -13,6 +14,7 @@ from core.accounting.valuation import MissingValuationError, Valuation
 from core.config import settings
 from core.data.models import Fill, KafkaTopic
 from core.orchestrator.message_bus import AlghrestConsumer
+from core.resilience import DatabaseCircuitOpenError, is_transient_db_error
 
 
 class PortfolioAccountant(BaseAgent):
@@ -34,14 +36,21 @@ class PortfolioAccountant(BaseAgent):
             [KafkaTopic.FILLS_CONFIRMED], auto_offset_reset="earliest"
         )
         # A different opening book must not inherit another book's Kafka cursor.
-        self.consumer.group_id += f".{settings.accounting_book_id}"
         await self.consumer.initialize()
+
+    async def _ensure_ledger_writer(self) -> None:
+        assert self.ledger is not None
+        ensure = getattr(self.ledger, "ensure_writer", None)
+        if callable(ensure):
+            await ensure()
+        else:
+            await self.ledger.check_writer()
 
     async def handle_fill(self, message: dict[str, Any]) -> None:
         if message.get("message_type") != "Fill":
             raise ValueError("Unexpected message on fills.confirmed")
         assert self.ledger is not None
-        await self.ledger.check_writer()
+        await self._ensure_ledger_writer()
         fill = Fill.model_validate(message["payload"])
         if fill.accounting_book_id and fill.accounting_book_id != self.ledger.book_id:
             return
@@ -52,7 +61,7 @@ class PortfolioAccountant(BaseAgent):
 
     async def snapshot(self) -> bool:
         assert self.ledger is not None and self.consumer is not None
-        await self.ledger.check_writer()
+        await self._ensure_ledger_writer()
         if not await self.consumer.caught_up():
             await self.state.invalidate_portfolio()
             return False
@@ -83,9 +92,18 @@ class PortfolioAccountant(BaseAgent):
         while True:
             try:
                 await self.snapshot()
-            except (MissingValuationError, performance.PerformanceUnavailableError) as exc:
-                await self.state.invalidate_portfolio()
-                self.logger.warning("accounting valuation unavailable", reason=str(exc))
+            except Exception as exc:
+                if isinstance(
+                    exc,
+                    MissingValuationError
+                    | performance.PerformanceUnavailableError
+                    | DatabaseCircuitOpenError,
+                ) or is_transient_db_error(exc):
+                    with suppress(Exception):
+                        await self.state.invalidate_portfolio()
+                    self.logger.warning("accounting valuation unavailable", reason=str(exc))
+                else:
+                    raise
             await asyncio.sleep(5)
 
     async def run(self) -> None:

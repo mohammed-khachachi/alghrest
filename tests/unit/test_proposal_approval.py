@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from agents.tier1_executive import proposal_approver
-from core.data.models import KafkaTopic, TradeProposal
+from core.data.models import KafkaTopic, TradeProposal, TradeProposalReview
 from tests.factories import portfolio, proposal
 
 pytestmark = pytest.mark.unit
@@ -27,6 +27,9 @@ def approver(monkeypatch):
 
     monkeypatch.setattr(proposal_approver, "datetime", Clock)
     agent = proposal_approver.ProposalApprover()
+    agent.authorizations = AsyncMock()
+    agent.authorizations.review.return_value = None
+    agent.authorizations.decide.return_value = True
     agent.state = AsyncMock()
     agent.state.is_kill_switch_active.return_value = False
     agent.state.trading_ready.return_value = True
@@ -93,7 +96,9 @@ async def test_redelivered_rejection_cannot_later_be_approved(approver):
     p = proposal(created_at=NOW)
     approver.state.trading_ready.return_value = False
     await approver._process(p.model_dump(mode="json"))
-    approver.state.get_json.return_value = approver.state.set_json.await_args.args[1]
+    approver.authorizations.review.return_value = TradeProposalReview.model_validate(
+        approver.state.set_json.await_args.args[1]
+    )
     approver.state.trading_ready.return_value = True
     approver.publish.reset_mock()
     await approver._process(p.model_dump(mode="json"))
@@ -106,7 +111,9 @@ async def test_uncertain_approval_publication_is_not_repeated(approver):
     approver.publish.side_effect = TimeoutError("uncertain publication")
     with pytest.raises(TimeoutError):
         await approver._process(p.model_dump(mode="json"))
-    approver.state.get_json.return_value = approver.state.set_json.await_args.args[1]
-    assert approver.state.get_json.return_value["decision"] == "APPROVED"
+    approver.authorizations.review.return_value = TradeProposalReview.model_validate(
+        approver.state.set_json.await_args.args[1]
+    )
+    assert approver.authorizations.review.return_value.decision == "APPROVED"
     await approver._process(p.model_dump(mode="json"))
     approver.publish.assert_awaited_once()

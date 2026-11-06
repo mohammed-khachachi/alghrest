@@ -1,4 +1,5 @@
 "use client";
+import { tr } from "../i18n";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
@@ -27,10 +28,8 @@ export default class WidgetErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
     return (
       <div className="p-2 flex flex-col gap-2 items-start">
-        <span className="down">{this.props.name} failed to render: {error.message}</span>
-        <button onClick={this.reset} className="dim hover:text-[var(--amber)]">
-          Retry
-        </button>
+        <span className="down">{this.props.name}{tr(" failed to render: ")}{tr(error.message)}</span>
+        <button onClick={this.reset} className="dim hover:text-[var(--amber)]">{tr("Retry")}</button>
       </div>
     );
   }

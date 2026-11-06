@@ -231,10 +231,15 @@ async def test_approval_and_routing_preserve_contract(proposal_data, monkeypatch
 
     from agents.tier1_executive.proposal_approver import ProposalApprover
     from agents.tier5_execution.order_router import OrderRouter
+    from core.config import settings
 
     approver = ProposalApprover()
+    approver.authorizations = AsyncMock()
+    approver.authorizations.review.return_value = None
+    approver.authorizations.decide.return_value = True
     approver.state = AsyncMock()
     approver.state.is_kill_switch_active.return_value = False
+    approver.state.trading_ready.return_value = True
     approver.state.get_portfolio.return_value = Portfolio(
         snapshot_time=datetime(2026, 9, 22),
         total_capital="100000",
@@ -244,11 +249,10 @@ async def test_approval_and_routing_preserve_contract(proposal_data, monkeypatch
         positions=[],
     )
     approver.publish = AsyncMock()
-    proposal = TradeProposal(**proposal_data)
+    proposal = TradeProposal(**proposal_data, accounting_book_id=settings.accounting_book_id)
     await approver._process(proposal.model_dump(mode="json"))
     assert approver.publish.call_args.args[0] == KafkaTopic.PROPOSALS_APPROVED
     router = OrderRouter()
-    from core.config import settings
     from core.execution.contracts import AccountScope
 
     monkeypatch.setattr(
@@ -257,10 +261,10 @@ async def test_approval_and_routing_preserve_contract(proposal_data, monkeypatch
         [AccountScope(exchange=proposal.exchange, symbols=[proposal.symbol])],
     )
     router.publish = AsyncMock()
+    router.authorizations = AsyncMock()
     await router._route(approver.publish.call_args.kwargs["payload"])
-    topic, payload, _ = router.publish.call_args.args
-    order = Order.model_validate(payload)
-    assert topic == KafkaTopic.ORDERS_PENDING
+    order = router.authorizations.bind.await_args.args[1]
+    router.publish.assert_not_awaited()  # The durable outbox delivers the bound order.
     assert order.proposal_id == proposal.proposal_id
     assert order.size == proposal.size
     assert order.price == proposal.limit_price

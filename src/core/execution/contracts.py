@@ -20,11 +20,32 @@ class OrderConflictError(ValueError):
     pass
 
 
+class InstrumentRules(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tick_size: Decimal = Field(gt=0, allow_inf_nan=False)
+    quantity_step: Decimal = Field(gt=0, allow_inf_nan=False)
+    min_quantity: Decimal = Field(gt=0, allow_inf_nan=False)
+    min_notional: Decimal = Field(ge=0, allow_inf_nan=False)
+
+    def validate_order(self, size: Decimal, price: Decimal) -> None:
+        if (
+            not size.is_finite()
+            or not price.is_finite()
+            or price <= 0
+            or size < self.min_quantity
+            or size % self.quantity_step
+            or price % self.tick_size
+            or size * price < self.min_notional
+        ):
+            raise RecoveryBlockedError("Order violates explicit instrument constraints")
+
+
 class AccountScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
     exchange: Exchange
     account_id: str = Field(default="default", min_length=1)
     symbols: list[str] = Field(min_length=1)
+    market_rules: dict[str, InstrumentRules] = Field(default_factory=dict)
 
     @field_validator("symbols")
     @classmethod

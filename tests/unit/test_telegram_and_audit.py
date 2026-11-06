@@ -108,12 +108,15 @@ async def test_control_commands_store_expiring_intent(bot, command, value):
     assert call.kwargs["ex"] == 300
 
 
-async def test_kill_switch_commands_and_recent_alerts_use_mock_redis(bot):
+async def test_kill_switch_commands_and_recent_alerts_use_mock_redis(bot, monkeypatch):
+    halt = SimpleNamespace(activate_global_kill_switch=AsyncMock())
+    monkeypatch.setattr(import_module("core.orchestrator.state_manager"), "state_manager", halt)
     await bot._cmd_killswitch("chat", ["on"])
-    assert bot.redis.set.await_args_list[0].args[0] == "alghrest:kill_switch:active"
+    halt.activate_global_kill_switch.assert_awaited_once()
     await bot._cmd_killswitch("chat", ["off"])
-    bot.redis.delete.assert_any_await("alghrest:kill_switch:active")
-    assert bot._broadcast.await_count == 2
+    bot.redis.delete.assert_not_awaited()
+    assert "Halt remains active" in bot._send.await_args.args[1]
+    assert bot._broadcast.await_count == 1
     bot.redis.lrange.return_value = []
     await bot._cmd_alerts("chat", [])
     assert "No recent" in bot._send.await_args.args[1]

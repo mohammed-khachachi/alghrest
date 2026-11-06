@@ -1,3 +1,4 @@
+import { currentLocale, tr } from '../i18n/core';
 import type { TerminalResearch } from './terminalResearch';
 import { quoteFreshness } from './terminalFreshness';
 
@@ -11,7 +12,7 @@ const intervals: Record<string,string> = {
   '1wk':'أسبوعي','1w':'أسبوعي','1mo':'شهري','1M':'شهري',UNVERIFIED:'غير معلن',
 };
 export function sourceTime(value: string | null | undefined) {
-  return value ? new Date(value).toLocaleString('ar-MA', {timeZone:'Africa/Casablanca'}) + ' (المغرب)' : 'غير معلن';
+  return value ? new Date(value).toLocaleString(currentLocale(), {timeZone:'Africa/Casablanca'}) + ' ' + tr('(المغرب)') : 'غير معلن';
 }
 export function dataAge(value: string | null | undefined, now: number) {
   if (!value) return 'غير معلوم';

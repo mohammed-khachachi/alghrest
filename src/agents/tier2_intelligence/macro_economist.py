@@ -15,6 +15,7 @@ import httpx
 import structlog
 
 from agents.base_agent import BaseAgent
+from connectors.data_providers.openbb_adapter import OpenBBAdapter, OpenBBAdapterError
 from core.config import settings
 from core.data.models import KafkaTopic, MacroSignal, MarketRegime, SignalDirection
 
@@ -44,6 +45,7 @@ class MacroEconomist(BaseAgent):
     def __init__(self) -> None:
         super().__init__(agent_id=self.AGENT_ID, tier=2, name="macro_economist")
         self._fred_client: httpx.AsyncClient | None = None
+        self._openbb_adapter = OpenBBAdapter()
         self._current_regime = MarketRegime.NEUTRAL
         self._macro_data: dict[str, Any] = {}
 
@@ -102,7 +104,29 @@ class MacroEconomist(BaseAgent):
                 self._macro_data[friendly_name] = result
 
     async def _fetch_fred_series(self, series_id: str) -> dict[str, Any] | None:
-        """Fetch latest observation from FRED."""
+        """Fetch latest observation from FRED (via OpenBB when enabled, with direct HTTP fallback)."""
+        if settings.openbb_enabled and self._openbb_adapter.is_available:
+            try:
+                start_dt = (datetime.utcnow() - timedelta(days=90)).date()
+                obs_list = await self._openbb_adapter.fetch_macro_series(
+                    series_id, start_date=start_dt
+                )
+                if obs_list:
+                    latest_obs = obs_list[-1]
+                    prev_obs = obs_list[-2] if len(obs_list) > 1 else None
+                    val = float(latest_obs.value)
+                    prev_val = float(prev_obs.value) if prev_obs is not None else None
+                    return {
+                        "value": val,
+                        "previous": prev_val,
+                        "date": latest_obs.date.isoformat(),
+                        "change": (val - prev_val) if prev_val is not None else None,
+                    }
+            except OpenBBAdapterError as exc:
+                self.logger.debug(
+                    "openbb_macro_fallback_to_http", series=series_id, error=str(exc)
+                )
+
         if not settings.fred_api_key or not self._fred_client:
             return None
         try:

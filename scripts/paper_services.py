@@ -30,6 +30,7 @@ MODULES = [
     ("agents.tier7_monitoring.portfolio_tracker", "PortfolioTracker"),
     ("agents.tier1_executive.proposal_approver", "ProposalApprover"),
     ("agents.tier5_execution.order_router", "OrderRouter"),
+    ("agents.tier5_execution.slippage_minimizer", "SlippageMinimizer"),
 ]
 
 

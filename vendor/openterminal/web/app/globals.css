@@ -151,3 +151,13 @@ button.term-btn.active {
 .react-grid-item > .react-resizable-handle::after {
   border-color: var(--amber-dim) !important;
 }
+
+html[lang="ar"] body { font-family: Tahoma, Arial, system-ui, sans-serif; }
+html[dir="rtl"] .panel-title { letter-spacing: 0; }
+/* Prices, symbols and third-party chart axes keep their market notation. */
+input[inputmode="decimal"], input[type="number"] { direction: ltr; }
+
+/* Grid positions and resize handles use physical LTR coordinates. */
+.react-grid-layout { direction: ltr; }
+html[dir="rtl"] .react-grid-layout .terminal-panel { direction: rtl; }
+html[dir="rtl"] .recharts-wrapper { direction: ltr; }

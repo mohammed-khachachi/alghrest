@@ -8,7 +8,11 @@ from uuid import uuid4
 import ccxt.pro as ccxtpro
 import pytest
 
-from connectors.exchanges.ccxt_connector import ExchangeConnector
+from connectors.exchanges.ccxt_connector import (
+    ExchangeConnector,
+    is_dict_list,
+    is_str_object_dict,
+)
 from connectors.exchanges.recovery import SpotRecoveryAdapter
 from core.config import settings
 from core.data.models import Exchange, Order, OrderSide, OrderType
@@ -213,6 +217,13 @@ async def test_nonlive_connector_never_calls_private_write_api(monkeypatch, envi
     conn._client.cancel_order.assert_not_awaited()
 
 
+async def test_unverified_live_protective_bundle_is_rejected_before_venue_contact():
+    venue = adapter(Exchange.BINANCE)
+    with pytest.raises(RecoveryBlockedError, match="protective-order"):
+        await venue.place(order(Exchange.BINANCE).model_copy(update={"stop_price": Decimal(90)}))
+    assert not venue.client.mock_calls
+
+
 async def test_live_ambiguous_create_is_never_retried(monkeypatch):
     monkeypatch.setattr(settings, "environment", "live")
     conn = ExchangeConnector(Exchange.BINANCE)
@@ -322,3 +333,27 @@ async def test_testnet_uses_sandbox_urls_and_never_falls_back_to_live_credential
     assert factory.call_args.args[0]["apiKey"] == ""
     assert factory.call_args.args[0]["secret"] == ""
     await connector.close()
+
+
+async def test_ccxt_type_guards_and_disconnected_client_rejection():
+    assert is_str_object_dict({"symbol": "BTC/USD", "last": 50000})
+    assert not is_str_object_dict(["not", "a", "dict"])
+    assert not is_str_object_dict({1: "non-string-key"})
+    assert is_dict_list([{"id": "1"}, {"id": "2"}])
+    assert not is_dict_list([{"id": "1"}, "not-a-dict"])
+
+    disconnected = ExchangeConnector(Exchange.BINANCE)
+    with pytest.raises(RuntimeError, match="not connected"):
+        await disconnected.fetch_balance()
+    with pytest.raises(RuntimeError, match="not connected"):
+        _ = SpotRecoveryAdapter(disconnected).client
+
+    conn = ExchangeConnector(Exchange.BINANCE)
+    conn._client = SimpleNamespace(
+        fetch_ticker=AsyncMock(return_value=["malformed"]),
+        fetch_open_orders=AsyncMock(return_value={"not": "a-list"}),
+    )
+    with pytest.raises(ValueError, match="Expected dict payload"):
+        await conn.fetch_ticker("BTC/USD")
+    with pytest.raises(ValueError, match="Expected list\\[dict\\] payload"):
+        await conn.fetch_open_orders("BTC/USD")

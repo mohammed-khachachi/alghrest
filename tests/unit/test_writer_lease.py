@@ -9,6 +9,12 @@ import pytest
 from core.accounting.repository import Ledger
 from core.execution.contracts import RecoveryBlockedError
 from core.execution.store import ExecutionStore
+from core.resilience import (
+    CircuitState,
+    DatabaseCircuitBreaker,
+    DatabaseCircuitOpenError,
+    ExponentialBackoffPolicy,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -207,4 +213,117 @@ async def test_concurrent_claims_acquire_one_session_and_refuse_second_owner(wri
     assert sum(isinstance(result, error) for result in outcomes) == 1
     pool.acquire.assert_awaited_once()
     assert store._lease is connection
+    await store.close()
+
+
+def test_circuit_breaker_transitions_closed_open_half_open_closed():
+    now = [100.0]
+    breaker = DatabaseCircuitBreaker(
+        "test-db",
+        failure_threshold=2,
+        recovery_timeout=5.0,
+        half_open_max_calls=1,
+        clock=lambda: now[0],
+    )
+    assert breaker.state == CircuitState.CLOSED
+    breaker.check()
+
+    breaker.record_failure(asyncpg.ConnectionDoesNotExistError("drop 1"))
+    assert breaker.state == CircuitState.CLOSED
+    breaker.record_failure(asyncpg.ConnectionDoesNotExistError("drop 2"))
+    assert breaker.state == CircuitState.OPEN
+
+    with pytest.raises(DatabaseCircuitOpenError, match="is OPEN"):
+        breaker.check()
+
+    # Advance clock past recovery_timeout -> HALF_OPEN
+    now[0] += 5.5
+    assert breaker.state == CircuitState.HALF_OPEN
+    breaker.check()  # consumes the single half-open probe slot
+    with pytest.raises(DatabaseCircuitOpenError, match="HALF_OPEN"):
+        breaker.check()
+
+    # Failed probe re-opens immediately
+    breaker.record_failure(asyncpg.ConnectionDoesNotExistError("probe failed"))
+    assert breaker.state == CircuitState.OPEN
+
+    # Advance clock again and succeed -> CLOSED
+    now[0] += 6.0
+    assert breaker.state == CircuitState.HALF_OPEN
+    breaker.check()
+    breaker.record_success()
+    assert breaker.state == CircuitState.CLOSED
+    assert breaker.failure_count == 0
+
+
+async def test_exponential_backoff_retries_transient_errors_and_trips_breaker():
+    delays: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    policy = ExponentialBackoffPolicy(
+        base_delay=0.05,
+        max_delay=0.5,
+        max_attempts=3,
+        jitter_ratio=0.0,
+        sleep=fake_sleep,
+    )
+    breaker = DatabaseCircuitBreaker("test-backoff", failure_threshold=2, recovery_timeout=10.0)
+    calls = 0
+
+    async def flaky_op() -> str:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise asyncpg.ConnectionDoesNotExistError("transient reset")
+        return "recovered"
+
+    result = await policy.run(flaky_op, circuit_breaker=breaker)
+    assert result == "recovered"
+    assert calls == 3
+    assert delays == [0.05, 0.1]
+    assert breaker.state == CircuitState.CLOSED
+
+    # Non-transient error does not retry
+    non_transient_calls = 0
+
+    async def bad_query() -> None:
+        nonlocal non_transient_calls
+        non_transient_calls += 1
+        raise ValueError("syntax or domain error")
+
+    with pytest.raises(ValueError, match="syntax or domain error"):
+        await policy.run(bad_query, circuit_breaker=breaker)
+    assert non_transient_calls == 1
+
+
+async def test_ensure_writer_automatically_recovers_dropped_session_lease(writer):
+    store, pool, first_conn, _error = writer
+    second_conn = ExclusiveConnection()
+    pool.acquire.side_effect = [first_conn, second_conn]
+
+    released: list[ExclusiveConnection] = []
+
+    async def release(lease):
+        assert not lease.active, "Released a connection during an active operation"
+        released.append(lease)
+
+    pool.release.side_effect = release
+
+    await store.claim_writer()
+    assert store._lease is first_conn
+
+    # Simulate underlying PostgreSQL session drop
+    first_conn.closed = True
+    await store.ensure_writer()
+
+    assert store._lease is second_conn
+    assert first_conn in released
+    assert pool.acquire.await_count == 2
+
+    # Subsequent ensure_writer probes liveness on the recovered lease without re-acquiring
+    await store.ensure_writer()
+    assert second_conn.checks == 1
+    assert pool.acquire.await_count == 2
     await store.close()

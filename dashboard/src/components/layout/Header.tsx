@@ -1,3 +1,6 @@
+import { LanguageSwitch } from '../../i18n';
+
+import { useLanguage, tr } from "../../i18n";
 import { accessHeaders } from '@/lib/access';
 import { useEffect, useState, useCallback } from 'react';
 import { Menu, Power, Clock } from 'lucide-react';
@@ -27,6 +30,7 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
+  useLanguage();
   const utc = useUtcClock();
   const systemStatus = useDashboardStore((s) => s.systemStatus);
   const addToast = useDashboardStore((s) => s.addToast);
@@ -84,20 +88,22 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
             'bg-loss animate-pulse': status === 'HALTED',
           })}
         />
-        {status}
+        {tr(status)}
       </div>
 
       <div className="flex-1" />
 
+      <LanguageSwitch />
+
       {/* UTC clock */}
       <div className="flex items-center gap-1.5 text-xs font-mono text-white/40">
         <Clock size={12} />
-        <span>{utc} UTC</span>
+        <span>{tr(utc)}{tr(" UTC")}</span>
       </div>
 
       {/* Session timer */}
-      <div className="hidden sm:block text-xs font-mono text-white/30 border-l border-border pl-3">
-        {formatUptime(systemStatus?.uptime_seconds ?? sessionSeconds)}
+      <div className="hidden sm:block text-xs font-mono text-white/30 border-s border-border ps-3">
+        {tr(formatUptime(systemStatus?.uptime_seconds ?? sessionSeconds))}
       </div>
 
       {/* Kill switch */}
@@ -106,32 +112,21 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
           <button
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-loss/10 border border-loss/30 text-loss text-xs font-mono font-bold hover:bg-loss/20 transition-colors"
           >
-            <Power size={12} />
-            KILL
-          </button>
+            <Power size={12} />{tr("KILL")}</button>
         </Dialog.Trigger>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/80 z-50 animate-fade-in" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg-elevated border border-loss/30 p-6 shadow-2xl animate-fade-in">
-            <Dialog.Title className="text-lg font-bold text-loss mb-2">
-              Activate Kill Switch
-            </Dialog.Title>
-            <Dialog.Description className="text-sm text-white/60 mb-6">
-              This will immediately halt all 32 agents, close all open positions, and suspend all
-              trading activity. This action requires manual reset.
-            </Dialog.Description>
+            <Dialog.Title className="text-lg font-bold text-loss mb-2">{tr("Activate Kill Switch")}</Dialog.Title>
+            <Dialog.Description className="text-sm text-white/60 mb-6">{tr("This will immediately halt all 32 agents, close all open positions, and suspend all trading activity. This action requires manual reset.")}</Dialog.Description>
             <div className="flex gap-3 justify-end">
               <Dialog.Close asChild>
-                <button className="px-4 py-2 rounded-lg bg-white/5 border border-border text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-                  Cancel
-                </button>
+                <button className="px-4 py-2 rounded-lg bg-white/5 border border-border text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors">{tr("Cancel")}</button>
               </Dialog.Close>
               <button
                 onClick={handleKillSwitch}
                 className="px-4 py-2 rounded-lg bg-loss border border-loss text-sm font-bold text-white hover:bg-loss/80 transition-colors"
-              >
-                CONFIRM KILL SWITCH
-              </button>
+              >{tr("CONFIRM KILL SWITCH")}</button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

@@ -14,6 +14,7 @@ import structlog
 
 from agents.base_agent import BaseAgent
 from core.accounting.performance import require_performance
+from core.config import settings
 from core.data.models import (
     RISK_LIMITS,
     AgentConfig,
@@ -215,6 +216,12 @@ class RiskGovernor(BaseAgent):
         try:
             await consumer.initialize()
             async for msg in consumer.stream():
+                payload = msg.get("payload", msg)
+                if (
+                    payload.get("halt_scope") != "global"
+                    and payload.get("accounting_book_id") != settings.accounting_book_id
+                ):
+                    continue
                 if await self.is_halted():
                     continue
                 try:
@@ -261,6 +268,7 @@ class RiskGovernor(BaseAgent):
         )
 
     async def _halt_all_strategies(self) -> None:
+        await self.state.activate_kill_switch("weekly_drawdown_halt")
         await self.publish(
             KafkaTopic.RISK_ALERTS,
             {

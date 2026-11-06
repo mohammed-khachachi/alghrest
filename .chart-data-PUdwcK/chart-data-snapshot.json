@@ -1,0 +1,75 @@
+{
+  "conversion": "chart_data_snapshot",
+  "converted_chart_count": 6,
+  "converted_charts": [
+    {
+      "chart_part": "ppt/slides/charts/chart1.xml",
+      "owner_slide": 23,
+      "point_count": 6,
+      "series_count": 2,
+      "workbook_part": "ppt/embeddings/chart-data-snapshot-001.xlsx"
+    },
+    {
+      "chart_part": "ppt/slides/charts/chart2.xml",
+      "owner_slide": 24,
+      "point_count": 6,
+      "series_count": 2,
+      "workbook_part": "ppt/embeddings/chart-data-snapshot-002.xlsx"
+    },
+    {
+      "chart_part": "ppt/slides/charts/chart3.xml",
+      "owner_slide": 25,
+      "point_count": 8,
+      "series_count": 2,
+      "workbook_part": "ppt/embeddings/chart-data-snapshot-003.xlsx"
+    },
+    {
+      "chart_part": "ppt/slides/charts/chart4.xml",
+      "owner_slide": 26,
+      "point_count": 6,
+      "series_count": 2,
+      "workbook_part": "ppt/embeddings/chart-data-snapshot-004.xlsx"
+    },
+    {
+      "chart_part": "ppt/slides/charts/chart5.xml",
+      "owner_slide": 27,
+      "point_count": 4,
+      "series_count": 2,
+      "workbook_part": "ppt/embeddings/chart-data-snapshot-005.xlsx"
+    },
+    {
+      "chart_part": "ppt/slides/charts/chart6.xml",
+      "owner_slide": 27,
+      "point_count": 6,
+      "series_count": 2,
+      "workbook_part": "ppt/embeddings/chart-data-snapshot-006.xlsx"
+    }
+  ],
+  "detected_chart_owner_slides": [
+    23,
+    24,
+    25,
+    26,
+    27
+  ],
+  "experimental": true,
+  "input_sha256": "30959d5ae18f655bf822070b79fe17bd4ab40db756438bea298d084af4d0db36",
+  "new_formulas_describe_snapshot_only": true,
+  "output_bytes": 199251,
+  "output_sha256": "8826cedddfb0fa5d1b5a4fd2025804e8a7cac9ed6a61e8150f156fa37aa383f1",
+  "portable_chart_validation_passed": true,
+  "portable_validated_owner_slides": [
+    23,
+    24,
+    25,
+    26,
+    27
+  ],
+  "preserved_existing_workbook_chart_count": 0,
+  "preserved_existing_workbook_charts": [],
+  "schema_version": "experimental.literal-chart-workbook-snapshot.v1",
+  "source_formula_required_slides": [],
+  "source_formulas_preserved": false,
+  "source_workbook_preserved": false,
+  "source_workbook_required_slides": []
+}

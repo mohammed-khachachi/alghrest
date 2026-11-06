@@ -45,7 +45,10 @@ def position(**changes):
 
 
 def proposal(**changes):
+    from core.config import settings
+
     values = dict(
+        accounting_book_id=settings.accounting_book_id,
         strategy_id="test",
         agent_id=14,
         symbol="BTC/USDT",

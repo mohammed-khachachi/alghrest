@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import { useMemo } from 'react';
 import { clsx } from 'clsx';
 import { Eye, Filter } from 'lucide-react';
@@ -56,6 +57,7 @@ function volFmt(volume: number, ac: Holding['asset_class']): string {
 }
 
 function PnlText({ value, pct = false }: { value: number; pct?: boolean }) {
+  useLanguage();
   const positive = value > 0;
   const flat = value === 0;
   const text = pct ? fmtPct(value) : fmtUsd(value, true);
@@ -68,7 +70,7 @@ function PnlText({ value, pct = false }: { value: number; pct?: boolean }) {
         !flat && !positive && 'text-red-400',
       )}
     >
-      {text}
+      {tr(text)}
     </span>
   );
 }
@@ -80,34 +82,35 @@ const ASSET_HINT: Record<Holding['asset_class'], string> = {
 };
 
 function BrokerSection({ group }: { group: BrokerGroup }) {
+  useLanguage();
   const assetClasses = Array.from(new Set(group.rows.map((r) => ASSET_HINT[r.asset_class])));
   return (
     <div className="overflow-hidden rounded-xl border border-white/8 bg-bg-surface">
       <div className="flex items-center justify-between border-b border-white/8 bg-white/[0.02] px-4 py-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-sm font-semibold">{group.broker}</span>
+          <span className="text-sm font-semibold">{tr(group.broker)}</span>
           <span className="text-[10px] uppercase tracking-wider text-text-muted">
-            {assetClasses.join(' · ')}
+            {tr(assetClasses.join(' · '))}
           </span>
         </div>
         <span className="font-mono text-[11px] text-text-muted">
-          {group.rows.length} position{group.rows.length === 1 ? '' : 's'}
+          {tr(group.rows.length)}{tr(" position")}{tr(group.rows.length === 1 ? '' : 's')}
         </span>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left font-mono text-xs">
+        <table className="w-full text-start font-mono text-xs">
           <thead>
             <tr className="border-b border-white/5 text-[10px] uppercase tracking-wider text-text-muted">
-              <th className="px-3 py-2 font-medium">Symbol</th>
-              <th className="px-3 py-2 text-right font-medium">Volume</th>
-              <th className="px-3 py-2 text-right font-medium">Entry</th>
-              <th className="px-3 py-2 text-right font-medium">Current</th>
-              <th className="px-3 py-2 text-right font-medium">Invested</th>
-              <th className="px-3 py-2 text-right font-medium">Value</th>
-              <th className="px-3 py-2 text-right font-medium">P&amp;L $</th>
-              <th className="px-3 py-2 text-right font-medium">P&amp;L %</th>
-              <th className="px-3 py-2 font-medium">Opened</th>
+              <th className="px-3 py-2 font-medium">{tr("Symbol")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("Volume")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("Entry")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("Current")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("Invested")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("Value")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("P&L $")}</th>
+              <th className="px-3 py-2 text-end font-medium">{tr("P&L %")}</th>
+              <th className="px-3 py-2 font-medium">{tr("Opened")}</th>
             </tr>
           </thead>
           <tbody>
@@ -117,42 +120,40 @@ function BrokerSection({ group }: { group: BrokerGroup }) {
                 className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.02]"
               >
                 <td className="px-3 py-2 font-semibold">{h.symbol}</td>
-                <td className="px-3 py-2 text-right">{volFmt(h.volume, h.asset_class)}</td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-3 py-2 text-end">{tr(volFmt(h.volume, h.asset_class))}</td>
+                <td className="px-3 py-2 text-end">
                   {priceFmt(h.entry_price, h.asset_class, h.symbol)}
                 </td>
-                <td className="px-3 py-2 text-right">
-                  {h.current_price != null
+                <td className="px-3 py-2 text-end">
+                  {tr(h.current_price != null
                     ? priceFmt(h.current_price, h.asset_class, h.symbol)
-                    : '—'}
+                    : '—')}
                 </td>
-                <td className="px-3 py-2 text-right">{fmtUsd(h.invested)}</td>
-                <td className="px-3 py-2 text-right">
-                  {h.current_value != null ? fmtUsd(h.current_value) : '—'}
+                <td className="px-3 py-2 text-end">{tr(fmtUsd(h.invested))}</td>
+                <td className="px-3 py-2 text-end">
+                  {tr(h.current_value != null ? fmtUsd(h.current_value) : '—')}
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-3 py-2 text-end">
                   {h.pnl_usd != null ? <PnlText value={h.pnl_usd} /> : '—'}
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-3 py-2 text-end">
                   {h.pnl_pct != null ? <PnlText value={h.pnl_pct} pct /> : '—'}
                 </td>
-                <td className="px-3 py-2 text-text-muted">{h.opened_at}</td>
+                <td className="px-3 py-2 text-text-muted">{tr(h.opened_at)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-white/10 bg-white/[0.02] font-semibold">
-              <td className="px-3 py-2" colSpan={4}>
-                Subtotal
+              <td className="px-3 py-2" colSpan={4}>{tr("Subtotal")}</td>
+              <td className="px-3 py-2 text-end">{tr(fmtUsd(group.invested))}</td>
+              <td className="px-3 py-2 text-end">
+                {tr(group.hasAll ? fmtUsd(group.current) : '—')}
               </td>
-              <td className="px-3 py-2 text-right">{fmtUsd(group.invested)}</td>
-              <td className="px-3 py-2 text-right">
-                {group.hasAll ? fmtUsd(group.current) : '—'}
-              </td>
-              <td className="px-3 py-2 text-right">
+              <td className="px-3 py-2 text-end">
                 {group.hasAll ? <PnlText value={group.pnl} /> : '—'}
               </td>
-              <td className="px-3 py-2 text-right">
+              <td className="px-3 py-2 text-end">
                 {group.hasAll ? <PnlText value={group.pnlPct} pct /> : '—'}
               </td>
               <td />
@@ -165,6 +166,7 @@ function BrokerSection({ group }: { group: BrokerGroup }) {
 }
 
 export function HoldingsPanel({ selectedSymbols, onClearFilter }: Props) {
+  useLanguage();
   const {
     holdings,
     quotesBySymbol,
@@ -231,8 +233,7 @@ export function HoldingsPanel({ selectedSymbols, onClearFilter }: Props) {
 
   if (hError) {
     return (
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
-        Failed to load holdings. Start <code className="font-mono">python api/mock_server.py</code>.
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">{tr("Failed to load holdings. Start ")}<code className="font-mono">{tr("python api/mock_server.py")}</code>.
       </div>
     );
   }
@@ -250,13 +251,11 @@ export function HoldingsPanel({ selectedSymbols, onClearFilter }: Props) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-text-muted">
-            Holdings by Broker
-          </h2>
+          <h2 className="text-sm font-medium uppercase tracking-wider text-text-muted">{tr("Holdings by Broker")}</h2>
           <span className="text-[11px] text-text-muted">
-            {isFiltered
+            {tr(isFiltered
               ? `Showing ${shownCount} of ${totalHoldings} available holdings · filtered by ${selectedSymbols.length} symbol${selectedSymbols.length === 1 ? '' : 's'}`
-              : `All ${totalHoldings} holdings across ${groups.length} broker${groups.length === 1 ? '' : 's'}`}
+              : `All ${totalHoldings} holdings across ${groups.length} broker${groups.length === 1 ? '' : 's'}`)}
           </span>
         </div>
 
@@ -264,40 +263,31 @@ export function HoldingsPanel({ selectedSymbols, onClearFilter }: Props) {
           <button
             type="button"
             onClick={onClearFilter}
-            title={`Reset filter to the ${defaultCount} default symbols (${totalHoldings} total holdings exist)`}
+            title={tr(`Reset filter to the ${defaultCount} default symbols (${totalHoldings} total holdings exist)`)}
             className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white transition hover:border-white/20 hover:bg-white/10"
           >
-            <Eye size={12} />
-            View all holdings ({totalHoldings})
+            <Eye size={12} />{tr("View all holdings (")}{tr(totalHoldings)})
           </button>
         )}
       </div>
 
       {qError && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-[11px] text-amber-300">
-          Live prices stale — using last known quotes.
-        </div>
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-[11px] text-amber-300">{tr("Live prices stale — using last known quotes.")}</div>
       )}
 
       {groups.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-white/8 bg-bg-surface p-8 text-center">
           <Filter size={20} className="text-text-muted" />
           <div className="flex flex-col gap-1 text-sm text-text-muted">
-            <span>
-              None of the {totalHoldings} available holdings match the current
-              filter.
-            </span>
-            <span className="text-[11px]">
-              Reset to the {defaultCount} default holdings to continue.
-            </span>
+            <span>{tr("None of the ")}{tr(totalHoldings)}{tr(" available holdings match the current filter.")}</span>
+            <span className="text-[11px]">{tr("Reset to the ")}{tr(defaultCount)}{tr(" default holdings to continue.")}</span>
           </div>
           <button
             type="button"
             onClick={onClearFilter}
             className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white transition hover:border-white/20 hover:bg-white/10"
           >
-            <Eye size={12} />
-            View all available holdings ({totalHoldings})
+            <Eye size={12} />{tr("View all available holdings (")}{tr(totalHoldings)})
           </button>
         </div>
       ) : (

@@ -54,14 +54,16 @@ async def test_router_preserves_approved_venue_account_and_rejects_out_of_scope(
     )
     agent = OrderRouter()
     agent.publish = AsyncMock()
+    agent.authorizations = AsyncMock()
     approved = proposal(
         symbol="SOL/USDT", side="SELL", account_id="holding", status=TradeProposalStatus.APPROVED
     )
     await agent._route(approved.model_dump(mode="json"))
-    order = agent.publish.await_args.args[1]
+    order = agent.authorizations.bind.await_args.args[1].model_dump(mode="json")
     assert order["exchange"] == "binance" and order["account_id"] == "holding"
     await agent._route(approved.model_copy(update={"account_id": "other"}).model_dump(mode="json"))
-    assert agent.publish.await_count == 1
+    assert agent.authorizations.bind.await_count == 1
+    agent.publish.assert_not_awaited()  # Binding commits the readiness-gated outbox.
 
 
 async def test_paper_feed_uses_unpegged_fx_and_rejects_stale_source(monkeypatch):

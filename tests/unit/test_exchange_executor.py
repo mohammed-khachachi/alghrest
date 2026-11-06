@@ -6,11 +6,13 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import asyncpg
 import pytest
 
 from agents.tier5_execution.exchange_executor import _SUPPORTED_EXCHANGES, ExchangeExecutor
 from core.data.models import Exchange, Order, OrderSide, OrderStatus, OrderType
 from core.execution.contracts import RecoveryBlockedError
+from core.resilience import DatabaseCircuitOpenError
 
 pytestmark = pytest.mark.unit
 
@@ -37,8 +39,13 @@ def executor():
     ex.store = SimpleNamespace(
         book_id="test",
         check_writer=AsyncMock(),
+        ensure_writer=AsyncMock(),
+        authorize=AsyncMock(),
+        deny=AsyncMock(),
         seen=AsyncMock(return_value=False),
         prepare=AsyncMock(return_value=True),
+        abort_prepared=AsyncMock(),
+        abort_if_unattempted=AsyncMock(return_value=True),
         reject=AsyncMock(),
         observe=AsyncMock(),
         uncertain=AsyncMock(),
@@ -150,3 +157,66 @@ async def test_algo_parents_are_not_submitted():
     ex, venue = executor()
     await ex.handle_order({"payload": order(order_type=OrderType.TWAP).model_dump(mode="json")})
     venue.place.assert_not_awaited()
+
+
+async def test_disconnect_during_prepare_aborts_unattempted_and_never_calls_venue():
+    ex, venue = executor()
+    intent = order()
+    ex.store.prepare.side_effect = asyncpg.ConnectionDoesNotExistError("db dropped at commit")
+    # Simulate DB still unreachable during immediate abort attempt, so it queues in _unattempted_claims
+    ex.store.abort_if_unattempted.side_effect = [
+        asyncpg.ConnectionDoesNotExistError("still down"),
+        True,
+    ]
+
+    assert not await ex._place_order(intent)
+    venue.place.assert_not_awaited()
+    ex.store.uncertain.assert_not_awaited()
+    assert intent.client_order_id in ex._unattempted_claims
+
+    # Once DB recovers, _flush_pending_journal cleans up the unattempted claim
+    await ex._flush_pending_journal()
+    assert intent.client_order_id not in ex._unattempted_claims
+    assert ex.store.abort_if_unattempted.await_count == 2
+
+
+async def test_disconnect_after_prepare_before_venue_place_aborts_unattempted():
+    ex, venue = executor()
+    intent = order()
+    # First ensure_writer (before prepare) succeeds; second (after prepare, before venue.place) trips
+    ex.store.ensure_writer.side_effect = [
+        None,
+        DatabaseCircuitOpenError("circuit open before venue contact"),
+        None,
+    ]
+
+    assert not await ex._place_order(intent)
+    venue.place.assert_not_awaited()
+    ex.store.uncertain.assert_not_awaited()
+    ex.store.abort_if_unattempted.assert_awaited_once()
+
+
+async def test_disconnect_during_observe_flushes_on_recovery_without_duplicate_venue_place():
+    ex, venue = executor()
+    intent = order()
+    placed_order = order(
+        client_order_id=intent.client_order_id,
+        exchange_order_id="venue-123",
+        status=OrderStatus.OPEN,
+    )
+    venue.place.return_value = placed_order
+    # Both initial observe and immediate retry fail due to DB drop; third call (during flush) succeeds
+    ex.store.observe.side_effect = [
+        asyncpg.ConnectionDoesNotExistError("dropped during observe"),
+        asyncpg.ConnectionDoesNotExistError("still down on immediate retry"),
+        None,
+    ]
+
+    assert await ex._place_order(intent)
+    venue.place.assert_awaited_once()
+    assert intent.client_order_id in ex._pending_observations
+
+    await ex._flush_pending_journal()
+    assert intent.client_order_id not in ex._pending_observations
+    assert ex.store.observe.await_count == 3
+    venue.place.assert_awaited_once()

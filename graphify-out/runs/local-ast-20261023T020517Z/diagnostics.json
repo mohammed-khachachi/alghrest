@@ -1,0 +1,215 @@
+{
+  "node_count": 5400,
+  "unverified_node_count": 0,
+  "raw_edge_count": 18352,
+  "non_object_edges": 0,
+  "missing_endpoint_edges": 0,
+  "dangling_endpoint_edges": 1617,
+  "external_reference_edges": 66,
+  "self_loop_edges": 5,
+  "valid_candidate_edges": 16669,
+  "exact_duplicate_edges": 0,
+  "directed_unique_endpoint_pairs": 15926,
+  "directed_same_endpoint_collapsed_edges": 743,
+  "undirected_unique_endpoint_pairs": 15920,
+  "undirected_same_endpoint_collapsed_edges": 749,
+  "same_endpoint_group_count": 718,
+  "relation_variant_groups": 612,
+  "source_file_variant_groups": 0,
+  "source_location_variant_groups": 54,
+  "context_variant_groups": 67,
+  "post_build_graph_type": "Graph",
+  "post_build_node_count": 5569,
+  "post_build_edge_count": 17598,
+  "post_build_error": "",
+  "producer_suppression": {
+    "path": "/home/xsabo/.local/share/uv/tools/graphifyy/lib64/python3.14/site-packages/graphify/extract.py",
+    "total_sites": 12,
+    "sites": [
+      {
+        "line": 1813,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2377,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2379,
+        "name": "seen_doc_refs",
+        "tuple_arity": 0,
+        "sample": "seen_doc_refs: set[str] = set()"
+      },
+      {
+        "line": 3046,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 3193,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n.get(\"id\") for n in nodes}"
+      },
+      {
+        "line": 4222,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 4408,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 7689,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 7797,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 7876,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 8391,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 8392,
+        "name": "seen_edges",
+        "tuple_arity": 4,
+        "sample": "seen_edges: set[tuple[str, str, str, str | None]] = set()"
+      }
+    ],
+    "error": ""
+  },
+  "examples": [
+    {
+      "source": "src_core_accounting_performance_observe",
+      "target": "src_core_data_performance_performance",
+      "edge_count": 4,
+      "relations": [
+        "calls",
+        "references",
+        "uses"
+      ],
+      "source_files": [
+        "src/core/accounting/performance.py"
+      ],
+      "source_locations": [
+        "L16",
+        "L17",
+        "L28"
+      ],
+      "contexts": [
+        "",
+        "call",
+        "parameter_type",
+        "return_type"
+      ]
+    },
+    {
+      "source": "dashboard_src_i18n_index",
+      "target": "dashboard_src_i18n_core",
+      "edge_count": 3,
+      "relations": [
+        "imports_from",
+        "re_exports"
+      ],
+      "source_files": [
+        "dashboard/src/i18n/index.tsx"
+      ],
+      "source_locations": [
+        "L3",
+        "L4"
+      ],
+      "contexts": [
+        "export",
+        "import",
+        "re-export"
+      ]
+    },
+    {
+      "source": "dashboard_src_lib_tcp25personal",
+      "target": "dashboard_src_lib_userpolicy",
+      "edge_count": 3,
+      "relations": [
+        "imports_from",
+        "re_exports"
+      ],
+      "source_files": [
+        "dashboard/src/lib/tcp25Personal.ts"
+      ],
+      "source_locations": [
+        "L113",
+        "L114",
+        "L2"
+      ],
+      "contexts": [
+        "export",
+        "import",
+        "re-export"
+      ]
+    },
+    {
+      "source": "src_api_advisor_create_evaluation",
+      "target": "src_core_advisory_evaluation_evaluationprofile",
+      "edge_count": 3,
+      "relations": [
+        "references",
+        "uses"
+      ],
+      "source_files": [
+        "src/api/advisor.py"
+      ],
+      "source_locations": [
+        "L305"
+      ],
+      "contexts": [
+        "",
+        "parameter_type",
+        "return_type"
+      ]
+    },
+    {
+      "source": "src_api_routes_advisory_briefings_workflow",
+      "target": "src_api_services_briefings_briefingworkflow",
+      "edge_count": 3,
+      "relations": [
+        "calls",
+        "references",
+        "uses"
+      ],
+      "source_files": [
+        "src/api/routes/advisory_briefings.py"
+      ],
+      "source_locations": [
+        "L15",
+        "L16"
+      ],
+      "contexts": [
+        "",
+        "call",
+        "return_type"
+      ]
+    }
+  ]
+}

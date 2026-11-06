@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../../i18n";
 
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
@@ -14,6 +15,7 @@ const CHANNELS = [
 ] as const;
 
 export default function TvWidget() {
+  useLanguage();
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]>(CHANNELS[0]);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -51,7 +53,7 @@ export default function TvWidget() {
             className={`term-btn ${channel.id === c.id ? "active" : ""}`}
             onClick={() => setChannel(c)}
           >
-            {c.label}
+            {tr(c.label)}
           </button>
         ))}
       </div>
@@ -59,7 +61,7 @@ export default function TvWidget() {
         <video ref={videoRef} className="w-full h-full" autoPlay muted controls playsInline />
         {error && (
           <div className="absolute inset-0 flex items-center justify-center p-4 text-center dim bg-black">
-            {error}
+            {tr(error)}
           </div>
         )}
       </div>

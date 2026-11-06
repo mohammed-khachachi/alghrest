@@ -45,7 +45,7 @@ async def test_health_roundtrip_expiry_and_missing_records(state):
     item = health()
     await state.set_agent_health(item, ttl_seconds=90)
     args = state.redis.setex.await_args.args
-    assert args[:2] == ("alghrest:agent:health:14", 90)
+    assert args[:2] == (state.book_key("alghrest:agent:health:14"), 90)
     state.redis.get.return_value = args[2]
     assert await state.get_agent_health(14) == item
     state.redis.keys.return_value = ["first", "expired"]
@@ -56,7 +56,9 @@ async def test_health_roundtrip_expiry_and_missing_records(state):
     state.redis.get.return_value = None
     assert await state.get_agent_health(14) is None
     await state.set_agent_status(14, AgentStatus.PAUSED)
-    state.redis.set.assert_awaited_with("alghrest:agent:status:14", "PAUSED", ex=120)
+    state.redis.set.assert_awaited_with(
+        state.book_key("alghrest:agent:status:14"), "PAUSED", ex=120
+    )
 
 
 @pytest.mark.parametrize(
@@ -86,22 +88,39 @@ async def test_domain_snapshots_roundtrip_and_reject_corruption(
 
 
 async def test_kill_switch_reason_and_atomic_dedup(state):
+    durable = AsyncMock()
+    durable.status.return_value = {"active": True, "reason": "drawdown", "generation": 1}
+    durable.is_active.return_value = True
+    state.halt_store = AsyncMock(return_value=durable)
+    global_halt = AsyncMock()
+    global_halt.status.return_value = {"active": False, "reason": "", "generation": 0}
+    state.global_halt_store = AsyncMock(return_value=global_halt)
     await state.activate_kill_switch("drawdown", ttl_seconds=100)
-    state.redis.setex.assert_awaited_with("alghrest:kill_switch:active", 100, b"drawdown")
+    durable.activate.assert_awaited_once_with("drawdown")
+    state.redis.set.assert_awaited_with(state.book_key("alghrest:kill_switch:active"), b"drawdown")
     state.redis.exists.return_value = 1
     assert await state.is_kill_switch_active()
     state.redis.get.return_value = b"drawdown"
     assert await state.get_kill_switch_reason() == "drawdown"
-    await state.deactivate_kill_switch()
-    state.redis.delete.assert_awaited_with("alghrest:kill_switch:active")
+    await state.deactivate_kill_switch(
+        actor="operator", reason="paper review", authorization="test-token", expected_generation=1
+    )
+    durable.reset.assert_awaited_once_with(
+        actor="operator", reason="paper review", authorization="test-token", expected_generation=1
+    )
+    state.redis.delete.assert_awaited_with(state.book_key("alghrest:kill_switch:active"))
     state.redis.exists.return_value = 0
     state.redis.get.return_value = None
+    durable.status.return_value = {"active": False, "reason": "paper review", "generation": 1}
+    durable.is_active.return_value = False
     assert not await state.is_kill_switch_active()
     assert await state.get_kill_switch_reason() is None
     state.redis.set.side_effect = [True, None]
     assert not await state.is_already_processed("fill:1", 60)
     assert await state.is_already_processed("fill:1", 60)
-    state.redis.set.assert_awaited_with("alghrest:dedup:fill:1", b"1", ex=60, nx=True)
+    state.redis.set.assert_awaited_with(
+        state.book_key("alghrest:dedup:fill:1"), b"1", ex=60, nx=True
+    )
 
 
 @pytest.mark.parametrize("acquired,release_error", [(True, False), (True, True), (False, False)])
@@ -128,7 +147,7 @@ async def test_signals_json_and_pubsub_preserve_payloads(state):
     value = {"price": "1.00000000000001", "enabled": True}
     await state.cache_signal("BTC", "technical", value, ttl=5)
     state.redis.setex.assert_awaited_with(
-        "alghrest:signal:latest:BTC:technical", 5, orjson.dumps(value)
+        state.book_key("alghrest:signal:latest:BTC:technical"), 5, orjson.dumps(value)
     )
     state.redis.get.return_value = orjson.dumps(value)
     assert await state.get_cached_signal("BTC", "technical") == value

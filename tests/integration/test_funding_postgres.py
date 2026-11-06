@@ -22,6 +22,7 @@ from core.data.models import Order, OrderSide
 from core.execution.contracts import AccountScope, RecoveryBlockedError
 from core.execution.store import ExecutionStore
 from scripts.paper_runtime import migrate
+from tests.execution_authorization import authorized_order
 from tests.factories import persist_snapshot
 
 pytestmark = pytest.mark.integration
@@ -71,6 +72,8 @@ async def funded(monkeypatch):
         yield obj
     finally:
         for table in (
+            "authorization_denials",
+            "authorizations",
             "paper_fills",
             "paper_orders",
             "paper_accounts",
@@ -263,21 +266,23 @@ async def make_ready(r):
 async def test_pending_orders_block_funding_and_deposit_blocks_new_order(funded):
     r = funded
     await make_ready(r)
-    intent = order()
+    intent = await authorized_order(r.store, order())
+    waiting = await authorized_order(r.store, order())
     await r.store.prepare(intent)
     with pytest.raises(ValueError, match="Pending"):
         await r.service.register(deposit(), apply=True)
     await r.store.abort_prepared(intent, "test cancelled before submission")
     await r.service.register(deposit(), apply=True)
     with pytest.raises(RecoveryBlockedError):
-        await r.store.prepare(order())
+        await r.store.prepare(waiting)
 
 
 async def test_order_prepare_races_deposit_under_same_book_lock(funded):
     r = funded
     await make_ready(r)
+    intent = await authorized_order(r.store, order())
     results = await asyncio.gather(
-        r.store.prepare(order()), r.service.register(deposit(), apply=True), return_exceptions=True
+        r.store.prepare(intent), r.service.register(deposit(), apply=True), return_exceptions=True
     )
     assert sum(isinstance(x, Exception) for x in results) == 1
     if results[0] is True:
@@ -325,12 +330,13 @@ async def test_unaccounted_fill_blocks_deposit_then_later_fills_preserve_funding
 async def test_cache_failure_after_commit_keeps_receipt_and_durable_gate(funded):
     r = funded
     await make_ready(r)
+    waiting = await authorized_order(r.store, order())
     r.state.invalidate_portfolio.side_effect = ConnectionError("Redis unavailable")
     first = await r.service.register(deposit(), apply=True)
     assert first.applied
     assert (await r.paper.balances())["USDT"] == 300
     with pytest.raises(RecoveryBlockedError):
-        await r.store.prepare(order())
+        await r.store.prepare(waiting)
     r.state.invalidate_portfolio.side_effect = None
     assert await r.service.register(deposit(), apply=True) == first
     restored = await persist_snapshot(r.ledger, r.state)
@@ -381,6 +387,7 @@ async def test_execution_reconciliation_requires_matching_performance(funded):
     assert report["reasons"] == ["durable performance snapshot missing or changed"]
     await persist_snapshot(r.ledger, r.state)
     assert (await r.store.verify([r.account], balances, [], {}, 30))["ready"]
+    waiting = await authorized_order(r.store, order())
     await r.ledger.pool.execute(
         """UPDATE accounting.performance SET state=jsonb_set(state,'{observed_at}',to_jsonb($2::text))
         WHERE book_id=$1""",
@@ -388,5 +395,5 @@ async def test_execution_reconciliation_requires_matching_performance(funded):
         (now - timedelta(minutes=1)).isoformat(),
     )
     with pytest.raises(RecoveryBlockedError, match="performance"):
-        await r.store.prepare(order())
+        await r.store.prepare(waiting)
     assert not (await r.store.verify([r.account], balances, [], {}, 30))["ready"]

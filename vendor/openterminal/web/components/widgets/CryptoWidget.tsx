@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, fmt, fmtBig, pctClass } from "../../lib/api";
@@ -19,6 +20,7 @@ function fmtPrice(p: number | null): string {
 }
 
 function Sparkline({ data }: { data: number[] }) {
+  useLanguage();
   if (data.length < 2) return null;
   const w = 60;
   const h = 16;
@@ -36,6 +38,7 @@ function Sparkline({ data }: { data: number[] }) {
 }
 
 export default function CryptoWidget() {
+  useLanguage();
   const setActiveSymbol = useTerminal((s) => s.setActiveSymbol);
   const { data = [], error } = useQuery({
     queryKey: ["crypto"],
@@ -48,32 +51,32 @@ export default function CryptoWidget() {
     refetchInterval: 30_000,
   });
 
-  if (error) return <div className="p-2 down">Error: {(error as Error).message}</div>;
+  if (error) return <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>;
 
   return (
     <div>
       {global && (
         <div className="flex gap-4 px-2 py-1 border-b border-[var(--border)] dim">
-          <span>Total MCap <span className="text-[var(--text)]">{fmtBig(global.totalMarketCap)}</span></span>
-          <span>BTC.D <span className="amber">{fmt(global.btcDominance, 1)}%</span></span>
-          <span>ETH.D <span className="amber">{fmt(global.ethDominance, 1)}%</span></span>
+          <span>{tr("Total MCap ")}<span className="text-[var(--text)]">{tr(fmtBig(global.totalMarketCap))}</span></span>
+          <span>{tr("BTC.D ")}<span className="amber">{tr(fmt(global.btcDominance, 1))}%</span></span>
+          <span>{tr("ETH.D ")}<span className="amber">{tr(fmt(global.ethDominance, 1))}%</span></span>
         </div>
       )}
       <table className="data-table">
         <thead>
-          <tr><th>#</th><th>Asset</th><th>Price</th><th>24h%</th><th>MCap</th><th>Vol 24h</th><th>7d</th></tr>
+          <tr><th>#</th><th>{tr("Asset")}</th><th>{tr("Price")}</th><th>{tr("24h%")}</th><th>{tr("MCap")}</th><th>{tr("Vol 24h")}</th><th>{tr("7d")}</th></tr>
         </thead>
         <tbody>
           {data.map((c) => (
             <tr key={c.id} onClick={() => setActiveSymbol(c.symbol)}>
-              <td className="dim">{c.rank ?? "—"}</td>
-              <td className="!text-left"><span className="font-bold">{c.symbol}</span> <span className="dim">{c.name}</span></td>
-              <td><Flash value={c.price}>{fmtPrice(c.price)}</Flash></td>
+              <td className="dim">{tr(c.rank ?? "—")}</td>
+              <td className="!text-start"><span className="font-bold">{c.symbol}</span> <span className="dim">{c.name}</span></td>
+              <td><Flash value={c.price}>{tr(fmtPrice(c.price))}</Flash></td>
               <td className={pctClass(c.changePercent24h)}>
-                <Flash value={c.changePercent24h}>{fmt(c.changePercent24h)}%</Flash>
+                <Flash value={c.changePercent24h}>{tr(fmt(c.changePercent24h))}%</Flash>
               </td>
-              <td>{fmtBig(c.marketCap)}</td>
-              <td>{fmtBig(c.volume24h)}</td>
+              <td>{tr(fmtBig(c.marketCap))}</td>
+              <td>{tr(fmtBig(c.volume24h))}</td>
               <td><Sparkline data={c.sparkline.filter((_, i) => i % 4 === 0)} /></td>
             </tr>
           ))}

@@ -102,6 +102,15 @@ async def test_governor_thresholds_and_kill_switch_latch(governor, daily, weekly
             assert governor.publish.await_args.args[2] == "HaltAllStrategies"
 
 
+async def test_weekly_halt_persists_before_event_delivery(governor):
+    async def published(*_args, **_kwargs):
+        governor.state.activate_kill_switch.assert_awaited_once()
+
+    governor.publish.side_effect = published
+    await governor._halt_all_strategies()
+    governor.state.activate_kill_switch.assert_awaited_once_with("weekly_drawdown_halt")
+
+
 async def test_governor_uses_durable_index_and_ignores_legacy_redis_baselines(governor):
     value = with_performance(portfolio(total_capital=Decimal(285)))
     value.performance.unit_price = Decimal("0.9")

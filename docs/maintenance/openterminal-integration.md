@@ -433,7 +433,7 @@ OpenTerminal AI is disabled at the API entrypoint; status reports `ai: false` an
 The MIT upstream snapshot is pinned to
 [`aed097c680cd8ec1c391ae06966babe7d6d91fc6`](https://github.com/ErTasselli/OpenTerminal/commit/aed097c680cd8ec1c391ae06966babe7d6d91fc6).
 `vendor/openterminal/UPSTREAM.json` preserves original per-file SHA-256 identities,
-nine local modifications and integration additions. There is no nested Git repo.
+the explicit lists of local modifications and integration additions. There is no nested Git repo.
 Local adaptations cover loopback ports, coordinated shutdown, disabled AI,
 research labels/return navigation, limited build workers and ignored generated
 files, plus history provenance and cache status. `IntegrationBridge.tsx` and
@@ -500,3 +500,62 @@ See [the scoped plan](research-reliability-alerts-plan.md). Diagnostic API:
 `GET /assistant-api/research-diagnostics/{symbol}`, using the existing assistant
 access gate. Native diagnostic reads never contact providers; refreshing the
 research report does. No access token is forwarded to OpenTerminal or providers.
+
+### English and Arabic interface
+
+Choose **English** or **العربية** in the language selector on the access page or
+in the header. The same selector is available in OpenTerminal. When embedded,
+OpenTerminal and ALGHREST synchronize the choice in both directions. Changing
+language updates interface text without navigating, remounting the workspace,
+or clearing input fields. The preference is saved as `alghrest.language` in each
+origin's local storage; it contains only `en` or `ar`. Arabic is the default.
+
+Arabic sets the document language to `ar` and direction to `rtl`. English uses
+`en` and `ltr`. Symbol/access-key fields and chart axes keep left-to-right
+notation. The language switch affects interface labels, help text, status and
+known diagnostic messages. Public news, company names, user notes, external
+video and other original source content retain their original text. PDF exports
+retain the existing report generator's language. This feature makes no external
+translation requests and does not change API payloads or stored research data.
+
+The dashboard translation entry point is `dashboard/src/i18n/index.tsx`, with a
+pure translation/store module in `core.ts`. Components call `useLanguage()` to
+subscribe and `tr()` only when displaying interface text. Labels use exact
+source text as keys in `messages.json`; each entry contains `[English, Arabic]`.
+Known templates use numbered placeholders such as `{0}` and preserve their
+interpolated values. Unknown source text passes through. Keep news/user content
+outside `tr()`. Use `currentLocale()` for interface date and number formatting.
+
+OpenTerminal carries an independent copy under `web/i18n/` so its React 19
+runtime does not import the React 18 dashboard. Keep both copies synchronized;
+`dashboard/tests/language.test.ts` validates catalog equality, placeholder
+integrity, source/value preservation, storage behavior and the strict language
+message schema. Existing origin and window-source guards also apply to language
+messages, which contain only `type` and `language`.
+
+Run the dashboard production build and OpenTerminal TypeScript check after
+changing the catalog or translation code. From the repository root:
+
+```bash
+npm --prefix dashboard run build
+vendor/openterminal/node_modules/.bin/tsc --project vendor/openterminal/web/tsconfig.json --noEmit --incremental false
+node <<'NODE'
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const esbuild = require('./dashboard/node_modules/esbuild');
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'alghrest-dashboard-tests-'));
+for (const file of fs.readdirSync('dashboard/tests').filter(name => name.endsWith('.test.ts')).sort()) {
+  const output = path.join(directory, file.replace(/\.ts$/, '.cjs'));
+  esbuild.buildSync({ entryPoints: ['dashboard/tests/' + file], bundle: true,
+    platform: 'node', format: 'cjs', outfile: output });
+  require(output);
+}
+NODE
+```
+
+The last command executes the compiled suites in the same Node process and
+prints their TAP test results. A failed assertion sets a nonzero exit status.
+The broader `node scripts/check_research.mjs` workflow also includes the language
+suite, but starts an isolated workspace and requires all four ports to be free.
+A build/type check does not replace visual review of both languages.

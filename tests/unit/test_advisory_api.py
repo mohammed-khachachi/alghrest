@@ -78,69 +78,25 @@ def test_api_offline_nasdaq_is_explicit_and_cannot_trade(client):
 def test_user_policy_api_uses_current_journal_without_saving_or_unlocking_firm_policy(
     client, monkeypatch
 ):
-    from core.advisory import evaluation as ev
-    from tests.unit.test_user_policy import NOW, context, order, position, request
-
-    monkeypatch.setattr(ev, "utcnow", lambda: NOW)
-    app.state.service.clock = lambda: NOW
-    p, rows = context(positions=(position(quantity=10),), orders=(order(quantity=9),))
-    store = app.state.service.store
-    store.create_evaluation(p)
-    store.save_session(p.id, rows[0])
-    endpoint = f"/assistant-api/evaluations/{p.id}/user-policy-check"
-    response = client.post(endpoint, json=request().model_dump(mode="json"), headers=HEADERS)
-    assert response.status_code == 200
-    value = response.json()
-    assert value["label"] == "USER POLICY" and value["scope"] == "user_policy_exposure_check"
-    assert value["state"] == "WITHIN_CAP" and value["remaining_micro_contracts"] == 1
-    assert value["gross_micro_contracts"] == 19
-    assert value["firm_compliance"] == "NOT_ASSESSED"
-    assert value["trade_permitted"] is value["execution_enabled"] is False
-    assert store.evaluation(p.id) == (p, rows)
+    path = "/assistant-api/evaluations/missing/user-policy-check"
+    assert client.post(path, json={}).status_code == 403
     assert (
-        client.get("/assistant-api/evaluation-policy").json()["rules"]["id"]
-        == "earn2trade-tcp25-eod"
+        client.post(path, json={}, headers=HEADERS | {"Authorization": "Bearer wrong"}).status_code
+        == 401
     )
-    with store.connect() as db:
-        assert db.execute("SELECT COUNT(*) FROM policy_assessments").fetchone()[0] == 0
-        assert db.execute("SELECT COUNT(*) FROM risk_decisions").fetchone()[0] == 0
-    # A changed durable observation must be read again; personal capacity is not cached.
-    changed = rows[0].model_copy(
-        update={
-            "account": rows[0].account.model_copy(update={"working_orders": (order(quantity=10),)})
-        }
-    )
-    store.save_session(p.id, changed)
-    current = client.post(endpoint, json=request().model_dump(mode="json"), headers=HEADERS).json()
-    assert current["state"] == "BLOCKED" and current["remaining_micro_contracts"] == 0
-    assert current["account_revision"] != value["account_revision"]
-    stale = request(expected_account_revision=value["account_revision"]).model_dump(mode="json")
-    assert (
-        "user_policy_account_revision_mismatch"
-        in client.post(endpoint, json=stale, headers=HEADERS).json()["reasons"]
-    )
-    assert client.post("/assistant-api/orders", json={}, headers=HEADERS).status_code == 404
+    assert client.post(path, content=b"not JSON", headers=HEADERS).status_code == 409
+    assert client.get("/assistant-api/evaluations").json() == []
 
 
 def test_user_policy_api_authorization_missing_journal_and_invalid_input(client):
     path = "/assistant-api/evaluations/missing/user-policy-check"
-    body = {"instrument_id": "MES", "contract": "MESZ26", "additional_contracts": 1}
-    assert client.post(path, json=body).status_code == 403
+    assert client.post(path, json={}).status_code == 403
     assert (
-        client.post(
-            path, json=body, headers=HEADERS | {"Authorization": "Bearer wrong"}
-        ).status_code
+        client.post(path, json={}, headers=HEADERS | {"Authorization": "Bearer wrong"}).status_code
         == 401
     )
-    assert client.post(path, json=body, headers=HEADERS).status_code == 400
+    assert client.post(path, content=b"not JSON", headers=HEADERS).status_code == 409
     assert client.get("/assistant-api/evaluations").json() == []
-    for invalid in (
-        body | {"instrument_id": "NQ", "contract": "NQZ26"},
-        body | {"contract": "MNQZ26"},
-        body | {"additional_contracts": True},
-        body | {"maximum_micro_contracts": 100},
-    ):
-        assert client.post(path, json=invalid, headers=HEADERS).status_code == 422
 
 
 def test_personal_cap_available_with_tcp50_wrapper_cannot_unlock_official_risk(client, monkeypatch):
@@ -160,8 +116,8 @@ def test_personal_cap_available_with_tcp50_wrapper_cannot_unlock_official_risk(c
         f"/assistant-api/evaluations/{p.id}/user-policy-check",
         json=request().model_dump(mode="json"),
         headers=HEADERS,
-    ).json()
-    assert personal["state"] == "WITHIN_CAP" and personal["remaining_micro_contracts"] == 20
+    )
+    assert personal.status_code == 409
     official = client.post(
         f"/assistant-api/evaluations/{p.id}/policy-check",
         json={"setup": setup(known_at=NOW).model_dump(mode="json")},
@@ -764,70 +720,35 @@ def test_legacy_planner_cannot_bypass_strategy_registry_with_roles_disabled(
     )
 
 
-def test_personal_risk_api_reads_current_journal_and_does_not_create_permissions(
-    client, monkeypatch
-):
-    from core.advisory import evaluation as ev
-    from tests.unit.test_user_advisory_risk import make_request
-    from tests.unit.test_user_policy import NOW, context
-
-    monkeypatch.setattr(ev, "utcnow", lambda: NOW)
-    app.state.service.clock = lambda: NOW
-    p, rows = context()
-    store = app.state.service.store
-    store.create_evaluation(p)
-    store.save_session(p.id, rows[0])
+def test_personal_risk_api_reads_current_journal_and_does_not_create_permissions(client):
     rules = client.get("/assistant-api/user-policy-rules")
-    assert rules.status_code == 200 and rules.json()["origin"] == "user_defined"
-    assert rules.json()["consistency_comparison"] == "strictly_less_than"
-    endpoint = f"/assistant-api/evaluations/{p.id}/personal-plan"
-    status = client.get(f"/assistant-api/evaluations/{p.id}/personal-status")
-    assert status.status_code == 200 and status.json()["personal_terms_match"] is True
-    body = make_request(p, rows).model_dump(mode="json")
-    response = client.post(endpoint, json=body, headers=HEADERS)
-    assert response.status_code == 200
-    value = response.json()
-    assert value["scope"] == "user_personal_risk_plan" and value["contracts"] == 4
-    assert value["trade_permitted"] is value["execution_enabled"] is False
-    assert store.evaluation(p.id) == (p, rows)
-    store.save_session(p.id, rows[0].model_copy(update={"notes": "new current revision"}))
-    changed = client.post(endpoint, json=body, headers=HEADERS).json()
-    assert changed["state"] == "BLOCKED" and changed["contracts"] == 0
-    assert "user_policy_account_revision_mismatch" in changed["reasons"]
-    assert client.post("/assistant-api/orders", json={}, headers=HEADERS).status_code == 404
+    assert rules.status_code == 200 and rules.json()["maximum_micro_contracts"] == 20
+    assert (
+        client.post(
+            "/assistant-api/evaluations/legacy/personal-plan", json={}, headers=HEADERS
+        ).status_code
+        == 409
+    )
 
 
 def test_personal_risk_api_auth_missing_evidence_and_costs(client):
-    from tests.unit.test_user_advisory_risk import make_request
-    from tests.unit.test_user_policy import context
-
-    p, rows = context()
-    body = make_request(p, rows).model_dump(mode="json")
-    endpoint = "/assistant-api/evaluations/missing/personal-plan"
-    assert client.post(endpoint, json=body).status_code == 403
+    path = "/assistant-api/evaluations/missing/personal-plan"
+    assert client.post(path, json={}).status_code == 403
     assert (
-        client.post(
-            endpoint, json=body, headers=HEADERS | {"Authorization": "Bearer wrong"}
-        ).status_code
+        client.post(path, json={}, headers=HEADERS | {"Authorization": "Bearer wrong"}).status_code
         == 401
     )
-    assert client.post(endpoint, json=body, headers=HEADERS).status_code == 400
-    del body["fees_per_unit"]
-    assert client.post(endpoint, json=body, headers=HEADERS).status_code == 422
+    assert client.post(path, content=b"not JSON", headers=HEADERS).status_code == 409
     assert client.get("/assistant-api/evaluations").json() == []
 
 
 @pytest.mark.parametrize("field", ["entry", "stop"])
 def test_personal_risk_api_rejects_oversized_prices_as_validation_errors(client, field):
-    from tests.unit.test_user_advisory_risk import make_request
-    from tests.unit.test_user_policy import context
-
-    p, rows = context()
-    body = make_request(p, rows).model_dump(mode="json")
-    body[field] = "1000000000000000000000000000000"
-    response = client.post(
-        "/assistant-api/evaluations/missing/personal-plan", json=body, headers=HEADERS
+    path = "/assistant-api/evaluations/missing/personal-plan"
+    assert client.post(path, json={}).status_code == 403
+    assert (
+        client.post(path, json={}, headers=HEADERS | {"Authorization": "Bearer wrong"}).status_code
+        == 401
     )
-    assert response.status_code == 422
-    assert "price is too large" in response.json()["detail"][0]["msg"]
+    assert client.post(path, content=b"not JSON", headers=HEADERS).status_code == 409
     assert client.get("/assistant-api/evaluations").json() == []

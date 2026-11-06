@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import json
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -17,6 +17,11 @@ import asyncpg
 from core.accounting.engine import apply_fill, fingerprint, identity
 from core.accounting.models import BookState, OpeningBalances, key, utc
 from core.data.models import Fill
+from core.resilience import (
+    DatabaseCircuitBreaker,
+    ExponentialBackoffPolicy,
+    is_transient_db_error,
+)
 
 
 class FillConflictError(ValueError):
@@ -24,11 +29,23 @@ class FillConflictError(ValueError):
 
 
 class Ledger:
-    def __init__(self, pool: asyncpg.Pool, book_id: str) -> None:
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        book_id: str,
+        *,
+        backoff: ExponentialBackoffPolicy | None = None,
+        circuit_breaker: DatabaseCircuitBreaker | None = None,
+    ) -> None:
         self.pool = pool
         self.book_id = book_id
         self._lease: Any = None
         self._lease_lock = asyncio.Lock()
+        self._writer_claimed = False
+        self.backoff = backoff or ExponentialBackoffPolicy()
+        self.circuit_breaker = circuit_breaker or DatabaseCircuitBreaker(
+            name=f"accounting:{book_id}"
+        )
 
     @classmethod
     async def connect(cls, dsn: str, book_id: str) -> Ledger:
@@ -58,6 +75,8 @@ class Ledger:
                 await self.pool.release(lease)
                 raise
             self._lease = lease
+            self._writer_claimed = True
+            self.circuit_breaker.record_success()
 
     async def check_writer(self) -> None:
         # Fill processing and snapshot publication share this asyncpg session.
@@ -66,11 +85,63 @@ class Ledger:
                 raise RuntimeError("Accounting writer lease lost")
             await self._lease.execute("SELECT 1")
 
+    async def recover_writer(self) -> None:
+        """Release a dropped session lease and re-claim the advisory lock with exponential backoff."""
+        async with self._lease_lock:
+            if not self._writer_claimed:
+                raise RuntimeError("Accounting writer lease lost")
+            if self._lease is not None and not self._lease.is_closed():
+                try:
+                    await self._lease.execute("SELECT 1")
+                    self.circuit_breaker.record_success()
+                    return
+                except BaseException as exc:
+                    if not is_transient_db_error(exc):
+                        raise
+            if self._lease is not None:
+                dead = self._lease
+                self._lease = None
+                with suppress(Exception):
+                    await self.pool.release(dead)
+            lock_id = int.from_bytes(
+                hashlib.sha256(self.book_id.encode()).digest()[:8], signed=True
+            )
+
+            async def _reacquire() -> Any:
+                lease = await self.pool.acquire()
+                try:
+                    if not await lease.fetchval("SELECT pg_try_advisory_lock($1)", lock_id):
+                        raise RuntimeError("Another accountant owns this book")
+                    return lease
+                except BaseException:
+                    with suppress(Exception):
+                        await self.pool.release(lease)
+                    raise
+
+            self._lease = await self.backoff.run(
+                _reacquire,
+                circuit_breaker=self.circuit_breaker,
+                is_retryable=is_transient_db_error,
+            )
+
+    async def ensure_writer(self) -> None:
+        """Verify the writer session or recover it with exponential backoff and circuit breaking."""
+        self.circuit_breaker.check()
+        try:
+            await self.check_writer()
+            self.circuit_breaker.record_success()
+        except BaseException as exc:
+            if not self._writer_claimed or not is_transient_db_error(exc):
+                raise
+            await self.recover_writer()
+
     async def close(self) -> None:
         async with self._lease_lock:
+            self._writer_claimed = False
             if self._lease is not None:
                 # Pool reset releases session advisory locks, including on cancellation.
-                await self.pool.release(self._lease)
+                with suppress(Exception):
+                    await self.pool.release(self._lease)
                 self._lease = None
             await self.pool.close()
 
@@ -87,20 +158,42 @@ class Ledger:
 
     @asynccontextmanager
     async def locked_state(self) -> AsyncIterator[tuple[Any, BookState, OpeningBalances]]:
-        async with self.pool.acquire() as conn, conn.transaction():
-            row = await conn.fetchrow(
-                "SELECT * FROM accounting.books WHERE book_id=$1 FOR UPDATE",
-                self.book_id,
-            )
-            if row is None:
-                raise RuntimeError("Accounting book missing: explicitly import opening balances")
-            if row["schema_version"] != 1:
-                raise RuntimeError("Unsupported accounting schema")
-            yield (
-                conn,
-                BookState.model_validate_json(row["state"]),
-                OpeningBalances.model_validate_json(row["opening"]),
-            )
+        self.circuit_breaker.check()
+        last_exc: BaseException | None = None
+        for attempt in range(self.backoff.max_attempts):
+            yielded = False
+            try:
+                async with self.pool.acquire() as conn, conn.transaction():
+                    row = await conn.fetchrow(
+                        "SELECT * FROM accounting.books WHERE book_id=$1 FOR UPDATE",
+                        self.book_id,
+                    )
+                    if row is None:
+                        raise RuntimeError(
+                            "Accounting book missing: explicitly import opening balances"
+                        )
+                    if row["schema_version"] != 1:
+                        raise RuntimeError("Unsupported accounting schema")
+                    self.circuit_breaker.record_success()
+                    yielded = True
+                    yield (
+                        conn,
+                        BookState.model_validate_json(row["state"]),
+                        OpeningBalances.model_validate_json(row["opening"]),
+                    )
+                return
+            except BaseException as exc:
+                if yielded or not is_transient_db_error(exc):
+                    if yielded and is_transient_db_error(exc):
+                        self.circuit_breaker.record_failure(exc)
+                    raise
+                last_exc = exc
+                if attempt + 1 >= self.backoff.max_attempts:
+                    break
+                await self.backoff._sleep(self.backoff.delay_for_attempt(attempt))
+        self.circuit_breaker.record_failure(last_exc)
+        assert last_exc is not None
+        raise last_exc
 
     async def load(self) -> BookState:
         async with self.locked_state() as (_, state, _opening):

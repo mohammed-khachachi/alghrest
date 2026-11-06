@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 interface ExposureBarProps {
   long: number;
   short: number;
@@ -11,6 +12,7 @@ function fmtUsd(n: number): string {
 }
 
 export function ExposureBar({ long, short }: ExposureBarProps) {
+  useLanguage();
   const total = long + short;
   const longPct = total > 0 ? (long / total) * 100 : 50;
   const shortPct = total > 0 ? (short / total) * 100 : 50;
@@ -19,8 +21,8 @@ export function ExposureBar({ long, short }: ExposureBarProps) {
   return (
     <div className="space-y-3">
       <div className="flex justify-between text-sm font-mono">
-        <span className="text-green-400">L {fmtUsd(long)}</span>
-        <span className="text-red-400">S {fmtUsd(short)}</span>
+        <span className="text-green-400">{tr("L ")}{tr(fmtUsd(long))}</span>
+        <span className="text-red-400">{tr("S ")}{tr(fmtUsd(short))}</span>
       </div>
 
       {/* Stacked bar */}
@@ -36,15 +38,15 @@ export function ExposureBar({ long, short }: ExposureBarProps) {
       </div>
 
       <div className="flex justify-between text-xs text-text-muted">
-        <span>{longPct.toFixed(0)}% Long</span>
+        <span>{tr(longPct.toFixed(0))}{tr("% Long")}</span>
         <span
           className={
             net >= 0 ? 'text-green-400 font-mono' : 'text-red-400 font-mono'
           }
         >
-          Δ {net >= 0 ? '+' : ''}{fmtUsd(net)}
+          Δ {tr(net >= 0 ? '+' : '')}{tr(fmtUsd(net))}
         </span>
-        <span>{shortPct.toFixed(0)}% Short</span>
+        <span>{tr(shortPct.toFixed(0))}{tr("% Short")}</span>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useDashboardStore } from '@/store/useStore';
 import { Skeleton } from '@/components/common/Skeleton';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -7,12 +8,14 @@ import { clsx } from 'clsx';
 import type { RiskAlert, RiskLimit } from '@/types/ws';
 
 function SeverityIcon({ severity }: { severity: string }) {
+  useLanguage();
   if (severity === 'CRITICAL') return <XOctagon size={14} className="text-red-400 flex-shrink-0" />;
   if (severity === 'WARNING') return <AlertTriangle size={14} className="text-amber-400 flex-shrink-0" />;
   return <Info size={14} className="text-blue-400 flex-shrink-0" />;
 }
 
 function AlertRow({ alert }: { alert: RiskAlert }) {
+  useLanguage();
   return (
     <div
       className={clsx(
@@ -32,16 +35,15 @@ function AlertRow({ alert }: { alert: RiskAlert }) {
               alert.severity === 'INFO' && 'bg-blue-900/50 text-blue-400',
             )}
           >
-            {alert.severity}
+            {tr(alert.severity)}
           </span>
           <span className="text-xs text-text-muted font-mono">
-            {new Date(alert.timestamp).toLocaleTimeString('en-US', { hour12: false })}
+            {tr(new Date(alert.timestamp).toLocaleTimeString('en-US', { hour12: false }))}
           </span>
-          <span className="text-xs text-indigo-400">{alert.affected_agent}</span>
+          <span className="text-xs text-indigo-400">{tr(alert.affected_agent)}</span>
         </div>
-        <p className="text-white leading-snug">{alert.message}</p>
-        <div className="text-xs text-text-muted mt-0.5 font-mono">
-          triggered: {alert.triggered_value.toFixed(2)} / threshold: {alert.threshold_value.toFixed(2)}
+        <p className="text-white leading-snug">{tr(alert.message)}</p>
+        <div className="text-xs text-text-muted mt-0.5 font-mono">{tr("triggered: ")}{tr(alert.triggered_value.toFixed(2))}{tr(" / threshold: ")}{tr(alert.threshold_value.toFixed(2))}
         </div>
       </div>
     </div>
@@ -49,6 +51,7 @@ function AlertRow({ alert }: { alert: RiskAlert }) {
 }
 
 function RiskLimitsTable({ limits }: { limits: RiskLimit[] }) {
+  useLanguage();
   if (limits.length === 0) {
     return (
       <div className="p-4 space-y-2">
@@ -66,9 +69,9 @@ function RiskLimitsTable({ limits }: { limits: RiskLimit[] }) {
           {['Limit', 'Current', 'Threshold', 'Usage', 'Status'].map((h) => (
             <th
               key={h}
-              className="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+              className="px-4 py-2 text-start text-xs font-medium text-text-muted uppercase tracking-wider"
             >
-              {h}
+              {tr(h)}
             </th>
           ))}
         </tr>
@@ -76,12 +79,12 @@ function RiskLimitsTable({ limits }: { limits: RiskLimit[] }) {
       <tbody>
         {limits.map((limit) => (
           <tr key={limit.name} className="border-b border-white/4 hover:bg-white/2">
-            <td className="px-4 py-2 text-white font-medium">{limit.name}</td>
+            <td className="px-4 py-2 text-white font-medium">{tr(limit.name)}</td>
             <td className="px-4 py-2 font-mono">
-              {limit.current.toFixed(2)}{limit.unit}
+              {tr(limit.current.toFixed(2))}{tr(limit.unit)}
             </td>
             <td className="px-4 py-2 font-mono text-text-muted">
-              {limit.threshold.toFixed(2)}{limit.unit}
+              {tr(limit.threshold.toFixed(2))}{tr(limit.unit)}
             </td>
             <td className="px-4 py-2 w-40">
               <div className="flex items-center gap-2">
@@ -96,8 +99,8 @@ function RiskLimitsTable({ limits }: { limits: RiskLimit[] }) {
                     style={{ width: `${Math.min(limit.pct, 100)}%` }}
                   />
                 </div>
-                <span className="font-mono text-xs text-text-muted w-10 text-right">
-                  {limit.pct.toFixed(0)}%
+                <span className="font-mono text-xs text-text-muted w-10 text-end">
+                  {tr(limit.pct.toFixed(0))}%
                 </span>
               </div>
             </td>
@@ -110,7 +113,7 @@ function RiskLimitsTable({ limits }: { limits: RiskLimit[] }) {
                   limit.status === 'BREACHED' && 'bg-red-900/50 text-red-400',
                 )}
               >
-                {limit.status}
+                {tr(limit.status)}
               </span>
             </td>
           </tr>
@@ -121,6 +124,7 @@ function RiskLimitsTable({ limits }: { limits: RiskLimit[] }) {
 }
 
 export function Risk() {
+  useLanguage();
   const riskAlerts = useDashboardStore((s) => s.riskAlerts);
   const riskLimits = useDashboardStore((s) => s.riskLimits);
 
@@ -130,23 +134,15 @@ export function Risk() {
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-white/8 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-white">
-              Risk Alerts
-              <span className="ml-2 text-xs text-text-muted font-mono">
-                (newest first)
-              </span>
+            <h2 className="text-sm font-medium text-white">{tr("Risk Alerts")}<span className="ml-2 text-xs text-text-muted font-mono">{tr("(newest first)")}</span>
             </h2>
             {riskAlerts.some((a) => a.severity === 'CRITICAL') && (
-              <span className="text-xs bg-red-900/70 text-red-300 px-2 py-0.5 rounded font-mono animate-pulse">
-                CRITICAL ACTIVE
-              </span>
+              <span className="text-xs bg-red-900/70 text-red-300 px-2 py-0.5 rounded font-mono animate-pulse">{tr("CRITICAL ACTIVE")}</span>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {riskAlerts.length === 0 ? (
-              <div className="text-center py-10 text-text-muted text-sm">
-                No alerts — system nominal
-              </div>
+              <div className="text-center py-10 text-text-muted text-sm">{tr("No alerts — system nominal")}</div>
             ) : (
               riskAlerts.map((alert) => (
                 <AlertRow key={alert.alert_id} alert={alert} />
@@ -160,7 +156,7 @@ export function Risk() {
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-white/8">
-            <h2 className="text-sm font-medium text-white">Risk Limits</h2>
+            <h2 className="text-sm font-medium text-white">{tr("Risk Limits")}</h2>
           </div>
           <div className="overflow-x-auto">
             <RiskLimitsTable limits={riskLimits} />
@@ -171,9 +167,7 @@ export function Risk() {
       {/* Correlation heatmap */}
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl p-6">
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
-            Strategy Correlation Heatmap
-          </h2>
+          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">{tr("Strategy Correlation Heatmap")}</h2>
           <CorrelationHeatmap />
         </div>
       </ErrorBoundary>

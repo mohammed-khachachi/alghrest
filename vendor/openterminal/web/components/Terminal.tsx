@@ -46,9 +46,9 @@ export default function Terminal() {
     <div className="flex flex-col h-full min-h-0">
       <IntegrationBridge />
       <TopBar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 min-w-0 min-h-0 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 min-w-0 min-h-0 overflow-auto">
           <Workspace />
         </main>
       </div>

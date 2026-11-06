@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import { useMemo } from 'react';
 import { clsx } from 'clsx';
 import {
@@ -31,13 +32,14 @@ interface KpiProps {
 }
 
 function Kpi({ label, value, sub, icon, tone = 'neutral' }: KpiProps) {
+  useLanguage();
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-white/8 bg-bg-surface p-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
-          {label}
+          {tr(label)}
         </span>
-        <span className="text-text-muted">{icon}</span>
+        <span className="text-text-muted">{tr(icon)}</span>
       </div>
       <div
         className={clsx(
@@ -47,9 +49,9 @@ function Kpi({ label, value, sub, icon, tone = 'neutral' }: KpiProps) {
           tone === 'neutral' && 'text-white',
         )}
       >
-        {value}
+        {tr(value)}
       </div>
-      {sub && <div className="text-[11px] text-text-muted">{sub}</div>}
+      {sub && <div className="text-[11px] text-text-muted">{tr(sub)}</div>}
     </div>
   );
 }
@@ -59,6 +61,7 @@ function Kpi({ label, value, sub, icon, tone = 'neutral' }: KpiProps) {
  * Independent of the symbol selector so users always see the full picture.
  */
 export function PortfolioOverview() {
+  useLanguage();
   const { holdings, quotesBySymbol, holdingsLoading, quotesLoading } = useLiveQuotes();
 
   const totals = useMemo(() => {
@@ -92,31 +95,29 @@ export function PortfolioOverview() {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-medium uppercase tracking-wider text-text-muted">
-        Portfolio Overview
-      </h2>
+      <h2 className="text-sm font-medium uppercase tracking-wider text-text-muted">{tr("Portfolio Overview")}</h2>
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Kpi
-          label="Total Invested"
+          label={tr("Total Invested")}
           value={fmtUsd(totals.invested)}
           sub={subAll}
           icon={<Wallet size={16} />}
         />
         <Kpi
-          label="Current Value"
+          label={tr("Current Value")}
           value={totals.hasAll ? fmtUsd(totals.current) : '—'}
           sub={subAll}
           icon={<DollarSign size={16} />}
         />
         <Kpi
-          label="P&L (USD)"
+          label={tr("P&L (USD)")}
           value={totals.hasAll ? fmtUsd(totals.pnl, true) : '—'}
           sub={subAll}
           icon={<PnlIcon size={16} />}
           tone={tone}
         />
         <Kpi
-          label="P&L (%)"
+          label={tr("P&L (%)")}
           value={totals.hasAll ? fmtPct(totals.pnlPct) : '—'}
           sub={subAll}
           icon={<Percent size={16} />}

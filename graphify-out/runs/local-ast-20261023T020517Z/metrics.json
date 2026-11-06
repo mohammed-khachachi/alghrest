@@ -1,0 +1,213 @@
+{
+  "nodes": 5569,
+  "edges": 17598,
+  "raw_nodes": 5411,
+  "raw_edges": 18352,
+  "communities": 185,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "elapsed_seconds": 17.438,
+  "failed_sources": [
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/init/timescale-init.sql",
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/migrations/001_accounting.sql",
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/migrations/002_execution_recovery.sql",
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/migrations/003_funding_performance.sql",
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/migrations/004_ai_budget.sql",
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/terraform/main.tf",
+    "/home/xsabo/Projects/MY-project/alghrest-main/infra/terraform/variables.tf"
+  ],
+  "skipped_sources": [
+    "/home/xsabo/Projects/MY-project/alghrest-main/dashboard/src/i18n/messages.json"
+  ],
+  "run_dir": "/home/xsabo/Projects/MY-project/alghrest-main/graphify-out/runs/local-ast-20261023T020517Z",
+  "gods": [
+    {
+      "id": "src_connectors_advisory_storage_advisorystore",
+      "label": "AdvisoryStore",
+      "degree": 124
+    },
+    {
+      "id": "dashboard_src_i18n_index_uselanguage",
+      "label": "useLanguage()",
+      "degree": 109
+    },
+    {
+      "id": "src_core_data_models_kafkatopic",
+      "label": "KafkaTopic",
+      "degree": 107
+    },
+    {
+      "id": "dashboard_src_i18n_core_tr",
+      "label": "tr()",
+      "degree": 105
+    },
+    {
+      "id": "src_core_data_models_exchange",
+      "label": "Exchange",
+      "degree": 98
+    },
+    {
+      "id": "src_core_data_models_tradeproposal",
+      "label": "TradeProposal",
+      "degree": 90
+    },
+    {
+      "id": "src_core_advisory_models_strict",
+      "label": "Strict",
+      "degree": 87
+    },
+    {
+      "id": "src_core_data_models_agentconfig",
+      "label": "AgentConfig",
+      "degree": 87
+    },
+    {
+      "id": "src_core_data_models_orderside",
+      "label": "OrderSide",
+      "degree": 79
+    },
+    {
+      "id": "src_agents_base_agent_baseagent",
+      "label": "BaseAgent",
+      "degree": 77
+    }
+  ],
+  "surprises": [
+    {
+      "source": "test_pinned_configuration_exists_and_matches_the_frozen_protocol()",
+      "target": "ResearchSpec",
+      "source_files": [
+        "tests/unit/test_mes5m_qualification_cli.py",
+        "src/backtesting/mes5m_spec.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `test_pinned_configuration_exists_and_matches_the_frozen_protocol()` unexpectedly reaches hub `ResearchSpec`"
+    },
+    {
+      "source": "test_render_failure_is_reported_without_filesystem_details()",
+      "target": "ResearchJournal",
+      "source_files": [
+        "tests/unit/test_research_brief.py",
+        "src/connectors/advisory/research_journal.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `test_render_failure_is_reported_without_filesystem_details()` unexpectedly reaches hub `ResearchJournal`"
+    },
+    {
+      "source": "test_authenticated_context_no_price_report_storage_write_or_order_path()",
+      "target": "NewsContext",
+      "source_files": [
+        "tests/unit/test_advisory_context.py",
+        "src/core/advisory/news_context.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `test_authenticated_context_no_price_report_storage_write_or_order_path()` unexpectedly reaches hub `NewsContext`"
+    },
+    {
+      "source": "fake()",
+      "target": "DiagnosticResult",
+      "source_files": [
+        "tests/unit/test_research_diagnostics.py",
+        "src/core/advisory/research_diagnostics.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `fake()` unexpectedly reaches hub `DiagnosticResult`"
+    },
+    {
+      "source": "test_full_compose_binds_local_and_authenticates_every_broker_listener()",
+      "target": "Settings",
+      "source_files": [
+        "tests/unit/test_infrastructure_access.py",
+        "src/core/config.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `test_full_compose_binds_local_and_authenticates_every_broker_listener()` unexpectedly reaches hub `Settings`"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `KafkaTopic` connect `src/agents/tier4_strategies` to `src/agents/tier5_execution`, `src/agents/tier5_execution`, `src/agents/tier6_defi`, `src/core/execution`, `src/agents/tier4_strategies`, `src/agents/tier3_quant`, `src/agents/tier4_strategies`, `src/core/orchestrator`, `tests/unit`, `src/core/utils`, `src/core/accounting`, `src/agents/tier2_intelligence`, `src/agents/tier4_strategies`, `src/core/data`, `tests/unit`, `src/agents`, `tests/unit`, `tests/unit`, `src/agents/tier1_executive`, `tests/unit`, `src/agents/tier1_executive`, `src/agents/tier2_intelligence`, `src/agents/tier3_quant`, `tests/unit`, `src/agents/tier2_intelligence`, `src/agents/tier2_intelligence`, `src/agents/tier2_intelligence`, `src/agents/tier2_intelligence`, `src/agents/tier4_strategies`, `src/agents/tier7_monitoring`, `src/agents/tier7_monitoring`?",
+      "why": "High betweenness centrality (0.025) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 77 inferred relationships involving `AdvisoryStore` (e.g. with `lifespan()` and `AdvisoryService`) actually correct?",
+      "why": "`AdvisoryStore` has 77 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `@radix-ui/react-collapsible`, `@radix-ui/react-tabs`, `@radix-ui/react-toast` to the rest of the system?",
+      "why": "12 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `src/agents/tier4_strategies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.04328407224958949 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `CIOAgent` connect `src/agents/tier1_executive` to `src/agents/tier4_strategies`, `src/core/utils`, `src/agents/tier6_defi`, `tests/unit`, `src/agents/tier2_intelligence`, `src/core/ai`, `src/agents`?",
+      "why": "High betweenness centrality (0.019) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 3 inferred relationships involving `useLanguage()` (e.g. with `getLanguage()` and `initializeLanguage()`) actually correct?",
+      "why": "`useLanguage()` has 3 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `src/core/advisory` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.03735632183908046 - nodes in this community are weakly interconnected."
+    }
+  ],
+  "all_input_hashes_unchanged": true,
+  "final_dangling_edges": 0,
+  "final_self_loop_edges": 5,
+  "html": "skipped: graph exceeds 5,000 nodes",
+  "native_failed_files": 7,
+  "actual_llm_usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "api_calls": 0,
+    "scope": "Graph extraction only; does not include conversation tokens"
+  },
+  "project_git_status_unchanged_except_outputs": true,
+  "warnings": [
+    "warning: 5 .sql file(s) contributed nothing to the graph because a dependency is missing: tree_sitter_sql not installed. Install it with: pip install \"graphifyy[sql]\" (#1745)",
+    "warning: 2 .tf file(s) contributed nothing to the graph because a dependency is missing: tree_sitter_hcl not installed. Install it with: pip install \"graphifyy[terraform]\" (#1745)",
+    "warning: 16 code file(s) yielded no symbols (0.01 MB) \u2014 a data file, or source this extractor models no symbols for: dashboard/postcss.config.js, dashboard/tests/navigation.test.ts, dashboard/vite.config.ts, src/agents/__init__.py, src/agents/tier3_quant/__init__.py (+11 more)",
+    "YAML is a top-level key inventory only; Dockerfiles are file inventory only. No YAML parser was installed.",
+    "Raw extraction: 1,617 dangling-endpoint edges, 66 external-reference edges, 5 self-loops, and 749 collapsed undirected endpoint pairs. See diagnostics.md and extraction.json.",
+    "Final graph endpoint verification: zero dangling edges. This does not validate correctness of resolved or inferred relationships.",
+    "Static AST relationships do not establish runtime Kafka topic flow, Redis state behavior, or trading readiness.",
+    "No PDF, image, document-semantic, vendor, dependency, agent-history, or memory processing was performed."
+  ],
+  "canonical_outputs_published": [
+    "graph.json",
+    "GRAPH_REPORT.md"
+  ],
+  "output_verification": {
+    "graphify-out/runs/local-ast-20261023T020517Z/graph.json": {
+      "bytes": 9308044,
+      "sha256": "ce833ab30bdc9b1e263a8d51166a786f7ed608570c29b1a505e66d5aaf5e28bd"
+    },
+    "graphify-out/runs/local-ast-20261023T020517Z/GRAPH_REPORT.md": {
+      "bytes": 51914,
+      "sha256": "90cb6b1fb5518ee5729e99d57950896193ddc27f9f88dfcbd91aabe77ec224da"
+    },
+    "graphify-out/graph.json": {
+      "bytes": 9308044,
+      "sha256": "ce833ab30bdc9b1e263a8d51166a786f7ed608570c29b1a505e66d5aaf5e28bd"
+    },
+    "graphify-out/GRAPH_REPORT.md": {
+      "bytes": 51914,
+      "sha256": "90cb6b1fb5518ee5729e99d57950896193ddc27f9f88dfcbd91aabe77ec224da"
+    }
+  }
+}

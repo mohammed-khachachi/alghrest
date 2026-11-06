@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useMemo } from 'react';
 import { useDashboardStore } from '@/store/useStore';
 import { Skeleton } from '@/components/common/Skeleton';
@@ -40,13 +41,14 @@ interface KpiCardProps {
 }
 
 function KpiCard({ label, value, sub, icon, positive }: KpiCardProps) {
+  useLanguage();
   return (
     <div className="bg-bg-surface border border-white/8 rounded-xl p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="text-text-muted text-xs font-medium uppercase tracking-wider">
-          {label}
+          {tr(label)}
         </span>
-        <span className="text-text-muted">{icon}</span>
+        <span className="text-text-muted">{tr(icon)}</span>
       </div>
       <div
         className={clsx(
@@ -56,14 +58,15 @@ function KpiCard({ label, value, sub, icon, positive }: KpiCardProps) {
           positive === null && 'text-white',
         )}
       >
-        {value}
+        {tr(value)}
       </div>
-      {sub && <div className="text-text-muted text-xs">{sub}</div>}
+      {sub && <div className="text-text-muted text-xs">{tr(sub)}</div>}
     </div>
   );
 }
 
 export function Overview() {
+  useLanguage();
   const portfolio = useDashboardStore((s) => s.portfolioSnapshot);
   const activeAgentCount = useDashboardStore((s) => s.activeAgentCount);
   const openPositions = useDashboardStore((s) => s.openPositions);
@@ -107,11 +110,11 @@ export function Overview() {
       {/* Symbol selector */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col">
-          <h1 className="text-lg font-semibold">Overview</h1>
+          <h1 className="text-lg font-semibold">{tr("Overview")}</h1>
           <span className="text-xs text-text-muted">
-            {isFiltered
+            {tr(isFiltered
               ? `Filtering positions & exposure by ${selectedSymbols.length} symbol${selectedSymbols.length > 1 ? 's' : ''}.`
-              : 'Showing portfolio-wide metrics. Pick symbols to filter and watch live quotes.'}
+              : 'Showing portfolio-wide metrics. Pick symbols to filter and watch live quotes.')}
           </span>
         </div>
         <SymbolSelector value={selectedSymbols} onChange={setSelectedSymbols} />
@@ -140,14 +143,14 @@ export function Overview() {
         {portfolio ? (
           <>
             <KpiCard
-              label="Total PnL Today"
+              label={tr("Total PnL Today")}
               value={fmtUsd(portfolio.daily_pnl_usd)}
               sub={`${portfolio.daily_pnl_pct >= 0 ? '+' : ''}${fmt(portfolio.daily_pnl_pct)}% · portfolio-wide`}
               icon={<DollarSign size={16} />}
               positive={portfolio.daily_pnl_usd >= 0}
             />
             <KpiCard
-              label="Portfolio Value"
+              label={tr("Portfolio Value")}
               value={fmtUsd(portfolio.portfolio_value)}
               sub={`Leverage ${fmt(portfolio.leverage, 1)}× · portfolio-wide`}
               icon={<Briefcase size={16} />}
@@ -162,7 +165,7 @@ export function Overview() {
         )}
 
         <KpiCard
-          label={isFiltered ? 'Filtered Positions' : 'Open Positions'}
+          label={tr(isFiltered ? 'Filtered Positions' : 'Open Positions')}
           value={String(filteredPositions.length)}
           sub={isFiltered ? `of ${openPositions.length} total` : 'active trades'}
           icon={<TrendingUp size={16} />}
@@ -170,7 +173,7 @@ export function Overview() {
         />
 
         <KpiCard
-          label="Active Agents"
+          label={tr("Active Agents")}
           value={`${activeAgentCount} / 32`}
           sub="EMA & ICT logic active"
           icon={<Cpu size={16} />}
@@ -181,9 +184,7 @@ export function Overview() {
       {/* PnL Chart */}
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
-            YTD Cumulative PnL
-          </h2>
+          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">{tr("YTD Cumulative PnL")}</h2>
           <PnlChart />
         </div>
       </ErrorBoundary>
@@ -192,9 +193,7 @@ export function Overview() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <ErrorBoundary>
           <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">
-              Dynamic Max Drawdown
-            </h3>
+            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">{tr("Dynamic Max Drawdown")}</h3>
             <DrawdownGauge
               value={drawdownLimit?.current ?? 0}
               max={25}
@@ -205,9 +204,7 @@ export function Overview() {
 
         <ErrorBoundary>
           <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">
-              Daily VaR
-            </h3>
+            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">{tr("Daily VaR")}</h3>
             <DrawdownGauge
               value={varLimit?.current ?? 0}
               max={varLimit?.threshold ?? 5}
@@ -220,8 +217,7 @@ export function Overview() {
 
         <ErrorBoundary>
           <div className="bg-bg-surface border border-white/8 rounded-xl p-4">
-            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">
-              Exposure{isFiltered ? ' (filtered)' : ''}
+            <h3 className="text-xs text-text-muted uppercase tracking-wider mb-3">{tr("Exposure")}{tr(isFiltered ? ' (filtered)' : '')}
             </h3>
             <ExposureBar long={longExposure} short={shortExposure} />
           </div>

@@ -369,6 +369,16 @@ def test_decimal_precision_is_local_and_micro_probability_is_not_cancelled():
         assert abs(result / (Decimal(96) * Decimal("1e-150")) - 1) < Decimal("1e-10")
 
 
+def test_near_certain_loss_run_rounds_consistently_across_thresholds():
+    # Exact rational enumeration gives a failure-to-hit probability below
+    # 5e-51 here, so the 50-digit result rounds to one. Accumulating the
+    # absorbing state alone previously left k=2 below the result for k=3.
+    two_losses = iid_loss_run_probability(Decimal(".994"), 50, 2)
+    three_losses = iid_loss_run_probability(Decimal(".994"), 50, 3)
+    assert two_losses == Decimal(1)
+    assert three_losses <= two_losses
+
+
 @pytest.mark.parametrize("returns", [0.1, {-1: 0.1}, {-0.1, 0.1}])
 def test_copied_wrong_history_container_is_unknown(returns):
     source = observed_result([0.1]).model_copy(update={"trade_returns": returns})

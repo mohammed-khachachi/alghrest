@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -30,6 +31,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
+  useLanguage();
   const wsStatus = useDashboardStore((s) => s.wsStatus);
   const activeAgents = useDashboardStore((s) => s.activeAgentCount);
   const riskAlerts = useDashboardStore((s) => s.riskAlerts);
@@ -38,11 +40,11 @@ export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
   return (
     <aside
       className={clsx(
-        'fixed inset-y-0 left-0 z-30 w-60 flex-shrink-0 flex flex-col',
-        'bg-bg-surface border-r border-border',
+        'fixed inset-y-0 start-0 z-30 w-60 flex-shrink-0 flex flex-col',
+        'bg-bg-surface border-e border-border',
         'transform transition-transform duration-300 ease-in-out',
-        'lg:relative lg:translate-x-0',
-        open ? 'translate-x-0' : '-translate-x-full',
+        'lg:relative lg:translate-x-0 rtl:lg:translate-x-0',
+        open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full',
       )}
     >
       {/* Logo */}
@@ -52,8 +54,8 @@ export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
             <Zap size={14} className="text-white" />
           </div>
           <div>
-            <div className="text-sm font-bold tracking-widest text-white">ALGHREST</div>
-            <div className="text-[10px] text-white/40 font-mono">{researchOnly ? 'مساعد التقييم · قرار بشري' : 'v0.3 · 32 AGENTS'}</div>
+            <div className="text-sm font-bold tracking-widest text-white">{tr("ALGHREST")}</div>
+            <div className="text-[10px] text-white/40 font-mono">{tr(researchOnly ? 'مساعد التقييم · قرار بشري' : 'v0.3 · 32 AGENTS')}</div>
           </div>
         </div>
         <button
@@ -85,15 +87,15 @@ export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
             {({ isActive }) => (
               <>
                 <Icon size={16} className={isActive ? 'text-indigo-400' : ''} />
-                {label}
+                {tr(label)}
                 {label === 'Risk' && criticalCount > 0 && (
-                  <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-loss text-[10px] font-bold text-white">
-                    {criticalCount > 9 ? '9+' : criticalCount}
+                  <span className="ms-auto flex h-4 w-4 items-center justify-center rounded-full bg-loss text-[10px] font-bold text-white">
+                    {tr(criticalCount > 9 ? '9+' : criticalCount)}
                   </span>
                 )}
                 {label === 'Agents' && (
-                  <span className="ml-auto text-[10px] font-mono text-white/30">
-                    {activeAgents}/32
+                  <span className="ms-auto text-[10px] font-mono text-white/30">
+                    {tr(activeAgents)}/32
                   </span>
                 )}
               </>
@@ -104,7 +106,7 @@ export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
 
       {/* WS Status */}
       <div className="px-4 py-3 border-t border-border">
-        {researchOnly ? <p className="text-xs text-white/50">بحث استشاري · دون تنفيذ آلي</p> : <div className="flex items-center gap-2 text-xs font-mono">
+        {researchOnly ? <p className="text-xs text-white/50">{tr("بحث استشاري · دون تنفيذ آلي")}</p> : <div className="flex items-center gap-2 text-xs font-mono">
           <span
             className={clsx('w-1.5 h-1.5 rounded-full', {
               'bg-profit animate-pulse': wsStatus === 'connected',
@@ -112,7 +114,7 @@ export function Sidebar({ open, onClose, researchOnly = false }: SidebarProps) {
               'bg-loss': wsStatus === 'disconnected' || wsStatus === 'error',
             })}
           />
-          <span className="text-white/40 capitalize">{wsStatus}</span>
+          <span className="text-white/40 capitalize">{tr(wsStatus)}</span>
         </div>}
       </div>
     </aside>

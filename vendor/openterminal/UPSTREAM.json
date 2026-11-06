@@ -98,7 +98,31 @@
     "server/src/providers/nasdaq.ts",
     "server/src/providers/stooq.ts",
     "server/src/providers/yahoo.ts",
-    "server/src/providers/news.ts"
+    "server/src/providers/news.ts",
+    "web/app/error.tsx",
+    "web/app/global-error.tsx",
+    "web/app/globals.css",
+    "web/components/CommandPalette.tsx",
+    "web/components/Flash.tsx",
+    "web/components/Sidebar.tsx",
+    "web/components/TopBar.tsx",
+    "web/components/WidgetErrorBoundary.tsx",
+    "web/components/Workspace.tsx",
+    "web/components/widgets/AiWidget.tsx",
+    "web/components/widgets/CalendarWidget.tsx",
+    "web/components/widgets/ChartWidget.tsx",
+    "web/components/widgets/CryptoWidget.tsx",
+    "web/components/widgets/HeatmapWidget.tsx",
+    "web/components/widgets/InsiderWidget.tsx",
+    "web/components/widgets/MacroWidget.tsx",
+    "web/components/widgets/NewsWidget.tsx",
+    "web/components/widgets/OptionsWidget.tsx",
+    "web/components/widgets/PortfolioWidget.tsx",
+    "web/components/widgets/QuoteWidget.tsx",
+    "web/components/widgets/RecapWidget.tsx",
+    "web/components/widgets/ScreenerWidget.tsx",
+    "web/components/widgets/TvWidget.tsx",
+    "web/components/widgets/WatchlistWidget.tsx"
   ],
   "integration_additions": [
     "web/components/IntegrationBridge.tsx",
@@ -112,6 +136,11 @@
     "server/src/researchDiagnostics.test.ts",
     "server/src/providers/researchClocks.test.ts",
     "server/src/routes/quoteFallback.test.ts",
-    "server/src/routes/newsDiagnostics.test.ts"
+    "server/src/routes/newsDiagnostics.test.ts",
+    "web/i18n/core.ts",
+    "web/i18n/index.tsx",
+    "web/i18n/messages.json",
+    "web/components/ResearchNotice.tsx",
+    "server/src/providers/yahoo.test.ts"
   ]
 }

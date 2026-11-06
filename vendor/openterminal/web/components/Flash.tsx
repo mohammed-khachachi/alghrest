@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../i18n";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -30,6 +31,7 @@ export default function Flash({
   className?: string;
   children: React.ReactNode;
 }) {
+  useLanguage();
   const flashing = useFlash(value);
-  return <span className={`${className ?? ""} ${flashing ? "flash-white" : ""}`}>{children}</span>;
+  return <span className={`${className ?? ""} ${flashing ? "flash-white" : ""}`}>{tr(children)}</span>;
 }

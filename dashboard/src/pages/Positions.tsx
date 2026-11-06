@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useState } from 'react';
 import { useDashboardStore } from '@/store/useStore';
 import { Skeleton } from '@/components/common/Skeleton';
@@ -36,25 +37,27 @@ function SummaryBar({
   short: number;
   net: number;
 }) {
+  useLanguage();
   return (
     <div className="bg-bg-surface border border-white/8 rounded-xl px-5 py-3 flex flex-wrap gap-6 text-sm font-mono">
       <div>
-        <span className="text-text-muted text-xs uppercase tracking-wider mr-2">Long</span>
-        <span className="text-green-400">{fmtUsd(long)}</span>
+        <span className="text-text-muted text-xs uppercase tracking-wider mr-2">{tr("Long")}</span>
+        <span className="text-green-400">{tr(fmtUsd(long))}</span>
       </div>
       <div>
-        <span className="text-text-muted text-xs uppercase tracking-wider mr-2">Short</span>
-        <span className="text-red-400">{fmtUsd(short)}</span>
+        <span className="text-text-muted text-xs uppercase tracking-wider mr-2">{tr("Short")}</span>
+        <span className="text-red-400">{tr(fmtUsd(short))}</span>
       </div>
       <div>
-        <span className="text-text-muted text-xs uppercase tracking-wider mr-2">Net Δ</span>
-        <span className={net >= 0 ? 'text-green-400' : 'text-red-400'}>{fmtUsd(net)}</span>
+        <span className="text-text-muted text-xs uppercase tracking-wider mr-2">{tr("Net Δ")}</span>
+        <span className={net >= 0 ? 'text-green-400' : 'text-red-400'}>{tr(fmtUsd(net))}</span>
       </div>
     </div>
   );
 }
 
 function OpenPositionsTable({ positions }: { positions: OpenPosition[] }) {
+  useLanguage();
   const cols = [
     'Symbol', 'Side', 'Size', 'Entry', 'Current', 'Unr. PnL', 'PnL %',
     'Strategy', 'Exchange', 'Age',
@@ -62,9 +65,7 @@ function OpenPositionsTable({ positions }: { positions: OpenPosition[] }) {
 
   if (positions.length === 0) {
     return (
-      <div className="text-center py-12 text-text-muted text-sm">
-        No open positions
-      </div>
+      <div className="text-center py-12 text-text-muted text-sm">{tr("No open positions")}</div>
     );
   }
 
@@ -76,9 +77,9 @@ function OpenPositionsTable({ positions }: { positions: OpenPosition[] }) {
             {cols.map((c) => (
               <th
                 key={c}
-                className="px-3 py-2 text-left text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
+                className="px-3 py-2 text-start text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
               >
-                {c}
+                {tr(c)}
               </th>
             ))}
           </tr>
@@ -106,34 +107,34 @@ function OpenPositionsTable({ positions }: { positions: OpenPosition[] }) {
                       : 'bg-red-900/50 text-red-400',
                   )}
                 >
-                  {p.side}
+                  {tr(p.side)}
                 </span>
               </td>
-              <td className="px-3 py-2 font-mono text-right">{fmt(p.size, 4)}</td>
-              <td className="px-3 py-2 font-mono text-right">{fmtUsd(p.entry_price)}</td>
-              <td className="px-3 py-2 font-mono text-right">{fmtUsd(p.current_price)}</td>
+              <td className="px-3 py-2 font-mono text-end">{tr(fmt(p.size, 4))}</td>
+              <td className="px-3 py-2 font-mono text-end">{tr(fmtUsd(p.entry_price))}</td>
+              <td className="px-3 py-2 font-mono text-end">{tr(fmtUsd(p.current_price))}</td>
               <td
                 className={clsx(
-                  'px-3 py-2 font-mono font-semibold text-right',
+                  'px-3 py-2 font-mono font-semibold text-end',
                   p.unrealized_pnl >= 0 ? 'text-green-400' : 'text-red-400',
                 )}
               >
-                {p.unrealized_pnl >= 0 ? '+' : ''}
-                {fmtUsd(p.unrealized_pnl)}
+                {tr(p.unrealized_pnl >= 0 ? '+' : '')}
+                {tr(fmtUsd(p.unrealized_pnl))}
               </td>
               <td
                 className={clsx(
-                  'px-3 py-2 font-mono text-right',
+                  'px-3 py-2 font-mono text-end',
                   p.unrealized_pnl_pct >= 0 ? 'text-green-400' : 'text-red-400',
                 )}
               >
-                {p.unrealized_pnl_pct >= 0 ? '+' : ''}
-                {fmt(p.unrealized_pnl_pct)}%
+                {tr(p.unrealized_pnl_pct >= 0 ? '+' : '')}
+                {tr(fmt(p.unrealized_pnl_pct))}%
               </td>
-              <td className="px-3 py-2 text-text-muted text-xs">{p.strategy}</td>
-              <td className="px-3 py-2 text-text-muted text-xs">{p.exchange}</td>
+              <td className="px-3 py-2 text-text-muted text-xs">{tr(p.strategy)}</td>
+              <td className="px-3 py-2 text-text-muted text-xs">{tr(p.exchange)}</td>
               <td className="px-3 py-2 font-mono text-text-muted text-xs">
-                {formatAge(p.age_seconds)}
+                {tr(formatAge(p.age_seconds))}
               </td>
             </tr>
           ))}
@@ -144,11 +145,12 @@ function OpenPositionsTable({ positions }: { positions: OpenPosition[] }) {
 }
 
 function ClosedTradesTable({ trades }: { trades: ClosedTrade[] }) {
+  useLanguage();
   const cols = ['Symbol', 'Side', 'Size', 'Entry', 'Exit', 'Realized PnL', 'PnL %', 'Strategy', 'Closed At'];
 
   if (trades.length === 0) {
     return (
-      <div className="text-center py-8 text-text-muted text-sm">No closed trades today</div>
+      <div className="text-center py-8 text-text-muted text-sm">{tr("No closed trades today")}</div>
     );
   }
 
@@ -160,9 +162,9 @@ function ClosedTradesTable({ trades }: { trades: ClosedTrade[] }) {
             {cols.map((c) => (
               <th
                 key={c}
-                className="px-3 py-2 text-left text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
+                className="px-3 py-2 text-start text-xs font-medium text-text-muted uppercase tracking-wider whitespace-nowrap"
               >
-                {c}
+                {tr(c)}
               </th>
             ))}
           </tr>
@@ -183,33 +185,33 @@ function ClosedTradesTable({ trades }: { trades: ClosedTrade[] }) {
                       : 'bg-red-900/40 text-red-400',
                   )}
                 >
-                  {t.side}
+                  {tr(t.side)}
                 </span>
               </td>
-              <td className="px-3 py-2 font-mono text-right">{fmt(t.size, 4)}</td>
-              <td className="px-3 py-2 font-mono text-right">{fmtUsd(t.entry_price)}</td>
-              <td className="px-3 py-2 font-mono text-right">{fmtUsd(t.exit_price)}</td>
+              <td className="px-3 py-2 font-mono text-end">{tr(fmt(t.size, 4))}</td>
+              <td className="px-3 py-2 font-mono text-end">{tr(fmtUsd(t.entry_price))}</td>
+              <td className="px-3 py-2 font-mono text-end">{tr(fmtUsd(t.exit_price))}</td>
               <td
                 className={clsx(
-                  'px-3 py-2 font-mono font-semibold text-right',
+                  'px-3 py-2 font-mono font-semibold text-end',
                   t.realized_pnl >= 0 ? 'text-green-400' : 'text-red-400',
                 )}
               >
-                {t.realized_pnl >= 0 ? '+' : ''}
-                {fmtUsd(t.realized_pnl)}
+                {tr(t.realized_pnl >= 0 ? '+' : '')}
+                {tr(fmtUsd(t.realized_pnl))}
               </td>
               <td
                 className={clsx(
-                  'px-3 py-2 font-mono text-right',
+                  'px-3 py-2 font-mono text-end',
                   t.pnl_pct >= 0 ? 'text-green-400' : 'text-red-400',
                 )}
               >
-                {t.pnl_pct >= 0 ? '+' : ''}
-                {fmt(t.pnl_pct)}%
+                {tr(t.pnl_pct >= 0 ? '+' : '')}
+                {tr(fmt(t.pnl_pct))}%
               </td>
-              <td className="px-3 py-2 text-text-muted text-xs">{t.strategy}</td>
+              <td className="px-3 py-2 text-text-muted text-xs">{tr(t.strategy)}</td>
               <td className="px-3 py-2 font-mono text-text-muted text-xs">
-                {new Date(t.closed_at).toLocaleTimeString('en-US', { hour12: false })}
+                {tr(new Date(t.closed_at).toLocaleTimeString('en-US', { hour12: false }))}
               </td>
             </tr>
           ))}
@@ -220,6 +222,7 @@ function ClosedTradesTable({ trades }: { trades: ClosedTrade[] }) {
 }
 
 export function Positions() {
+  useLanguage();
   const openPositions = useDashboardStore((s) => s.openPositions);
   const closedTrades = useDashboardStore((s) => s.closedTrades);
   const longExposure = useDashboardStore((s) => s.longExposure);
@@ -238,10 +241,8 @@ export function Positions() {
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-white/8 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-white">
-              Open Positions
-              <span className="ml-2 text-xs text-text-muted font-mono">
-                ({openPositions.length})
+            <h2 className="text-sm font-medium text-white">{tr("Open Positions")}<span className="ml-2 text-xs text-text-muted font-mono">
+                ({tr(openPositions.length)})
               </span>
             </h2>
           </div>
@@ -264,10 +265,8 @@ export function Positions() {
             onClick={() => setClosedExpanded((v) => !v)}
             className="w-full px-5 py-3 border-b border-white/8 flex items-center justify-between hover:bg-white/2 transition-colors"
           >
-            <h2 className="text-sm font-medium text-white">
-              Closed Trades Today
-              <span className="ml-2 text-xs text-text-muted font-mono">
-                ({closedTrades.length})
+            <h2 className="text-sm font-medium text-white">{tr("Closed Trades Today")}<span className="ml-2 text-xs text-text-muted font-mono">
+                ({tr(closedTrades.length)})
               </span>
             </h2>
             {closedExpanded ? (

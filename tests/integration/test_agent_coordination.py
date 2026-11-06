@@ -104,7 +104,9 @@ async def test_envelope_identity_and_error_counters(agent):
     health = await agent.health_check()
     assert health.messages_processed == 2 and health.messages_failed == 1
     consumer = agent.make_consumer([KafkaTopic.PRICES_REALTIME], "earliest")
-    assert consumer.group_id.endswith(".lifecycle-test")
+    from core.config import settings
+
+    assert consumer.group_id.endswith(f".lifecycle-test.{settings.accounting_book_id}")
     assert consumer.auto_offset_reset == "earliest"
 
 

@@ -1,0 +1,308 @@
+name: alghrest
+
+# =============================================================================
+# ALGHREST — Production Kafka TLS & Least-Privilege Worker Principal Overlay
+# Usage:
+#   python -m scripts.configure_access
+#   docker compose -f docker-compose.yml -f docker-compose.kafka-tls.yml up -d
+# Enforces SASL_SSL + SCRAM-SHA-512 on all 3 brokers and assigns tier-isolated
+# SASL principals to every agent worker container.
+# =============================================================================
+
+x-tls-broker-env: &tls-broker-env
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:SASL_SSL,EXTERNAL:SASL_SSL
+  KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-512,SCRAM-SHA-256,PLAIN
+  KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+  KAFKA_SSL_KEYSTORE_TYPE: PKCS12
+  KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.broker.keystore.p12
+  KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_SSL_KEYSTORE_PASSWORD:?Set KAFKA_SSL_KEYSTORE_PASSWORD}
+  KAFKA_SSL_KEY_PASSWORD: ${KAFKA_SSL_KEY_PASSWORD:?Set KAFKA_SSL_KEY_PASSWORD}
+  KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
+  KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.broker.truststore.p12
+  KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?Set KAFKA_SSL_TRUSTSTORE_PASSWORD}
+  KAFKA_SSL_ENABLED_PROTOCOLS: TLSv1.3,TLSv1.2
+  KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: https
+  KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+  KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+  KAFKA_SUPER_USERS: "User:broker;User:alghrest"
+
+x-tier1-env: &tier1-env
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  KAFKA_SASL_USERNAME: tier1_executive
+  KAFKA_SASL_PASSWORD: ${KAFKA_TIER1_PASSWORD:?Run python -m scripts.configure_access}
+  KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+  KAFKA_CONSUMER_GROUP_PREFIX: alghrest.tier1
+
+x-tier2-env: &tier2-env
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  KAFKA_SASL_USERNAME: tier2_intelligence
+  KAFKA_SASL_PASSWORD: ${KAFKA_TIER2_PASSWORD:?Run python -m scripts.configure_access}
+  KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+  KAFKA_CONSUMER_GROUP_PREFIX: alghrest.tier2
+
+x-tier4-env: &tier4-env
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  KAFKA_SASL_USERNAME: tier4_strategy
+  KAFKA_SASL_PASSWORD: ${KAFKA_TIER4_PASSWORD:?Run python -m scripts.configure_access}
+  KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+  KAFKA_CONSUMER_GROUP_PREFIX: alghrest.tier4
+
+x-tier5-router-env: &tier5-router-env
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  KAFKA_SASL_USERNAME: tier5_router
+  KAFKA_SASL_PASSWORD: ${KAFKA_TIER5_ROUTER_PASSWORD:?Run python -m scripts.configure_access}
+  KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+  KAFKA_CONSUMER_GROUP_PREFIX: alghrest.tier5
+
+x-tier5-executor-env: &tier5-executor-env
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  KAFKA_SASL_USERNAME: tier5_executor
+  KAFKA_SASL_PASSWORD: ${KAFKA_TIER5_EXECUTOR_PASSWORD:?Run python -m scripts.configure_access}
+  KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+  KAFKA_CONSUMER_GROUP_PREFIX: alghrest.tier5
+
+x-tier7-env: &tier7-env
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  KAFKA_SASL_USERNAME: tier7_monitoring
+  KAFKA_SASL_PASSWORD: ${KAFKA_TIER7_PASSWORD:?Run python -m scripts.configure_access}
+  KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+  KAFKA_CONSUMER_GROUP_PREFIX: alghrest.tier7
+
+services:
+  kafka-1:
+    environment: *tls-broker-env
+    volumes:
+      - ./.secrets/tls:/etc/kafka/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --command-config /etc/kafka/secrets/kafka-client-tls.properties --list 2>/dev/null || exit 1"]
+
+  kafka-2:
+    environment: *tls-broker-env
+    volumes:
+      - ./.secrets/tls:/etc/kafka/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --command-config /etc/kafka/secrets/kafka-client-tls.properties --list 2>/dev/null || exit 1"]
+
+  kafka-3:
+    environment: *tls-broker-env
+    volumes:
+      - ./.secrets/tls:/etc/kafka/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9094 --command-config /etc/kafka/secrets/kafka-client-tls.properties --list 2>/dev/null || exit 1"]
+
+  kafka-init:
+    environment:
+      KAFKA_COMMAND_CONFIG: /etc/kafka/secrets/kafka-client-tls.properties
+    volumes:
+      - ./.secrets/tls:/etc/kafka/secrets:ro
+
+  schema-registry:
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_SSL
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.broker.truststore.p12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?Set KAFKA_SSL_TRUSTSTORE_PASSWORD}
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_TYPE: PKCS12
+    volumes:
+      - ./.secrets/tls:/etc/kafka/secrets:ro
+
+  kafka-ui:
+    environment:
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.broker.truststore.p12
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?Set KAFKA_SSL_TRUSTSTORE_PASSWORD}
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_TYPE: PKCS12
+    volumes:
+      - ./.secrets/tls:/etc/kafka/secrets:ro
+
+  api:
+    environment:
+      KAFKA_SECURITY_PROTOCOL: SASL_SSL
+      KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+      KAFKA_SSL_CAFILE: /run/secrets/kafka-ca.crt
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-cio:
+    environment: *tier1-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-risk-governor:
+    environment: *tier1-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-proposal-approver:
+    environment: *tier1-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-price-publisher:
+    environment: *tier2-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-paper-market-feed:
+    environment: *tier2-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-trend-follower:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-mean-reversion:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-momentum:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-stat-arb:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-arb-cross-exchange:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-macro-rotator:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-breakout-hunter:
+    environment: *tier4-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-order-router:
+    environment: *tier5-router-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-slippage-minimizer:
+    environment: *tier5-router-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-hedge-manager:
+    environment: *tier5-router-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-fee-optimizer:
+    environment: *tier5-router-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-liquidation-guard:
+    environment: *tier5-router-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-exchange-executor:
+    environment: *tier5-executor-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-portfolio-accountant:
+    environment: *tier7-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-portfolio-tracker:
+    environment: *tier7-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-alert-manager:
+    environment: *tier7-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  agent-compliance:
+    environment: *tier7-env
+    volumes:
+      - ./.secrets/tls/ca.crt:/run/secrets/kafka-ca.crt:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully

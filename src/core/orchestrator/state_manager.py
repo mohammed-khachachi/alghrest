@@ -6,10 +6,12 @@ risk metrics, and distributed coordination primitives.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from typing import Any, cast
+from urllib.parse import quote
 
 import orjson
 import structlog
@@ -38,9 +40,12 @@ class StateManager:
     One connection pool per agent process.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, book_id: str | None = None) -> None:
+        self.book_id = book_id or settings.accounting_book_id
         self._pool: ConnectionPool | None = None
         self._redis: Redis | None = None
+        self._halt_pool: Any = None
+        self._halt_lock = asyncio.Lock()
         self._log = logger.bind(component="state_manager")
 
     async def initialize(self) -> None:
@@ -63,49 +68,56 @@ class StateManager:
             raise RuntimeError("StateManager not initialized — call initialize() first")
         return self._redis
 
+    def book_key(self, key: str) -> str:
+        return f"{key}:book:{quote(self.book_id, safe='')}"
+
     # ── AGENT HEALTH ──────────────────────────────────────────────────────────
 
     async def set_agent_health(self, health: AgentHealth, ttl_seconds: int = 60) -> None:
-        key = _NS_AGENT_HEALTH.format(agent_id=health.agent_id)
+        key = self.book_key(_NS_AGENT_HEALTH.format(agent_id=health.agent_id))
         data = orjson.dumps(health.model_dump(mode="json"))
         await self.redis.setex(key, ttl_seconds, data)
 
     async def get_agent_health(self, agent_id: int) -> AgentHealth | None:
-        key = _NS_AGENT_HEALTH.format(agent_id=agent_id)
+        key = self.book_key(_NS_AGENT_HEALTH.format(agent_id=agent_id))
         raw = await self.redis.get(key)
         if raw:
             return AgentHealth.model_validate(orjson.loads(raw))
         return None
 
     async def get_all_agent_healths(self) -> list[AgentHealth]:
-        keys = await self.redis.keys("alghrest:agent:health:*")
+        keys = await self.redis.keys(self.book_key("alghrest:agent:health:*"))
         if not keys:
             return []
         values = await self.redis.mget(keys)
         return [AgentHealth.model_validate(orjson.loads(v)) for v in values if v is not None]
 
     async def set_agent_status(self, agent_id: int, status: AgentStatus) -> None:
-        key = _NS_AGENT_STATUS.format(agent_id=agent_id)
+        key = self.book_key(_NS_AGENT_STATUS.format(agent_id=agent_id))
         await self.redis.set(key, status.value, ex=120)
 
     # ── PORTFOLIO STATE ────────────────────────────────────────────────────────
 
     async def set_portfolio(self, portfolio: Portfolio) -> None:
+        if portfolio.accounting_book_id not in (None, self.book_id):
+            raise ValueError("Portfolio belongs to another accounting book")
         data = orjson.dumps(portfolio.model_dump(mode="json"))
-        await self.redis.set(_NS_PORTFOLIO, data, ex=300)
+        await self.redis.set(self.book_key(_NS_PORTFOLIO), data, ex=300)
 
     async def get_portfolio(self) -> Portfolio | None:
-        raw = await self.redis.get(_NS_PORTFOLIO)
+        raw = await self.redis.get(self.book_key(_NS_PORTFOLIO))
         if raw:
             return Portfolio.model_validate(orjson.loads(raw))
         return None
 
     async def set_accounting_portfolio(self, portfolio: Portfolio) -> None:
         """Short-lived cache; the accountant's DB writer lease owns publication."""
-        await self.redis.set(_NS_PORTFOLIO, portfolio.model_dump_json(), ex=15)
+        if portfolio.accounting_book_id != self.book_id:
+            raise ValueError("Accounting portfolio belongs to another book")
+        await self.redis.set(self.book_key(_NS_PORTFOLIO), portfolio.model_dump_json(), ex=15)
 
     async def invalidate_portfolio(self) -> None:
-        await self.redis.delete(_NS_PORTFOLIO)
+        await self.redis.delete(self.book_key(_NS_PORTFOLIO))
 
     async def set_reconciliation(self, report: dict[str, Any], ttl: int = 30) -> None:
         await self.set_json(f"alghrest:reconciliation:{report['book_id']}", report, ttl=ttl)
@@ -116,7 +128,7 @@ class StateManager:
         from core.accounting.performance import PerformanceUnavailableError, require_performance
 
         portfolio = portfolio or await self.get_portfolio()
-        if portfolio is None or portfolio.accounting_book_id != settings.accounting_book_id:
+        if portfolio is None or portfolio.accounting_book_id != self.book_id:
             return False
         try:
             require_performance(portfolio)
@@ -125,7 +137,7 @@ class StateManager:
         age = (datetime.now(UTC) - utc(portfolio.snapshot_time)).total_seconds()
         if not 0 <= age <= 15:
             return False
-        report = await self.get_json(f"alghrest:reconciliation:{settings.accounting_book_id}")
+        report = await self.get_json(f"alghrest:reconciliation:{self.book_id}")
         if (
             not isinstance(report, dict)
             or report.get("ready") is not True
@@ -137,7 +149,7 @@ class StateManager:
                 datetime.now(UTC) - utc(datetime.fromisoformat(report["checked_at"]))
             ).total_seconds()
             return (
-                report.get("book_id") == settings.accounting_book_id
+                report.get("book_id") == self.book_id
                 and 0 <= age <= settings.execution_reconciliation_ttl
             )
         except (KeyError, TypeError, ValueError):
@@ -171,30 +183,98 @@ class StateManager:
 
     async def set_risk_metrics(self, metrics: RiskMetrics) -> None:
         data = orjson.dumps(metrics.model_dump(mode="json"))
-        await self.redis.set(_NS_RISK, data, ex=120)
+        await self.redis.set(self.book_key(_NS_RISK), data, ex=120)
 
     async def get_risk_metrics(self) -> RiskMetrics | None:
-        raw = await self.redis.get(_NS_RISK)
+        raw = await self.redis.get(self.book_key(_NS_RISK))
         if raw:
             return RiskMetrics.model_validate(orjson.loads(raw))
         return None
 
     # ── KILL SWITCH ───────────────────────────────────────────────────────────
 
+    async def halt_store(self) -> Any:
+        import asyncpg
+
+        from core.risk.halt import RiskHaltStore
+
+        async with self._halt_lock:
+            if self._halt_pool is not None and getattr(self._halt_pool, "_closed", False):
+                self._halt_pool = None
+            if self._halt_pool is None:
+                self._halt_pool = await asyncpg.create_pool(
+                    settings.database_url.replace("postgresql+asyncpg://", "postgresql://", 1),
+                    min_size=1,
+                    max_size=2,
+                    command_timeout=5,
+                    timeout=5,
+                )
+        return RiskHaltStore(self._halt_pool, self.book_id)
+
     async def activate_kill_switch(self, reason: str, ttl_seconds: int = 86400) -> None:
-        await self.redis.setex(_NS_KILL_SWITCH, ttl_seconds, reason.encode())
+        await (await self.halt_store()).activate(reason)
+        # Redis is a cache/legacy signal, never the authority and never expiring.
+        await self.redis.set(self.book_key(_NS_KILL_SWITCH), reason.encode())
         self._log.critical("kill switch activated", reason=reason)
 
-    async def is_kill_switch_active(self) -> bool:
-        return bool(await self.redis.exists(_NS_KILL_SWITCH) > 0)
+    async def global_halt_store(self) -> Any:
+        from core.risk.halt import GLOBAL_HALT_BOOK, RiskHaltStore
 
-    async def deactivate_kill_switch(self) -> None:
-        await self.redis.delete(_NS_KILL_SWITCH)
+        await self.halt_store()
+        return RiskHaltStore(self._halt_pool, GLOBAL_HALT_BOOK)
+
+    async def activate_global_kill_switch(self, reason: str) -> None:
+        await (await self.global_halt_store()).activate(reason, actor="global-risk-control")
+        await self.redis.set(_NS_KILL_SWITCH, reason.encode())
+        self._log.critical("global kill switch activated", reason=reason)
+
+    async def is_kill_switch_active(self) -> bool:
+        try:
+            active = await (await self.halt_store()).is_active()
+            return (
+                active
+                or bool(await self.redis.exists(self.book_key(_NS_KILL_SWITCH)))
+                or bool(await self.redis.exists(_NS_KILL_SWITCH))
+            )
+        except Exception:
+            self._log.error("authoritative halt state unavailable; new risk blocked")
+            return True
+
+    async def deactivate_kill_switch(
+        self,
+        *,
+        actor: str = "",
+        reason: str = "",
+        authorization: str = "",
+        expected_generation: int = -1,
+    ) -> None:
+        await (await self.halt_store()).reset(
+            actor=actor,
+            reason=reason,
+            authorization=authorization,
+            expected_generation=expected_generation,
+        )
+        await self.redis.delete(self.book_key(_NS_KILL_SWITCH))
         self._log.warning("kill switch deactivated")
 
+    async def deactivate_global_kill_switch(
+        self, *, actor: str, reason: str, authorization: str, expected_generation: int
+    ) -> None:
+        await (await self.global_halt_store()).reset(
+            actor=actor,
+            reason=reason,
+            authorization=authorization,
+            expected_generation=expected_generation,
+        )
+        await self.redis.delete(_NS_KILL_SWITCH)
+        self._log.warning("global kill switch deactivated")
+
     async def get_kill_switch_reason(self) -> str | None:
-        raw = await self.redis.get(_NS_KILL_SWITCH)
-        return raw.decode() if raw else None
+        global_status = await (await self.global_halt_store()).status()
+        if global_status["active"]:
+            return str(global_status["reason"])
+        status = await (await self.halt_store()).status()
+        return status["reason"] if status["active"] else None
 
     # ── IDEMPOTENCY DEDUPLICATION ─────────────────────────────────────────────
 
@@ -203,7 +283,7 @@ class StateManager:
         Returns True if this key was seen recently (message already processed).
         Atomically sets the key if not present (SET NX EX pattern).
         """
-        key = _NS_DEDUP.format(key=idempotency_key)
+        key = self.book_key(_NS_DEDUP.format(key=idempotency_key))
         result = await self.redis.set(key, b"1", ex=ttl_seconds, nx=True)
         # NX returns None if key already existed (already processed)
         return result is None
@@ -213,7 +293,7 @@ class StateManager:
     @asynccontextmanager
     async def lock(self, name: str, timeout: float = 30.0) -> AsyncIterator[Lock]:
         """Distributed lock for critical sections (e.g., order submission)."""
-        key = _NS_LOCK.format(name=name)
+        key = self.book_key(_NS_LOCK.format(name=name))
         lock = self.redis.lock(key, timeout=timeout, blocking_timeout=timeout)
         acquired = await lock.acquire()
         if not acquired:
@@ -229,11 +309,11 @@ class StateManager:
     async def cache_signal(
         self, symbol: str, signal_type: str, data: dict[str, Any], ttl: int = 3600
     ) -> None:
-        key = _NS_SIGNAL.format(symbol=symbol, signal_type=signal_type)
+        key = self.book_key(_NS_SIGNAL.format(symbol=symbol, signal_type=signal_type))
         await self.redis.setex(key, ttl, orjson.dumps(data))
 
     async def get_cached_signal(self, symbol: str, signal_type: str) -> dict[str, Any] | None:
-        key = _NS_SIGNAL.format(symbol=symbol, signal_type=signal_type)
+        key = self.book_key(_NS_SIGNAL.format(symbol=symbol, signal_type=signal_type))
         raw = await self.redis.get(key)
         return orjson.loads(raw) if raw else None
 
@@ -245,6 +325,8 @@ class StateManager:
     # ── GENERIC K/V ──────────────────────────────────────────────────────────
 
     async def set_json(self, key: str, value: Any, ttl: int | None = None) -> None:
+        if key.startswith(("proposal_review:", "strategy:")):
+            key = self.book_key(key)
         data = orjson.dumps(value)
         if ttl:
             await self.redis.setex(key, ttl, data)
@@ -252,12 +334,17 @@ class StateManager:
             await self.redis.set(key, data)
 
     async def get_json(self, key: str) -> Any | None:
+        if key.startswith(("proposal_review:", "strategy:")):
+            key = self.book_key(key)
         raw = await self.redis.get(key)
         return orjson.loads(raw) if raw else None
 
     # ── LIFECYCLE ────────────────────────────────────────────────────────────
 
     async def shutdown(self) -> None:
+        if self._halt_pool is not None:
+            await self._halt_pool.close()
+            self._halt_pool = None
         if self._redis:
             await self._redis.aclose()
         if self._pool:

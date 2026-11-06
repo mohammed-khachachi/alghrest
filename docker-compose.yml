@@ -7,6 +7,7 @@ x-runtime-environment: &runtime-environment
   REDIS_URL: redis://redis:6379
   KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
   KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+  KAFKA_SASL_MECHANISM: ${KAFKA_SASL_MECHANISM:-SCRAM-SHA-512}
   KAFKA_SASL_USERNAME: alghrest
   KAFKA_SASL_PASSWORD: ${KAFKA_APP_PASSWORD:?Run python -m scripts.configure_access}
 
@@ -15,7 +16,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.28.0.0/16
 
 volumes:
   timescale-data:
@@ -79,6 +80,10 @@ services:
       - ./infra/migrations/002_execution_recovery.sql:/docker-entrypoint-initdb.d/03-execution-recovery.sql:ro
       - ./infra/migrations/003_funding_performance.sql:/docker-entrypoint-initdb.d/04-funding-performance.sql:ro
       - ./infra/migrations/004_ai_budget.sql:/docker-entrypoint-initdb.d/05-ai-budget.sql:ro
+      - ./infra/migrations/005_risk_halts.sql:/docker-entrypoint-initdb.d/06-risk-halts.sql:ro
+      - ./infra/migrations/006_twap_plans.sql:/docker-entrypoint-initdb.d/07-twap-plans.sql:ro
+      - ./infra/migrations/007_execution_authorizations.sql:/docker-entrypoint-initdb.d/08-execution-authorizations.sql:ro
+      - ./infra/migrations/008_global_risk_halt.sql:/docker-entrypoint-initdb.d/09-global-risk-halt.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U alghrest -d alghrest"]
       interval: 10s
@@ -87,7 +92,7 @@ services:
       start_period: 30s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.2
+        ipv4_address: 172.28.0.2
     deploy:
       resources:
         limits:
@@ -114,7 +119,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.3
+        ipv4_address: 172.28.0.3
     logging:
       driver: json-file
       options:
@@ -154,7 +159,7 @@ services:
       start_period: 10s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.5
+        ipv4_address: 172.28.0.5
     deploy:
       resources:
         limits:
@@ -181,7 +186,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.6
+        ipv4_address: 172.28.0.6
     logging:
       driver: json-file
       options:
@@ -217,7 +222,7 @@ services:
       start_period: 20s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.28.0.10
     logging:
       driver: json-file
       options:
@@ -241,10 +246,17 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-256,SCRAM-SHA-512
       KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
-      KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: &broker-jaas 'org.apache.kafka.common.security.plain.PlainLoginModule required username="broker" password="${KAFKA_BROKER_PASSWORD:?Run python -m scripts.configure_access}" user_broker="${KAFKA_BROKER_PASSWORD}" user_alghrest="${KAFKA_APP_PASSWORD:?Run python -m scripts.configure_access}";'
+      KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: &broker-jaas 'org.apache.kafka.common.security.plain.PlainLoginModule required username="broker" password="${KAFKA_BROKER_PASSWORD:?Run python -m scripts.configure_access}" user_broker="${KAFKA_BROKER_PASSWORD}" user_alghrest="${KAFKA_APP_PASSWORD:?Run python -m scripts.configure_access}" user_tier1_executive="${KAFKA_TIER1_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_tier2_intelligence="${KAFKA_TIER2_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_tier3_quant="${KAFKA_TIER3_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_tier4_strategy="${KAFKA_TIER4_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_tier5_router="${KAFKA_TIER5_ROUTER_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_tier5_executor="${KAFKA_TIER5_EXECUTOR_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_tier7_monitoring="${KAFKA_TIER7_PASSWORD:-${KAFKA_APP_PASSWORD}}" user_advisory_reader="${KAFKA_ADVISORY_PASSWORD:-${KAFKA_APP_PASSWORD}}";'
       KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: &broker-scram-jaas 'org.apache.kafka.common.security.scram.ScramLoginModule required username="broker" password="${KAFKA_BROKER_PASSWORD:?Run python -m scripts.configure_access}";'
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: "User:broker;User:alghrest"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 50
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
@@ -281,7 +293,7 @@ services:
       start_period: 45s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.11
+        ipv4_address: 172.28.0.11
     deploy:
       resources:
         limits:
@@ -309,10 +321,17 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:29092,EXTERNAL://localhost:9093
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9093
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-256,SCRAM-SHA-512
       KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
       KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
       KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: "User:broker;User:alghrest"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 50
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
@@ -345,7 +364,7 @@ services:
       start_period: 45s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.12
+        ipv4_address: 172.28.0.12
     deploy:
       resources:
         limits:
@@ -373,10 +392,17 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-3:29092,EXTERNAL://localhost:9094
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9094
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN,SCRAM-SHA-256,SCRAM-SHA-512
       KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
       KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
       KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: *broker-jaas
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___512_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: *broker-scram-jaas
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: "User:broker;User:alghrest"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 50
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
@@ -409,7 +435,7 @@ services:
       start_period: 45s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.13
+        ipv4_address: 172.28.0.13
     deploy:
       resources:
         limits:
@@ -454,7 +480,7 @@ services:
       start_period: 30s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.15
+        ipv4_address: 172.28.0.15
     logging:
       driver: json-file
       options:
@@ -477,10 +503,22 @@ services:
         condition: service_healthy
     volumes:
       - ./infra/init/kafka-init.sh:/kafka-init.sh:ro
+      - ./infra/init/kafka-acls.sh:/kafka-acls.sh:ro
       - ./.secrets/kafka-client.properties:/run/secrets/kafka-client.properties:ro
     entrypoint: ["/bin/bash", "/kafka-init.sh"]
     environment:
       BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_APP_PASSWORD: ${KAFKA_APP_PASSWORD:?Run python -m scripts.configure_access}
+      KAFKA_BROKER_PASSWORD: ${KAFKA_BROKER_PASSWORD:?Run python -m scripts.configure_access}
+      KAFKA_TIER1_PASSWORD: ${KAFKA_TIER1_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_TIER2_PASSWORD: ${KAFKA_TIER2_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_TIER3_PASSWORD: ${KAFKA_TIER3_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_TIER4_PASSWORD: ${KAFKA_TIER4_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_TIER5_ROUTER_PASSWORD: ${KAFKA_TIER5_ROUTER_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_TIER5_EXECUTOR_PASSWORD: ${KAFKA_TIER5_EXECUTOR_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_TIER7_PASSWORD: ${KAFKA_TIER7_PASSWORD:-${KAFKA_APP_PASSWORD}}
+      KAFKA_ADVISORY_PASSWORD: ${KAFKA_ADVISORY_PASSWORD:-${KAFKA_APP_PASSWORD}}
     networks:
       - alghrest-network
     restart: "no"
@@ -517,7 +555,7 @@ services:
       start_period: 20s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.16
+        ipv4_address: 172.28.0.16
     logging:
       driver: json-file
       options:
@@ -557,7 +595,7 @@ services:
       start_period: 15s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.20
+        ipv4_address: 172.28.0.20
     deploy:
       resources:
         limits:
@@ -603,7 +641,7 @@ services:
       start_period: 20s
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.21
+        ipv4_address: 172.28.0.21
     deploy:
       resources:
         limits:
@@ -634,7 +672,7 @@ services:
       - "127.0.0.1:9100:9100"
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.22
+        ipv4_address: 172.28.0.22
     logging:
       driver: json-file
       options:
@@ -661,7 +699,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.1.1
+        ipv4_address: 172.28.1.1
     deploy:
       resources:
         limits:
@@ -683,7 +721,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.1.2
+        ipv4_address: 172.28.1.2
     deploy:
       resources:
         limits:
@@ -705,7 +743,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.1.3
+        ipv4_address: 172.28.1.3
     deploy:
       resources:
         limits:
@@ -727,7 +765,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.2.4
+        ipv4_address: 172.28.2.4
     deploy:
       resources:
         limits:
@@ -782,7 +820,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.12
+        ipv4_address: 172.28.4.12
     deploy:
       resources:
         limits:
@@ -802,7 +840,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.13
+        ipv4_address: 172.28.4.13
     deploy:
       resources:
         limits:
@@ -822,7 +860,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.17
+        ipv4_address: 172.28.4.17
     deploy:
       resources:
         limits:
@@ -842,7 +880,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.21
+        ipv4_address: 172.28.4.21
     deploy:
       resources:
         limits:
@@ -862,7 +900,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.18
+        ipv4_address: 172.28.4.18
     deploy:
       resources:
         limits:
@@ -882,7 +920,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.34
+        ipv4_address: 172.28.4.34
     deploy:
       resources:
         limits:
@@ -902,7 +940,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.4.19
+        ipv4_address: 172.28.4.19
     deploy:
       resources:
         limits:
@@ -928,7 +966,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.5.20
+        ipv4_address: 172.28.5.20
     deploy:
       resources:
         limits:
@@ -948,7 +986,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.5.22
+        ipv4_address: 172.28.5.22
     deploy:
       resources:
         limits:
@@ -968,7 +1006,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.5.23
+        ipv4_address: 172.28.5.23
     deploy:
       resources:
         limits:
@@ -988,7 +1026,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.5.24
+        ipv4_address: 172.28.5.24
     deploy:
       resources:
         limits:
@@ -1008,7 +1046,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.5.25
+        ipv4_address: 172.28.5.25
     deploy:
       resources:
         limits:
@@ -1036,7 +1074,7 @@ services:
         condition: service_completed_successfully
     networks:
       alghrest-network:
-        ipv4_address: 172.20.5.26
+        ipv4_address: 172.28.5.26
     deploy:
       resources:
         limits:
@@ -1068,7 +1106,7 @@ services:
         condition: service_completed_successfully
     networks:
       alghrest-network:
-        ipv4_address: 172.20.7.37
+        ipv4_address: 172.28.7.37
     deploy:
       resources:
         limits:
@@ -1090,7 +1128,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.7.30
+        ipv4_address: 172.28.7.30
     deploy:
       resources:
         limits:
@@ -1112,7 +1150,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.7.31
+        ipv4_address: 172.28.7.31
     deploy:
       resources:
         limits:
@@ -1136,7 +1174,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.7.32
+        ipv4_address: 172.28.7.32
     deploy:
       resources:
         limits:
@@ -1162,7 +1200,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.50
+        ipv4_address: 172.28.0.50
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; req = urllib.request.Request('http://localhost:8000/health/live'); urllib.request.urlopen(req)\""]
       interval: 15s
@@ -1196,7 +1234,7 @@ services:
         condition: service_healthy
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.51
+        ipv4_address: 172.28.0.51
 
   # ═══════════════════════════════════════════════════════
   # NGINX — Reverse proxy (/ → dashboard, /api → fastapi, /ws → fastapi)
@@ -1215,4 +1253,4 @@ services:
       - dashboard
     networks:
       alghrest-network:
-        ipv4_address: 172.20.0.52
+        ipv4_address: 172.28.0.52

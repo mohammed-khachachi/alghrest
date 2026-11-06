@@ -102,3 +102,8 @@
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 8px !important;
 }
+
+/* Language changes affect reading order, while chart coordinate systems stay LTR. */
+html[lang="ar"] body { font-family: Tahoma, Arial, system-ui, sans-serif; }
+html[dir="rtl"] .recharts-wrapper { direction: ltr; }
+input[inputmode="decimal"], input[type="number"] { direction: ltr; }

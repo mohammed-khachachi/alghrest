@@ -524,10 +524,10 @@ class TelegramBotManager:
             return
         action = args[0].lower()
         if action == "on":
-            await self.redis.set("alghrest:kill_switch:active", "1")
-            await self.redis.set(
-                "alghrest:kill_switch:reason",
-                f"Activated via Telegram by admin at {datetime.utcnow().isoformat()}",
+            from core.orchestrator.state_manager import state_manager
+
+            await state_manager.activate_global_kill_switch(
+                "Activated via authorized Telegram admin"
             )
             await self._broadcast(
                 "🚨 *KILL SWITCH ACTIVATED*\n"
@@ -536,13 +536,10 @@ class TelegramBotManager:
                 f"🕐 {datetime.utcnow().strftime('%H:%M:%S')} UTC"
             )
         elif action == "off":
-            await self.redis.delete("alghrest:kill_switch:active")
-            await self.redis.delete("alghrest:kill_switch:reason")
-            await self._broadcast(
-                "✅ *Kill Switch Deactivated*\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                "Trading resumed.\n"
-                f"🕐 {datetime.utcnow().strftime('%H:%M:%S')} UTC"
+            await self._send(
+                chat_id,
+                "Halt remains active. Use the authorized local risk_halt reset with "
+                "operator identity, review reason, reset token and current generation.",
             )
         else:
             await self._send(chat_id, "Usage: /ks on  or  /ks off")

@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, currentLocale, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { Fragment, useMemo, useState } from "react";
@@ -42,6 +43,7 @@ const TIMEZONES: Array<{ label: string; zone: string | undefined }> = [
 ];
 
 function EconomicTab() {
+  useLanguage();
   const [minImpact, setMinImpact] = useState<"all" | "medium">("medium");
   const [tz, setTz] = useState<string>("Local");
 
@@ -56,20 +58,16 @@ function EconomicTab() {
     [data, minImpact]
   );
 
-  if (error) return <div className="p-2 down">Error: {(error as Error).message}</div>;
-  if (isLoading) return <div className="p-2 dim">Loading calendar…</div>;
+  if (error) return <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>;
+  if (isLoading) return <div className="p-2 dim">{tr("Loading calendar…")}</div>;
 
   const zone = TIMEZONES.find((t) => t.label === tz)?.zone;
 
   return (
     <div>
       <div className="flex gap-1 p-1 items-center flex-wrap">
-        <button className={`term-btn ${minImpact === "medium" ? "active" : ""}`} onClick={() => setMinImpact("medium")}>
-          HIGH+MED
-        </button>
-        <button className={`term-btn ${minImpact === "all" ? "active" : ""}`} onClick={() => setMinImpact("all")}>
-          ALL
-        </button>
+        <button className={`term-btn ${minImpact === "medium" ? "active" : ""}`} onClick={() => setMinImpact("medium")}>{tr("HIGH+MED")}</button>
+        <button className={`term-btn ${minImpact === "all" ? "active" : ""}`} onClick={() => setMinImpact("all")}>{tr("ALL")}</button>
         <span className="w-2" />
         <select
           value={tz}
@@ -78,7 +76,7 @@ function EconomicTab() {
         >
           {TIMEZONES.map((t) => (
             <option key={t.label} value={t.label}>
-              {t.label}
+              {tr(t.label)}
             </option>
           ))}
         </select>
@@ -86,42 +84,42 @@ function EconomicTab() {
       <table className="data-table">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Ccy</th>
-            <th>Event</th>
-            <th>Forecast</th>
-            <th>Previous</th>
-            <th>Actual</th>
+            <th>{tr("Date")}</th>
+            <th>{tr("Ccy")}</th>
+            <th>{tr("Event")}</th>
+            <th>{tr("Forecast")}</th>
+            <th>{tr("Previous")}</th>
+            <th>{tr("Actual")}</th>
           </tr>
         </thead>
         <tbody>
           {events.map((e, i) => (
             <tr key={`${e.title}-${e.date}-${i}`}>
-              <td className="!text-left dim whitespace-nowrap">
-                {new Date(e.date).toLocaleString(undefined, {
+              <td className="!text-start dim whitespace-nowrap">
+                {tr(new Date(e.date).toLocaleString(currentLocale(), {
                   timeZone: zone,
                   month: "short",
                   day: "2-digit",
                   hour: "2-digit",
                   minute: "2-digit",
                   timeZoneName: "short",
-                })}
+                }))}
               </td>
-              <td>{e.country}</td>
-              <td className={`!text-left ${IMPACT_CLASS[e.impact]}`}>{e.title}</td>
-              <td>{e.forecast ?? "—"}</td>
-              <td className="dim">{e.previous ?? "—"}</td>
-              <td className={e.actual ? "text-[var(--text)]" : "dim"}>{e.actual ?? "—"}</td>
+              <td>{tr(e.country)}</td>
+              <td className={`!text-start ${IMPACT_CLASS[e.impact]}`}>{e.title}</td>
+              <td>{tr(e.forecast ?? "—")}</td>
+              <td className="dim">{tr(e.previous ?? "—")}</td>
+              <td className={e.actual ? "text-[var(--text)]" : "dim"}>{tr(e.actual ?? "—")}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {events.length === 0 && <div className="p-3 dim">No events in this window.</div>}
+      {events.length === 0 && <div className="p-3 dim">{tr("No events in this window.")}</div>}
     </div>
   );
 }
 
-const fmtDate = (ts: number | null) => (ts ? new Date(ts * 1000).toLocaleDateString("en-US") : "—");
+const fmtDate = (ts: number | null) => (ts ? new Date(ts * 1000).toLocaleDateString(currentLocale()) : "—");
 
 type EarningsHistoryRow = {
   fiscalQtrEnd: string;
@@ -141,38 +139,39 @@ function surpriseClass(row: EarningsHistoryRow): string {
 }
 
 function EarningsHistoryRows({ symbol }: { symbol: string }) {
+  useLanguage();
   const { data = [], isLoading, error } = useQuery({
     queryKey: ["earnings-history", symbol],
     queryFn: () => apiGet<EarningsHistoryRow[]>(`/api/earnings-history/${encodeURIComponent(symbol)}`),
     staleTime: 3_600_000,
   });
 
-  if (error) return <div className="p-2 down">Error: {(error as Error).message}</div>;
-  if (isLoading) return <div className="p-2 dim">Loading history for {symbol}…</div>;
-  if (data.length === 0) return <div className="p-2 dim">No earnings history for {symbol}.</div>;
+  if (error) return <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>;
+  if (isLoading) return <div className="p-2 dim">{tr("Loading history for ")}{tr(symbol)}…</div>;
+  if (data.length === 0) return <div className="p-2 dim">{tr("No earnings history for ")}{tr(symbol)}.</div>;
 
   return (
     <table className="data-table">
       <thead>
         <tr>
-          <th>Quarter</th>
-          <th>Reported</th>
-          <th>Forecast</th>
-          <th>Actual</th>
-          <th>Surprise</th>
-          <th>Day After</th>
+          <th>{tr("Quarter")}</th>
+          <th>{tr("Reported")}</th>
+          <th>{tr("Forecast")}</th>
+          <th>{tr("Actual")}</th>
+          <th>{tr("Surprise")}</th>
+          <th>{tr("Day After")}</th>
         </tr>
       </thead>
       <tbody>
         {data.map((row) => (
           <tr key={row.dateReported}>
-            <td className="!text-left dim">{row.fiscalQtrEnd}</td>
-            <td className="!text-left dim">{fmtDate(row.dateReported)}</td>
-            <td className="dim">{row.consensusForecast != null ? `$${row.consensusForecast.toFixed(2)}` : "—"}</td>
-            <td className={surpriseClass(row)}>{row.eps != null ? `$${row.eps.toFixed(2)}` : "—"}</td>
-            <td className={surpriseClass(row)}>{row.surprisePercent != null ? `${fmt(row.surprisePercent, 1)}%` : "—"}</td>
+            <td className="!text-start dim">{tr(row.fiscalQtrEnd)}</td>
+            <td className="!text-start dim">{tr(fmtDate(row.dateReported))}</td>
+            <td className="dim">{tr(row.consensusForecast != null ? `$${row.consensusForecast.toFixed(2)}` : "—")}</td>
+            <td className={surpriseClass(row)}>{tr(row.eps != null ? `$${row.eps.toFixed(2)}` : "—")}</td>
+            <td className={surpriseClass(row)}>{tr(row.surprisePercent != null ? `${fmt(row.surprisePercent, 1)}%` : "—")}</td>
             <td className={pctClass(row.dayAfterChangePercent)}>
-              {row.dayAfterChangePercent != null ? `${fmt(row.dayAfterChangePercent, 1)}%` : "—"}
+              {tr(row.dayAfterChangePercent != null ? `${fmt(row.dayAfterChangePercent, 1)}%` : "—")}
             </td>
           </tr>
         ))}
@@ -182,6 +181,7 @@ function EarningsHistoryRows({ symbol }: { symbol: string }) {
 }
 
 function EarningsTab() {
+  useLanguage();
   const watchlist = useTerminal((s) => s.watchlist);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -203,17 +203,17 @@ function EarningsTab() {
     [data]
   );
 
-  if (error) return <div className="p-2 down">Error: {(error as Error).message}</div>;
-  if (isLoading) return <div className="p-2 dim">Loading earnings…</div>;
+  if (error) return <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>;
+  if (isLoading) return <div className="p-2 dim">{tr("Loading earnings…")}</div>;
 
   return (
     <table className="data-table">
       <thead>
         <tr>
-          <th>Sym</th>
-          <th>Last Earnings</th>
-          <th>Next Earnings</th>
-          <th>EPS Est.</th>
+          <th>{tr("Sym")}</th>
+          <th>{tr("Last Earnings")}</th>
+          <th>{tr("Next Earnings")}</th>
+          <th>{tr("EPS Est.")}</th>
         </tr>
       </thead>
       <tbody>
@@ -222,16 +222,16 @@ function EarningsTab() {
             <tr
               onClick={() => setExpanded(expanded === e.symbol ? null : e.symbol)}
               className="cursor-pointer"
-              title="Click for earnings history"
+              title={tr("Click for earnings history")}
             >
-              <td className="!text-left text-[var(--text)] font-bold underline decoration-1">{e.symbol}</td>
-              <td className="dim">{fmtDate(e.lastEarningsDate)}</td>
-              <td className="amber">{fmtDate(e.nextEarningsDate)}</td>
-              <td>{e.epsForecast != null ? `$${e.epsForecast.toFixed(2)}` : "—"}</td>
+              <td className="!text-start text-[var(--text)] font-bold underline decoration-1">{e.symbol}</td>
+              <td className="dim">{tr(fmtDate(e.lastEarningsDate))}</td>
+              <td className="amber">{tr(fmtDate(e.nextEarningsDate))}</td>
+              <td>{tr(e.epsForecast != null ? `$${e.epsForecast.toFixed(2)}` : "—")}</td>
             </tr>
             {expanded === e.symbol && (
               <tr>
-                <td colSpan={4} className="!text-left p-0">
+                <td colSpan={4} className="!text-start p-0">
                   <EarningsHistoryRows symbol={e.symbol} />
                 </td>
               </tr>
@@ -240,9 +240,7 @@ function EarningsTab() {
         ))}
         {sorted.length === 0 && (
           <tr>
-            <td colSpan={4} className="dim p-3">
-              No upcoming earnings data for your watchlist.
-            </td>
+            <td colSpan={4} className="dim p-3">{tr("No upcoming earnings data for your watchlist.")}</td>
           </tr>
         )}
       </tbody>
@@ -251,17 +249,14 @@ function EarningsTab() {
 }
 
 export default function CalendarWidget() {
+  useLanguage();
   const [tab, setTab] = useState<"econ" | "earnings">("econ");
 
   return (
     <div>
       <div className="flex gap-1 p-1">
-        <button className={`term-btn ${tab === "econ" ? "active" : ""}`} onClick={() => setTab("econ")}>
-          ECONOMIC
-        </button>
-        <button className={`term-btn ${tab === "earnings" ? "active" : ""}`} onClick={() => setTab("earnings")}>
-          EARNINGS
-        </button>
+        <button className={`term-btn ${tab === "econ" ? "active" : ""}`} onClick={() => setTab("econ")}>{tr("ECONOMIC")}</button>
+        <button className={`term-btn ${tab === "earnings" ? "active" : ""}`} onClick={() => setTab("earnings")}>{tr("EARNINGS")}</button>
       </div>
       {tab === "econ" ? <EconomicTab /> : <EarningsTab />}
     </div>

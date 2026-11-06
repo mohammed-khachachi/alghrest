@@ -105,5 +105,91 @@ resource "aws_security_group" "redis_sg" {
   }
 }
 
-# NOTE: For Kafka (MSK) and TimescaleDB (RDS PostgreSQL), we would use 
-# similar modules here, but keeping it concise for the example.
+# 4. Amazon MSK (Authenticated SASL/SCRAM-SHA-512 + TLS + Default-Deny ACLs)
+resource "aws_kms_key" "kafka_kms" {
+  description             = "KMS key for ALGHREST MSK storage and SASL/SCRAM Secrets Manager credentials"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+}
+
+resource "aws_security_group" "kafka_sg" {
+  name_prefix = "alghrest-kafka-sg-"
+  vpc_id      = module.vpc.vpc_id
+
+  # Port 9096: SASL/SCRAM over TLS only (plaintext 9092 disabled)
+  ingress {
+    from_port   = 9096
+    to_port     = 9096
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "Kafka SASL/SCRAM TLS from VPC worker nodes"
+  }
+}
+
+resource "aws_msk_configuration" "kafka_config" {
+  name              = "alghrest-kafka-config-${var.environment}"
+  kafka_versions    = [var.kafka_version]
+  server_properties = <<PROPERTIES
+auto.create.topics.enable=false
+delete.topic.enable=true
+default.replication.factor=3
+min.insync.replicas=2
+unclean.leader.election.enable=false
+offsets.topic.replication.factor=3
+transaction.state.log.replication.factor=3
+transaction.state.log.min.isr=2
+allow.everyone.if.no.acl.found=false
+compression.type=lz4
+log.retention.hours=168
+PROPERTIES
+}
+
+resource "aws_secretsmanager_secret" "kafka_scram" {
+  for_each   = var.kafka_scram_principals
+  name       = "AmazonMSK_alghrest_${var.environment}_${each.key}"
+  kms_key_id = aws_kms_key.kafka_kms.arn
+}
+
+resource "aws_msk_cluster" "kafka" {
+  cluster_name           = "alghrest-kafka-${var.environment}"
+  kafka_version          = var.kafka_version
+  number_of_broker_nodes = 3
+
+  broker_node_group_info {
+    instance_type   = var.kafka_instance_type
+    client_subnets  = module.vpc.private_subnets
+    security_groups = [aws_security_group.kafka_sg.id]
+
+    storage_info {
+      ebs_storage_info {
+        volume_size = 500
+      }
+    }
+  }
+
+  client_authentication {
+    unauthenticated = false
+    sasl {
+      scram = true
+      iam   = false
+    }
+  }
+
+  encryption_info {
+    encryption_at_rest_kms_key_arn = aws_kms_key.kafka_kms.arn
+    encryption_in_transit {
+      client_broker = "TLS"
+      in_cluster    = true
+    }
+  }
+
+  configuration_info {
+    arn      = aws_msk_configuration.kafka_config.arn
+    revision = aws_msk_configuration.kafka_config.latest_revision
+  }
+}
+
+resource "aws_msk_scram_secret_association" "kafka_scram_assoc" {
+  cluster_arn     = aws_msk_cluster.kafka.arn
+  secret_arn_list = [for secret in aws_secretsmanager_secret.kafka_scram : secret.arn]
+}

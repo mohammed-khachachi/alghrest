@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -8,6 +9,7 @@ import { useTerminal } from "../../store/terminal";
 import Flash from "../Flash";
 
 export default function WatchlistWidget() {
+  useLanguage();
   const watchlist = useTerminal((s) => s.watchlist);
   const addToWatchlist = useTerminal((s) => s.addToWatchlist);
   const removeFromWatchlist = useTerminal((s) => s.removeFromWatchlist);
@@ -39,13 +41,14 @@ export default function WatchlistWidget() {
         }}
       >
         <input
+          dir="ltr"
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
             setInvalid(false);
           }}
-          placeholder="Add ticker…"
-          title={invalid ? "Not a valid ticker symbol" : undefined}
+          placeholder={tr("Add ticker…")}
+          title={tr(invalid ? "Not a valid ticker symbol" : undefined)}
           aria-invalid={invalid}
           className={`flex-1 ${invalid ? "!border-[var(--down)]" : ""}`}
         />
@@ -53,19 +56,19 @@ export default function WatchlistWidget() {
       </form>
       <table className="data-table">
         <thead>
-          <tr><th>Sym</th><th>Last</th><th>Chg%</th><th>Vol</th><th></th></tr>
+          <tr><th>{tr("Sym")}</th><th>{tr("Last")}</th><th>{tr("Chg%")}</th><th>{tr("Vol")}</th><th></th></tr>
         </thead>
         <tbody>
           {watchlist.map((sym) => {
             const q = data.find((d) => d.symbol === sym);
             return (
               <tr key={sym} onClick={() => setActiveSymbol(sym)}>
-                <td className="font-bold">{sym}</td>
-                <td><Flash value={q?.price}>{fmt(q?.price)}</Flash></td>
+                <td className="font-bold">{tr(sym)}</td>
+                <td><Flash value={q?.price}>{tr(fmt(q?.price))}</Flash></td>
                 <td className={pctClass(q?.changePercent)}>
-                  <Flash value={q?.changePercent}>{fmt(q?.changePercent)}%</Flash>
+                  <Flash value={q?.changePercent}>{tr(fmt(q?.changePercent))}%</Flash>
                 </td>
-                <td>{fmtBig(q?.volume)}</td>
+                <td>{tr(fmtBig(q?.volume))}</td>
                 <td>
                   <button
                     onClick={(e) => {

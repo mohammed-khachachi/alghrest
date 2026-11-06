@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, currentLocale, tr } from "../../i18n";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -10,6 +11,7 @@ type Position = { symbol: string; quantity: number; avgCost: number; realizedPnl
 type Tx = { id: number; symbol: string; side: string; quantity: number; price: number; executed_at: string };
 
 export default function PortfolioWidget() {
+  useLanguage();
   const qc = useQueryClient();
   const [portfolioId, setPortfolioId] = useState<number | null>(null);
   const [showTx, setShowTx] = useState(false);
@@ -78,13 +80,10 @@ export default function PortfolioWidget() {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-        <button className={`term-btn ${showTx ? "active" : ""}`} onClick={() => setShowTx(!showTx)}>
-          TRANSACTIONS
-        </button>
-        <span className="ml-auto">
-          MV <span className="amber">{fmt(totals.marketValue)}</span>{" "}
-          <span className="dim">Unrl</span> <span className={pctClass(unrealized)}>{fmt(unrealized)}</span>{" "}
-          <span className="dim">Rlzd</span> <span className={pctClass(totals.realized)}>{fmt(totals.realized)}</span>
+        <button className={`term-btn ${showTx ? "active" : ""}`} onClick={() => setShowTx(!showTx)}>{tr("TRANSACTIONS")}</button>
+        <span className="ms-auto">{tr("MV ")}<span className="amber">{tr(fmt(totals.marketValue))}</span>{tr(" ")}
+          <span className="dim">{tr("Unrl")}</span> <span className={pctClass(unrealized)}>{tr(fmt(unrealized))}</span>{tr(" ")}
+          <span className="dim">{tr("Rlzd")}</span> <span className={pctClass(totals.realized)}>{tr(fmt(totals.realized))}</span>
         </span>
       </div>
 
@@ -95,20 +94,20 @@ export default function PortfolioWidget() {
           if (form.symbol && form.quantity && form.price) addTx.mutate();
         }}
       >
-        <input className="w-20" placeholder="Ticker" value={form.symbol} onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })} />
+        <input dir="ltr" className="w-20" placeholder={tr("Ticker")} value={form.symbol} onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })} />
         <select value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value })}>
-          <option>BUY</option><option>SELL</option>
+          <option value="BUY">{tr("BUY")}</option><option value="SELL">{tr("SELL")}</option>
         </select>
-        <input className="w-20" placeholder="Qty" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-        <input className="w-24" placeholder="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-        <button className="term-btn" type="submit">ADD</button>
-        {addTx.error && <span className="down">{(addTx.error as Error).message}</span>}
+        <input dir="ltr" className="w-20" placeholder={tr("Qty")} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+        <input dir="ltr" className="w-24" placeholder={tr("Price")} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+        <button className="term-btn" type="submit">{tr("ADD")}</button>
+        {addTx.error && <span className="down">{tr((addTx.error as Error).message)}</span>}
       </form>
 
       {!showTx ? (
         <table className="data-table">
           <thead>
-            <tr><th>Sym</th><th>Qty</th><th>Avg Cost</th><th>Last</th><th>Mkt Val</th><th>Unrl PnL</th><th>Rlzd PnL</th></tr>
+            <tr><th>{tr("Sym")}</th><th>{tr("Qty")}</th><th>{tr("Avg Cost")}</th><th>{tr("Last")}</th><th>{tr("Mkt Val")}</th><th>{tr("Unrl PnL")}</th><th>{tr("Rlzd PnL")}</th></tr>
           </thead>
           <tbody>
             {positions.map((p) => {
@@ -119,12 +118,12 @@ export default function PortfolioWidget() {
               return (
                 <tr key={p.symbol}>
                   <td className="font-bold">{p.symbol}</td>
-                  <td>{fmt(p.quantity, 4)}</td>
-                  <td>{fmt(p.avgCost)}</td>
-                  <td>{fmt(last)}</td>
-                  <td>{fmt(mv)}</td>
-                  <td className={pctClass(upnl)}>{fmt(upnl)}</td>
-                  <td className={pctClass(p.realizedPnl)}>{fmt(p.realizedPnl)}</td>
+                  <td>{tr(fmt(p.quantity, 4))}</td>
+                  <td>{tr(fmt(p.avgCost))}</td>
+                  <td>{tr(fmt(last))}</td>
+                  <td>{tr(fmt(mv))}</td>
+                  <td className={pctClass(upnl)}>{tr(fmt(upnl))}</td>
+                  <td className={pctClass(p.realizedPnl)}>{tr(fmt(p.realizedPnl))}</td>
                 </tr>
               );
             })}
@@ -133,16 +132,16 @@ export default function PortfolioWidget() {
       ) : (
         <table className="data-table">
           <thead>
-            <tr><th>Date</th><th>Sym</th><th>Side</th><th>Qty</th><th>Price</th><th></th></tr>
+            <tr><th>{tr("Date")}</th><th>{tr("Sym")}</th><th>{tr("Side")}</th><th>{tr("Qty")}</th><th>{tr("Price")}</th><th></th></tr>
           </thead>
           <tbody>
             {txs.map((t) => (
               <tr key={t.id}>
-                <td className="!text-left dim">{new Date(t.executed_at).toLocaleDateString()}</td>
+                <td className="!text-start dim">{tr(new Date(t.executed_at).toLocaleDateString(currentLocale()))}</td>
                 <td className="font-bold">{t.symbol}</td>
-                <td className={t.side === "BUY" ? "up" : "down"}>{t.side}</td>
-                <td>{fmt(t.quantity, 4)}</td>
-                <td>{fmt(t.price)}</td>
+                <td className={t.side === "BUY" ? "up" : "down"}>{tr(t.side)}</td>
+                <td>{tr(fmt(t.quantity, 4))}</td>
+                <td>{tr(fmt(t.price))}</td>
                 <td>
                   <button
                     className="dim hover:text-[var(--down)]"

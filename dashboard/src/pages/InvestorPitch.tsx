@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useMemo, useState } from 'react';
 import {
   ArrowRight,
@@ -10,7 +11,6 @@ import {
   Database,
   Gauge,
   Globe2,
-  Languages,
   Lock,
   Radio,
   ShieldCheck,
@@ -28,7 +28,6 @@ import {
   YAxis,
 } from 'recharts';
 
-type Lang = 'ar' | 'fr';
 
 const copy = {
   ar: {
@@ -148,11 +147,11 @@ const investorMessages = [
 ];
 
 export function InvestorPitch() {
-  const [lang, setLang] = useState<Lang>('ar');
+  const lang = useLanguage();
   const [capital, setCapital] = useState(10000);
   const [months, setMonths] = useState(12);
   const [rate, setRate] = useState(0.05);
-  const t = copy[lang];
+  const t = copy.ar;
   const isAr = lang === 'ar';
 
   const chartData = useMemo(() => {
@@ -165,7 +164,7 @@ export function InvestorPitch() {
 
   const finalValue = chartData[chartData.length - 1]?.value ?? capital;
   const profit = finalValue - capital;
-  const money = new Intl.NumberFormat(lang === 'ar' ? 'ar-MA' : 'fr-FR', {
+  const money = new Intl.NumberFormat(lang === 'ar' ? 'ar-MA' : 'en-US', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
@@ -184,36 +183,27 @@ export function InvestorPitch() {
             </div>
             <div>
               <div className="text-lg font-black tracking-[0.28em]">{t.title}</div>
-              <div className="font-mono text-xs text-white/45">INVESTOR PRESENTATION</div>
+              <div className="font-mono text-xs text-white/45">{tr("INVESTOR PRESENTATION")}</div>
             </div>
           </div>
-          <button
-            onClick={() => setLang(isAr ? 'fr' : 'ar')}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10"
-          >
-            <Languages size={16} />
-            {t.switch}
-          </button>
         </div>
 
         <div className="relative z-10 grid min-h-[70vh] items-center gap-10 pt-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-200">
               <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]" />
-              {t.live}
+              {tr(t.live)}
             </div>
             <h1 className="max-w-4xl text-5xl font-black leading-tight sm:text-6xl lg:text-7xl">
               {t.title}
-              <span className="block bg-gradient-to-r from-emerald-200 via-cyan-200 to-indigo-200 bg-clip-text text-transparent">
-                Autonomous Trading Intelligence
-              </span>
+              <span className="block bg-gradient-to-r from-emerald-200 via-cyan-200 to-indigo-200 bg-clip-text text-transparent">{tr("Autonomous Trading Intelligence")}</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/62">{t.subtitle}</p>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/62">{tr(t.subtitle)}</p>
             <a
               href="#investor-schema"
               className="mt-8 inline-flex items-center gap-3 rounded-lg bg-emerald-300 px-5 py-3 font-black text-slate-950 transition hover:-translate-y-1 hover:shadow-[0_20px_70px_rgba(52,211,153,0.28)]"
             >
-              {t.cta}
+              {tr(t.cta)}
               <ArrowRight size={18} className={isAr ? 'rotate-180' : ''} />
             </a>
           </div>
@@ -225,8 +215,8 @@ export function InvestorPitch() {
                 <div className="absolute inset-[-28px] rounded-full border border-emerald-300/20 animate-ping-slow" />
                 <div className="text-center">
                   <Database className="mx-auto mb-1" size={28} />
-                  <div className="text-2xl font-black">Kafka</div>
-                  <div className="font-mono text-xs text-white/75">BUS</div>
+                  <div className="text-2xl font-black">{tr("Kafka")}</div>
+                  <div className="font-mono text-xs text-white/75">{tr("BUS")}</div>
                 </div>
               </div>
 
@@ -239,8 +229,8 @@ export function InvestorPitch() {
                   <div className={`mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br ${color}`}>
                     <Icon size={18} />
                   </div>
-                  <div className="font-bold">{label}</div>
-                  <div className="mt-1 font-mono text-[10px] text-white/40">agent.cluster.{id}</div>
+                  <div className="font-bold">{tr(label)}</div>
+                  <div className="mt-1 font-mono text-[10px] text-white/40">{tr("agent.cluster.")}{tr(id)}</div>
                 </div>
               ))}
 
@@ -263,23 +253,23 @@ export function InvestorPitch() {
           {[7, 37, 20, 1].map((value, index) => (
             <div key={t.stats[index]} className="rounded-lg border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
               <div className="text-3xl font-black text-emerald-200">
-                {value}
-                {index === 2 ? '+' : index === 3 ? '%' : ''}
+                {tr(value)}
+                {tr(index === 2 ? '+' : index === 3 ? '%' : '')}
               </div>
-              <div className="text-sm text-white/50">{t.stats[index]}</div>
+              <div className="text-sm text-white/50">{tr(t.stats[index])}</div>
             </div>
           ))}
         </div>
       </section>
 
       <section className="px-5 py-10 sm:px-8 lg:px-10">
-        <h2 className="mb-6 text-3xl font-black">{t.capabilitiesTitle}</h2>
+        <h2 className="mb-6 text-3xl font-black">{tr(t.capabilitiesTitle)}</h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {capabilities.map(({ icon: Icon, titleAr, titleFr, textAr, textFr }) => (
+          {capabilities.map(({ icon: Icon, titleAr, titleFr, textAr }) => (
             <article key={titleFr} className="rounded-xl border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-1 hover:border-emerald-300/30">
               <Icon className="mb-5 text-emerald-300" size={28} />
-              <h3 className="mb-2 text-lg font-black">{isAr ? titleAr : titleFr}</h3>
-              <p className="text-sm leading-6 text-white/55">{isAr ? textAr : textFr}</p>
+              <h3 className="mb-2 text-lg font-black">{tr(titleAr)}</h3>
+              <p className="text-sm leading-6 text-white/55">{tr(textAr)}</p>
             </article>
           ))}
         </div>
@@ -289,25 +279,25 @@ export function InvestorPitch() {
         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
           <div className="mb-2 flex items-center gap-2 text-emerald-200">
             <Radio size={18} />
-            <span className="font-mono text-xs uppercase tracking-[0.24em]">Interaction Map</span>
+            <span className="font-mono text-xs uppercase tracking-[0.24em]">{tr("Interaction Map")}</span>
           </div>
-          <h2 className="text-3xl font-black">{t.schemaTitle}</h2>
-          <p className="mt-4 max-w-3xl leading-7 text-white/58">{t.schemaText}</p>
+          <h2 className="text-3xl font-black">{tr(t.schemaTitle)}</h2>
+          <p className="mt-4 max-w-3xl leading-7 text-white/58">{tr(t.schemaText)}</p>
 
           <div className="mt-8 grid gap-3">
             {['Strategy → PROPOSALS_BUS', 'Approver → PROPOSALS_APPROVED', 'Router → ORDERS_PENDING', 'Executor → FILLS_CONFIRMED'].map((step, index) => (
               <div key={step} className="flex items-center gap-4 rounded-lg border border-white/10 bg-slate-950/40 p-4">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-300/10 font-mono text-sm text-emerald-200">
-                  {index + 1}
+                  {tr(index + 1)}
                 </span>
-                <span className="font-mono text-sm text-white/72">{step}</span>
+                <span className="font-mono text-sm text-white/72">{tr(step)}</span>
               </div>
             ))}
           </div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="mb-5 text-2xl font-black">{t.agentsTitle}</h2>
+          <h2 className="mb-5 text-2xl font-black">{tr(t.agentsTitle)}</h2>
           <div className="space-y-3">
             {agents.map(([name, topic, load]) => (
               <div key={name} className="rounded-lg border border-white/10 bg-slate-950/50 p-4">
@@ -315,11 +305,11 @@ export function InvestorPitch() {
                   <div className="flex items-center gap-3">
                     <Bot size={18} className="text-cyan-300" />
                     <div>
-                      <div className="font-bold">{name}</div>
-                      <div className="font-mono text-xs text-white/35">{topic}</div>
+                      <div className="font-bold">{tr(name)}</div>
+                      <div className="font-mono text-xs text-white/35">{tr(topic)}</div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-emerald-300/10 px-2 py-1 font-mono text-xs text-emerald-200">LIVE</span>
+                  <span className="rounded-full bg-emerald-300/10 px-2 py-1 font-mono text-xs text-emerald-200">{tr("LIVE")}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300" style={{ width: `${load}%` }} />
@@ -332,21 +322,21 @@ export function InvestorPitch() {
 
       <section className="grid gap-6 px-5 py-10 sm:px-8 lg:grid-cols-[0.75fr_1.25fr] lg:px-10">
         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="mb-5 text-2xl font-black">{t.calculatorTitle}</h2>
+          <h2 className="mb-5 text-2xl font-black">{tr(t.calculatorTitle)}</h2>
           <label className="mb-4 block text-sm font-semibold text-white/60">
-            {t.capital}
+            {tr(t.capital)}
             <input className="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-3 text-white outline-none focus:border-emerald-300/50" type="number" value={capital} onChange={(event) => setCapital(Number(event.target.value))} />
           </label>
           <label className="mb-4 block text-sm font-semibold text-white/60">
-            {t.months}
+            {tr(t.months)}
             <input className="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-3 text-white outline-none focus:border-emerald-300/50" type="number" min={1} max={60} value={months} onChange={(event) => setMonths(Number(event.target.value))} />
           </label>
           <label className="block text-sm font-semibold text-white/60">
-            {t.scenario}
+            {tr(t.scenario)}
             <select className="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-3 text-white outline-none focus:border-emerald-300/50" value={rate} onChange={(event) => setRate(Number(event.target.value))}>
-              <option value={0.02}>{t.conservative}</option>
-              <option value={0.05}>{t.balanced}</option>
-              <option value={0.1}>{t.aggressive}</option>
+              <option value={0.02}>{tr(t.conservative)}</option>
+              <option value={0.05}>{tr(t.balanced)}</option>
+              <option value={0.1}>{tr(t.aggressive)}</option>
             </select>
           </label>
         </div>
@@ -354,12 +344,12 @@ export function InvestorPitch() {
         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
           <div className="mb-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg bg-emerald-300/10 p-4">
-              <div className="text-sm text-emerald-100/70">{t.expectedValue}</div>
-              <div className="mt-1 text-3xl font-black text-emerald-200">{money.format(finalValue)}</div>
+              <div className="text-sm text-emerald-100/70">{tr(t.expectedValue)}</div>
+              <div className="mt-1 text-3xl font-black text-emerald-200">{tr(money.format(finalValue))}</div>
             </div>
             <div className="rounded-lg bg-cyan-300/10 p-4">
-              <div className="text-sm text-cyan-100/70">{t.expectedProfit}</div>
-              <div className="mt-1 text-3xl font-black text-cyan-200">{money.format(profit)}</div>
+              <div className="text-sm text-cyan-100/70">{tr(t.expectedProfit)}</div>
+              <div className="mt-1 text-3xl font-black text-cyan-200">{tr(money.format(profit))}</div>
             </div>
           </div>
           <div className="h-72">
@@ -379,23 +369,23 @@ export function InvestorPitch() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-4 text-sm text-white/45">{t.riskNote}</p>
+          <p className="mt-4 text-sm text-white/45">{tr(t.riskNote)}</p>
         </div>
       </section>
 
       <section className="px-5 py-10 sm:px-8 lg:px-10">
-        <h2 className="mb-6 text-3xl font-black">{t.investorTitle}</h2>
+        <h2 className="mb-6 text-3xl font-black">{tr(t.investorTitle)}</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {investorMessages.map((message, index) => (
             <article key={message.fr} className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.03] p-6">
               <CircleDollarSign className="mb-5 text-amber-200" size={28} />
-              <div className="mb-3 font-mono text-sm text-white/35">0{index + 1}</div>
-              <p className="text-lg font-bold leading-7">{isAr ? message.ar : message.fr}</p>
+              <div className="mb-3 font-mono text-sm text-white/35">0{tr(index + 1)}</div>
+              <p className="text-lg font-bold leading-7">{tr(message.ar)}</p>
             </article>
           ))}
         </div>
         <div className="mt-8 rounded-lg border border-amber-300/20 bg-amber-300/10 p-4 text-sm text-amber-100/80">
-          <Gauge className="mb-2 inline-block" size={18} /> {t.footer}
+          <Gauge className="mb-2 inline-block" size={18} /> {tr(t.footer)}
         </div>
       </section>
     </div>

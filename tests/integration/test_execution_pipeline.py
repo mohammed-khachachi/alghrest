@@ -10,12 +10,14 @@ from time import monotonic
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import pytest_asyncio
 
 from agents.tier1_executive.proposal_approver import ProposalApprover
 from agents.tier5_execution.exchange_executor import ExchangeExecutor
 from agents.tier5_execution.fee_optimizer import FeeOptimizer
 from agents.tier5_execution.order_router import OrderRouter
 from agents.tier5_execution.slippage_minimizer import SlippageMinimizer
+from core.config import settings
 from core.data.models import (
     AgentMessage,
     Fill,
@@ -27,10 +29,14 @@ from core.data.models import (
     TradeProposal,
     TradeProposalStatus,
 )
+from core.execution.authorization import ApprovalStore
 from core.orchestrator.message_bus import AlghrestProducer
 from core.orchestrator.state_manager import StateManager
+from tests.factories import persist_snapshot
+from tests.integration.test_execution_recovery import ready
 
 pytestmark = pytest.mark.integration
+pytest_plugins = ("tests.integration.test_execution_recovery",)
 
 
 @pytest.fixture
@@ -59,19 +65,31 @@ def mock_producer():
 @pytest.fixture
 def sample_trade_proposal():
     return TradeProposal(
+        accounting_book_id=settings.accounting_book_id,
         strategy_id="test_trend_follower",
         agent_id=12,
-        symbol="BTC/USDT",
+        symbol="BTC/USD",
         exchange="binance",
         asset_class="CRYPTO",
         side="BUY",
         order_type="LIMIT",
         size="0.01",
-        size_usd="450",
-        limit_price="45000",
-        stop_loss="44000",
+        size_usd="1",
+        limit_price="100",
+        stop_loss="99",
         confidence_score=0.8,
     )
+
+
+@pytest_asyncio.fixture
+async def authorizations(recovery, mock_state_manager, monkeypatch):
+    await ready(recovery)
+    monkeypatch.setattr(settings, "execution_accounts", [recovery.account])
+    mock_state_manager.get_portfolio.return_value = await persist_snapshot(
+        recovery.ledger, recovery.state
+    )
+    mock_state_manager.trading_ready.return_value = True
+    return ApprovalStore(recovery.ledger)
 
 
 class FiniteConsumer:
@@ -86,13 +104,26 @@ class FiniteConsumer:
             )
 
 
-async def consume(agent, state, producer, messages):
+async def consume(agent, state, producer, messages, authorizations=None):
     agent.state = state
     agent.producer = producer
+    if isinstance(agent, ProposalApprover | OrderRouter):
+        assert authorizations is not None
+        agent.authorizations = authorizations
     consumer = FiniteConsumer(messages)
     with patch.object(agent, "make_consumer", return_value=consumer):
         await asyncio.wait_for(agent.run(), timeout=1)
     consumer.initialize.assert_awaited()
+    if isinstance(agent, OrderRouter):
+        from core.execution.recovery import RecoveryCoordinator
+        from core.execution.store import ExecutionStore
+
+        # Exercise committed transport output, rather than assuming immediate
+        # publication from the router before its durable binding succeeds.
+        coordinator = RecoveryCoordinator(
+            ExecutionStore(authorizations.ledger), [], {}, state, agent.publish
+        )
+        await coordinator.flush(allow_new_risk=True)
 
 
 def envelope(proposal):
@@ -110,10 +141,14 @@ def sent(producer, topic):
 
 class TestExecutionPipeline:
     async def test_happy_path_execution(
-        self, mock_state_manager, mock_producer, sample_trade_proposal, monkeypatch
+        self, mock_state_manager, mock_producer, authorizations, sample_trade_proposal, monkeypatch
     ):
         await consume(
-            ProposalApprover(), mock_state_manager, mock_producer, [envelope(sample_trade_proposal)]
+            ProposalApprover(),
+            mock_state_manager,
+            mock_producer,
+            [envelope(sample_trade_proposal)],
+            authorizations,
         )
         approved = sent(mock_producer, KafkaTopic.PROPOSALS_APPROVED)
         assert len(approved) == 1
@@ -133,7 +168,7 @@ class TestExecutionPipeline:
             ],
         )
         router = OrderRouter()
-        await consume(router, mock_state_manager, mock_producer, approved)
+        await consume(router, mock_state_manager, mock_producer, approved, authorizations)
         pending = sent(mock_producer, KafkaTopic.ORDERS_PENDING)
         assert len(pending) == 1
         order = Order.model_validate(pending[0].payload)
@@ -168,6 +203,7 @@ class TestExecutionPipeline:
         executor.store.observe.assert_awaited_once_with(order, placed)
         # Confirmed observations are dispatched from the durable outbox.
         fill = Fill(
+            accounting_book_id=order.accounting_book_id,
             order_id=order.order_id,
             exchange_order_id="paper-1",
             exchange_trade_id="trade-1",
@@ -197,11 +233,11 @@ class TestExecutionPipeline:
         executor.store.delivered.assert_awaited_once_with(1)
 
     async def test_position_limit_rejection(
-        self, mock_state_manager, mock_producer, sample_trade_proposal, monkeypatch
+        self, mock_state_manager, mock_producer, authorizations, sample_trade_proposal, monkeypatch
     ):
         mock_state_manager.get_portfolio.return_value.positions = [
             Position(
-                symbol="BTC/USDT",
+                symbol="BTC/USD",
                 exchange="binance",
                 asset_class="CRYPTO",
                 side="BUY",
@@ -217,7 +253,9 @@ class TestExecutionPipeline:
             update={"size": Decimal("1"), "size_usd": Decimal("45000")}
         )
         approver = ProposalApprover()
-        await consume(approver, mock_state_manager, mock_producer, [envelope(large)])
+        await consume(
+            approver, mock_state_manager, mock_producer, [envelope(large)], authorizations
+        )
         assert sent(mock_producer, KafkaTopic.PROPOSALS_APPROVED) == []
         rejected = sent(mock_producer, KafkaTopic.RISK_ALERTS)
         assert len(rejected) == 1
@@ -226,11 +264,15 @@ class TestExecutionPipeline:
         assert approver._rejected_count == 1
 
     async def test_kill_switch_halts_pipeline(
-        self, mock_state_manager, mock_producer, sample_trade_proposal, monkeypatch
+        self, mock_state_manager, mock_producer, authorizations, sample_trade_proposal, monkeypatch
     ):
         mock_state_manager.is_kill_switch_active.return_value = True
         await consume(
-            ProposalApprover(), mock_state_manager, mock_producer, [envelope(sample_trade_proposal)]
+            ProposalApprover(),
+            mock_state_manager,
+            mock_producer,
+            [envelope(sample_trade_proposal)],
+            authorizations,
         )
         assert sent(mock_producer, KafkaTopic.PROPOSALS_APPROVED) == []
         rejected = sent(mock_producer, KafkaTopic.RISK_ALERTS)
@@ -271,7 +313,7 @@ class TestExecutionPipeline:
             start.assert_not_awaited()
 
     async def test_pipeline_with_ml_predictor_fallback(
-        self, mock_state_manager, mock_producer, sample_trade_proposal, monkeypatch
+        self, mock_state_manager, mock_producer, authorizations, sample_trade_proposal, monkeypatch
     ):
         proposal = sample_trade_proposal.model_copy(
             update={
@@ -281,7 +323,13 @@ class TestExecutionPipeline:
                 "metadata": {"source": "fallback_technical"},
             }
         )
-        await consume(ProposalApprover(), mock_state_manager, mock_producer, [envelope(proposal)])
+        await consume(
+            ProposalApprover(),
+            mock_state_manager,
+            mock_producer,
+            [envelope(proposal)],
+            authorizations,
+        )
         approved = sent(mock_producer, KafkaTopic.PROPOSALS_APPROVED)
         assert len(approved) == 1
         restored = TradeProposal.model_validate(approved[0].payload)
@@ -289,7 +337,7 @@ class TestExecutionPipeline:
         assert restored.metadata == proposal.metadata
 
     async def test_execution_pipeline_performance(
-        self, mock_state_manager, mock_producer, sample_trade_proposal, monkeypatch
+        self, mock_state_manager, mock_producer, authorizations, sample_trade_proposal, monkeypatch
     ):
         proposals = [
             TradeProposal(
@@ -304,7 +352,11 @@ class TestExecutionPipeline:
         ]
         start = monotonic()
         await consume(
-            ProposalApprover(), mock_state_manager, mock_producer, [envelope(p) for p in proposals]
+            ProposalApprover(),
+            mock_state_manager,
+            mock_producer,
+            [envelope(p) for p in proposals],
+            authorizations,
         )
         assert monotonic() - start < 1.0
         approved = sent(mock_producer, KafkaTopic.PROPOSALS_APPROVED)

@@ -10,14 +10,15 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from uuid import UUID, uuid5
 
 import ccxt.pro as ccxtpro
 
-from connectors.exchanges.ccxt_connector import ExchangeConnector
-from core.accounting.models import utc
+from connectors.exchanges.ccxt_connector import CCXTAsyncClient, ExchangeConnector
+from core.accounting.models import currencies, key, utc
 from core.config import settings
-from core.data.models import Exchange, Order, OrderSide, OrderType
-from core.execution.contracts import RecoveryBlockedError, TradePage
+from core.data.models import Exchange, Order, OrderSide, OrderStatus, OrderType
+from core.execution.contracts import InstrumentRules, RecoveryBlockedError, TradePage
 
 
 class SpotRecoveryAdapter:
@@ -27,14 +28,18 @@ class SpotRecoveryAdapter:
         self.account_id = connector.account_id
 
     @property
-    def client(self) -> Any:
-        return self.connector._client
+    def client(self) -> CCXTAsyncClient:
+        return self.connector._require_client()
 
     async def balances(self) -> dict[str, Decimal]:
         return await self.connector.fetch_balance()
 
     async def place(self, order: Order) -> Order:
         settings.require_order_execution()
+        if order.stop_price is not None:
+            raise RecoveryBlockedError(
+                "Atomic protective-order capability is not verified for this live adapter"
+            )
         args: dict[str, Any] = dict(
             symbol=order.symbol,
             side=order.side,
@@ -77,7 +82,7 @@ class SpotRecoveryAdapter:
                     raise RecoveryBlockedError("Client ID lookup returned a different order")
                 return self._order(raw)
             if self.exchange == Exchange.BYBIT:
-                query = {"category": "spot", "symbol": market["id"]}
+                query: dict[str, Any] = {"category": "spot", "symbol": market["id"]}
                 query["orderId" if order.exchange_order_id else "orderLinkId"] = (
                     order.exchange_order_id or client_id
                 )
@@ -167,7 +172,7 @@ class SpotRecoveryAdapter:
         seen = set()
         for _ in range(1000):
             if self.exchange == Exchange.BYBIT:
-                query = {"category": "spot", "openOnly": 0, "limit": 50}
+                query: dict[str, Any] = {"category": "spot", "openOnly": 0, "limit": 50}
                 if token:
                     query["cursor"] = token
                 response = await self.client.privateGetV5OrderRealtime(query)
@@ -190,6 +195,114 @@ class SpotRecoveryAdapter:
             seen.add(token)
         raise RecoveryBlockedError("Open order page budget exceeded")
 
+    async def cancel_pending(self, *, preserve_flatten_operation: UUID | None = None) -> int:
+        """Cancel all non-preserved open orders and verify zero remain open."""
+        settings.require_order_execution()
+        preserved_id = str(preserve_flatten_operation) if preserve_flatten_operation else None
+
+        def is_preserved(order: Order) -> bool:
+            if preserved_id is None:
+                return False
+            return order.algo_params.get("flatten_operation") == preserved_id
+
+        pending = [order for order in await self.open_orders() if not is_preserved(order)]
+        for order in pending:
+            await self.cancel(order)
+        remaining = [order for order in await self.open_orders() if not is_preserved(order)]
+        if remaining:
+            raise RecoveryBlockedError("Pending order cancellation is not confirmed")
+        return len(pending)
+
+    async def flatten(
+        self,
+        operation_id: Any,
+        *,
+        symbols: list[str],
+        market_rules: dict[str, InstrumentRules] | None = None,
+        reference_prices: dict[str, Decimal] | None = None,
+        halted: bool = True,
+        book_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Reconcile external spot inventory while halted and close only what exists."""
+        settings.require_order_execution()
+        if not halted:
+            raise RecoveryBlockedError("Emergency flatten requires a persistent halt")
+        op_uuid = UUID(str(operation_id))
+        effective_book = book_id or settings.accounting_book_id
+        account_key = key(self.exchange.value, self.account_id)
+        cancelled = await self.cancel_pending(preserve_flatten_operation=op_uuid)
+        closed_orders: list[str] = []
+
+        for symbol in sorted(set(symbols)):
+            base, _quote = currencies(symbol)
+            current_balances = await self.balances()
+            size = current_balances.get(base, Decimal(0))
+            if size < 0:
+                raise RecoveryBlockedError("Borrowed spot inventory cannot be flattened here")
+            close_id = uuid5(op_uuid, f"{effective_book}:{account_key}:{symbol}")
+            probe = Order(
+                accounting_book_id=effective_book,
+                order_id=close_id,
+                client_order_id=close_id,
+                symbol=symbol,
+                exchange=self.exchange,
+                account_id=self.account_id,
+                side=OrderSide.SELL,
+                order_type=OrderType.MARKET,
+                size=size if size > 0 else Decimal("1"),
+                strategy_id="emergency_flatten",
+                agent_id=26,
+                algo_params={"reduce_only": True, "flatten_operation": str(op_uuid)},
+            )
+            existing = await self.lookup(probe)
+            if existing is not None:
+                observed = existing
+            else:
+                if not size:
+                    continue
+                if market_rules is not None:
+                    rules = market_rules.get(symbol)
+                    if rules is None:
+                        raise RecoveryBlockedError("Flatten requires explicit instrument metadata")
+                    ref_price = (reference_prices or {}).get(symbol)
+                    if ref_price is not None:
+                        rules.validate_order(size, ref_price)
+                observed = await self.place(probe)
+
+            for _ in range(100):
+                if observed.status == OrderStatus.FILLED:
+                    break
+                if observed.status in (
+                    OrderStatus.CANCELLED,
+                    OrderStatus.REJECTED,
+                    OrderStatus.EXPIRED,
+                ):
+                    raise RecoveryBlockedError(
+                        f"Emergency flatten order terminated in {observed.status.value}"
+                    )
+                looked_up = await self.lookup(observed)
+                if looked_up is None:
+                    raise RecoveryBlockedError("Emergency flatten order disappeared before fill")
+                observed = looked_up
+            else:
+                raise RecoveryBlockedError("Emergency flatten order did not reach FILLED")
+            closed_orders.append(str(close_id))
+
+        if await self.open_orders():
+            raise RecoveryBlockedError("Open orders remain after emergency flatten")
+        final_balances = await self.balances()
+        for symbol in symbols:
+            base, _quote = currencies(symbol)
+            if final_balances.get(base, Decimal(0)) != Decimal(0):
+                raise RecoveryBlockedError(f"Base inventory for {symbol} is not flat after flatten")
+        return {
+            "operation_id": str(op_uuid),
+            "cancelled": cancelled,
+            "orders": closed_orders,
+            "balances": {c: str(v) for c, v in sorted(final_balances.items())},
+            "flat": True,
+        }
+
     async def history_page(
         self, symbol: str, start_ms: int, end_ms: int, cursor: dict[str, Any] | None
     ) -> TradePage:
@@ -211,7 +324,7 @@ class SpotRecoveryAdapter:
                 self.connector.normalize_trades(raw, symbol), {"ranges": ranges} if ranges else None
             )
         if self.exchange == Exchange.BYBIT:
-            query = {
+            query: dict[str, Any] = {
                 "category": "spot",
                 "symbol": market["id"],
                 "startTime": start_ms,

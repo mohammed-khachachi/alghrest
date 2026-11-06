@@ -21,6 +21,8 @@ from typing import Any
 import structlog
 
 from agents.base_agent import BaseAgent
+from core.accounting.repository import Ledger
+from core.config import settings
 from core.data.models import (
     AgentConfig,
     AlertType,
@@ -31,6 +33,7 @@ from core.data.models import (
     TradeProposalReview,
     TradeProposalStatus,
 )
+from core.execution.authorization import ApprovalStore
 from core.risk.position_limits import PositionLimitChecker
 
 log = structlog.get_logger(__name__)
@@ -58,10 +61,14 @@ class ProposalApprover(BaseAgent):
         self._approved_count = 0
         self._rejected_count = 0
         self._adjusted_count = 0
+        self.authorizations: ApprovalStore | None = None
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 
     async def initialize(self) -> None:
+        self.authorizations = ApprovalStore(
+            await Ledger.connect(settings.database_url, settings.accounting_book_id)
+        )
         log.info("proposal_approver.initialized")
 
     async def run(self) -> None:
@@ -76,6 +83,8 @@ class ProposalApprover(BaseAgent):
                 log.warning("proposal_approver.process_error", error=str(exc))
 
     async def shutdown(self) -> None:
+        if self.authorizations is not None:
+            await self.authorizations.ledger.close()
         log.info(
             "proposal_approver.shutdown",
             approved=self._approved_count,
@@ -86,6 +95,10 @@ class ProposalApprover(BaseAgent):
     # ── Approval logic ─────────────────────────────────────────────────────────
 
     async def _process(self, payload: dict[str, Any]) -> None:
+        if payload.get("accounting_book_id") != settings.accounting_book_id:
+            return
+        if self.authorizations is None:
+            raise RuntimeError("Durable approval store must be initialized")
         try:
             proposal = TradeProposal.model_validate(payload)
         except Exception as exc:
@@ -95,9 +108,9 @@ class ProposalApprover(BaseAgent):
         # A redelivered rejected proposal must not later become approved while
         # its sender retries with a fresh ID. Approved publication is likewise
         # never repeated when its delivery outcome may be uncertain.
-        previous = await self.state.get_json(f"proposal_review:{proposal.proposal_id}")
-        if isinstance(previous, dict):
-            review = TradeProposalReview.model_validate(previous)
+        previous = await self.authorizations.review(proposal.proposal_id)
+        if previous is not None:
+            review = previous
             if (
                 review.proposal_id != proposal.proposal_id
                 or review.reviewer_agent_id != self.AGENT_ID
@@ -156,14 +169,21 @@ class ProposalApprover(BaseAgent):
                     ),
                 }
             )
-            await self._approve(adjusted, warnings=result.warnings)
+            await self._approve(
+                adjusted, warnings=result.warnings, revision=portfolio.accounting_revision
+            )
         else:
             approved = proposal.model_copy(update={"status": TradeProposalStatus.APPROVED})
-            await self._approve(approved, warnings=result.warnings)
+            await self._approve(
+                approved, warnings=result.warnings, revision=portfolio.accounting_revision
+            )
 
-    async def _approve(self, proposal: TradeProposal, warnings: list[str]) -> None:
+    async def _approve(
+        self, proposal: TradeProposal, warnings: list[str], *, revision: int | None = None
+    ) -> None:
         self._approved_count += 1
         review = TradeProposalReview(
+            accounting_book_id=settings.accounting_book_id,
             proposal_id=proposal.proposal_id,
             reviewer_agent_id=self.AGENT_ID,
             decision=TradeProposalStatus.APPROVED,
@@ -171,6 +191,10 @@ class ProposalApprover(BaseAgent):
             risk_score=1.0 - min(1.0, proposal.confidence_score),
             adjusted_size_usd=proposal.adjusted_size_usd,
         )
+        if self.authorizations is None:
+            raise RuntimeError("Durable approval store must be initialized")
+        if not await self.authorizations.decide(proposal, review, revision=revision):
+            return
         # Record the decision before publishing. An uncertain delivery requires
         # investigation, never another order under a replacement proposal.
         await self.state.set_json(
@@ -183,6 +207,7 @@ class ProposalApprover(BaseAgent):
             payload=proposal.model_dump(mode="json"),
             message_type="TradeProposalApproved",
         )
+        await self.authorizations.published(proposal.proposal_id)
         log.info(
             "proposal_approver.approved",
             proposal_id=str(proposal.proposal_id),
@@ -194,12 +219,17 @@ class ProposalApprover(BaseAgent):
     async def _reject(self, proposal: TradeProposal, reason: str) -> None:
         self._rejected_count += 1
         review = TradeProposalReview(
+            accounting_book_id=settings.accounting_book_id,
             proposal_id=proposal.proposal_id,
             reviewer_agent_id=self.AGENT_ID,
             decision=TradeProposalStatus.REJECTED,
             reason=reason,
             risk_score=1.0,
         )
+        if self.authorizations is None:
+            raise RuntimeError("Durable approval store must be initialized")
+        if not await self.authorizations.decide(proposal, review):
+            return
         await self.state.set_json(
             f"proposal_review:{proposal.proposal_id}",
             review.model_dump(mode="json"),

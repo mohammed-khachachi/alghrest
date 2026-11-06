@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { clsx } from 'clsx';
@@ -33,6 +34,7 @@ const generateDummyAudits = (): AgentAudit[] => {
 };
 
 export function AuditorDashboard() {
+  useLanguage();
   const [audits, setAudits] = useState<AgentAudit[]>([]);
   const [isAuditing, setIsAuditing] = useState(false);
 
@@ -57,14 +59,9 @@ export function AuditorDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <ShieldCheck className="text-indigo-400" size={28} />
-            System Audit & Validation
-          </h1>
-          <p className="text-sm text-text-muted mt-1">
-            2026 YTD Multi-Agent Performance Leaderboard by Agent #33 (Auditor)
-            {audits.length > 0 && (
-              <span className="ml-3 pl-3 border-l border-white/20 text-indigo-300">
-                Last YTD Test Completed: {new Date(audits[0].last_audit_timestamp).toLocaleTimeString()}
+            <ShieldCheck className="text-indigo-400" size={28} />{tr("System Audit & Validation")}</h1>
+          <p className="text-sm text-text-muted mt-1">{tr("2026 YTD Multi-Agent Performance Leaderboard by Agent #33 (Auditor)")}{audits.length > 0 && (
+              <span className="ml-3 pl-3 border-l border-white/20 text-indigo-300">{tr("Last YTD Test Completed: ")}{tr(new Date(audits[0].last_audit_timestamp).toLocaleTimeString())}
               </span>
             )}
           </p>
@@ -78,31 +75,30 @@ export function AuditorDashboard() {
           )}
         >
           <Activity size={16} className={isAuditing ? "animate-spin" : ""} />
-          {isAuditing ? 'Running Walk-Forward...' : 'Run Manual Audit'}
+          {tr(isAuditing ? 'Running Walk-Forward...' : 'Run Manual Audit')}
         </button>
       </div>
 
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-start">
               <thead className="text-xs text-text-muted uppercase bg-black/20 border-b border-white/8">
                 <tr>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Agent ID</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Health Score</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Sharpe / Sortino</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Profit Factor</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Volatility (YTD)</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Dynamic Max Drawdown</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">W/L Ratio</th>
-                  <th className="px-6 py-4 font-semibold tracking-wider">Latency</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Agent ID")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Health Score")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Sharpe / Sortino")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Profit Factor")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Volatility (YTD)")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Dynamic Max Drawdown")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("W/L Ratio")}</th>
+                  <th className="px-6 py-4 font-semibold tracking-wider">{tr("Latency")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/4">
                 {audits.map((audit) => (
                   <tr key={audit.agent_id} className="hover:bg-white/4 transition-colors">
-                    <td className="px-6 py-4 font-mono text-white">
-                      AGT-{String(audit.agent_id).padStart(2, '0')}
+                    <td className="px-6 py-4 font-mono text-white">{tr("AGT-")}{tr(String(audit.agent_id).padStart(2, '0'))}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -115,16 +111,16 @@ export function AuditorDashboard() {
                             style={{ width: `${audit.health_score}%` }}
                           />
                         </div>
-                        <span className="font-mono text-xs text-text-muted">{audit.health_score}%</span>
+                        <span className="font-mono text-xs text-text-muted">{tr(audit.health_score)}%</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 font-mono">
                       <span className={clsx(audit.sharpe >= 1.5 ? "text-green-400" : "text-white")}>
-                        {audit.sharpe.toFixed(2)}
+                        {tr(audit.sharpe.toFixed(2))}
                       </span>
                       <span className="text-text-muted mx-1">/</span>
                       <span className={clsx(audit.sortino >= 2.0 ? "text-green-400" : "text-white")}>
-                        {audit.sortino.toFixed(2)}
+                        {tr(audit.sortino.toFixed(2))}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -132,21 +128,20 @@ export function AuditorDashboard() {
                         "font-mono px-2 py-1 rounded text-xs",
                         audit.profit_factor >= 1.2 ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400 animate-pulse"
                       )}>
-                        {audit.profit_factor.toFixed(2)}
+                        {tr(audit.profit_factor.toFixed(2))}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-text-muted">
-                      {audit.volatility_pct.toFixed(1)}%
+                      {tr(audit.volatility_pct.toFixed(1))}%
                     </td>
                     <td className="px-6 py-4 font-mono text-red-400">
-                      {audit.mdd.toFixed(1)}%
+                      {tr(audit.mdd.toFixed(1))}%
                     </td>
                     <td className="px-6 py-4 font-mono text-text-muted">
-                      {audit.win_loss.toFixed(2)}
+                      {tr(audit.win_loss.toFixed(2))}
                     </td>
                     <td className="px-6 py-4 font-mono text-text-muted">
-                      {audit.latency_ms.toFixed(1)} ms
-                    </td>
+                      {tr(audit.latency_ms.toFixed(1))}{tr(" ms")}</td>
                   </tr>
                 ))}
               </tbody>

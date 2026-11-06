@@ -45,6 +45,10 @@ async def migrate(ledger: Ledger) -> None:
         "002_execution_recovery.sql",
         "003_funding_performance.sql",
         "004_ai_budget.sql",
+        "005_risk_halts.sql",
+        "006_twap_plans.sql",
+        "007_execution_authorizations.sql",
+        "008_global_risk_halt.sql",
     ):
         await ledger.pool.execute((root / "infra/migrations" / name).read_text())
 

@@ -18,6 +18,7 @@ from api.routes.advisory_observations import router as observations_router
 from api.routes.openterminal_context import router as openterminal_router
 from api.routes.research_brief import router as research_brief_router
 from api.routes.research_journal import router as research_journal_router
+from api.routes.tcp25_personal import router as tcp25_personal_router
 from api.security import AccessTokenMiddleware
 from api.services.advisory import AdvisoryService
 from connectors.advisory.economic_calendar import CalendarCache
@@ -114,6 +115,23 @@ async def local_writes(request: Request, call_next: Any) -> Any:
             return JSONResponse(
                 {"detail": "Explicit advisory client header required"}, status_code=403
             )
+        path = request.scope["path"]
+        root = request.scope.get("root_path", "").rstrip("/")
+        if root and path.startswith(root + "/"):
+            path = path[len(root) :]
+        retired = path.rstrip("/") == "/assistant-api/briefings" or (
+            path.startswith("/assistant-api/evaluations/")
+            and path.rstrip("/").rsplit("/", 1)[-1] in {"user-policy-check", "personal-plan"}
+        )
+        if request.method == "POST" and retired:
+            detail = (
+                "Legacy briefing creation is retired. Historical briefings remain readable; TCP25 briefing creation is not implemented."
+                if path.rstrip("/") == "/assistant-api/briefings"
+                else "Legacy personal calculation is retired; use the versioned TCP25 personal endpoints."
+            )
+            return JSONResponse(
+                {"detail": detail}, status_code=409, headers={"Cache-Control": "no-store"}
+            )
         # Check bytes received, including chunked requests, before JSON parsing.
         body = bytearray()
         limit = (
@@ -145,6 +163,7 @@ app.add_middleware(AccessTokenMiddleware, service="advisory")
 app.include_router(observations_router)
 app.include_router(context_router)
 app.include_router(briefings_router)
+app.include_router(tcp25_personal_router)
 app.include_router(capabilities_router)
 app.include_router(openterminal_router)
 app.include_router(research_journal_router)

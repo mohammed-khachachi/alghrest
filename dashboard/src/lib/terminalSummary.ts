@@ -1,8 +1,9 @@
+import { currentLocale } from '../i18n/core';
 import type { TerminalResearch } from './terminalResearch';
 import { qualityAnalysis, qualityReasonText } from './terminalQuality';
 
 export type ResearchExplanation = { title: string; explanation: string; evidence: string };
-export const summaryNumber = (value: string | number) => Number(value).toLocaleString('ar-MA', {
+export const summaryNumber = (value: string | number) => Number(value).toLocaleString(currentLocale(), {
   maximumSignificantDigits: 6,
 });
 

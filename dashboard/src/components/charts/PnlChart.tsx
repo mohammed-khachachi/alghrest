@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import {
   LineChart,
   Line,
@@ -19,19 +20,21 @@ interface TooltipProps {
 }
 
 function CustomTooltip({ active, payload, label }: TooltipProps) {
+  useLanguage();
   if (!active || !payload?.length) return null;
   const val = payload[0].value;
   return (
     <div className="bg-bg-surface border border-white/10 rounded-lg px-3 py-2 text-xs font-mono">
-      <div className="text-text-muted mb-1">{label}</div>
+      <div className="text-text-muted mb-1">{tr(label)}</div>
       <div className={val >= 0 ? 'text-green-400' : 'text-red-400'}>
-        {val >= 0 ? '+' : ''}${val.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        {tr(val >= 0 ? '+' : '')}${tr(val.toLocaleString('en-US', { minimumFractionDigits: 2 }))}
       </div>
     </div>
   );
 }
 
 export function PnlChart() {
+  useLanguage();
   const portfolio = useDashboardStore((s) => s.portfolioSnapshot);
 
   if (!portfolio) {

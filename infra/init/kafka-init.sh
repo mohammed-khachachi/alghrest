@@ -9,7 +9,8 @@ set -euo pipefail
 
 BOOTSTRAP="${BOOTSTRAP_SERVERS:-kafka-1:29092,kafka-2:29092,kafka-3:29092}"
 REPLICATION=3
-CMD="kafka-topics --bootstrap-server ${BOOTSTRAP} --command-config /run/secrets/kafka-client.properties"
+COMMAND_CONFIG="${KAFKA_COMMAND_CONFIG:-/run/secrets/kafka-client.properties}"
+CMD="kafka-topics --bootstrap-server ${BOOTSTRAP} --command-config ${COMMAND_CONFIG}"
 
 echo "========================================================"
 echo " ALGHREST Kafka Topic Initialization"
@@ -209,3 +210,9 @@ echo ""
 echo "========================================================"
 echo " All 18 Kafka topics initialized successfully."
 echo "========================================================"
+
+if [ -f "/kafka-acls.sh" ]; then
+    /bin/bash /kafka-acls.sh
+elif [ -f "$(dirname "$0")/kafka-acls.sh" ]; then
+    /bin/bash "$(dirname "$0")/kafka-acls.sh"
+fi

@@ -8,13 +8,35 @@ in by replacing the mock classes without changing the router or API surface.
 """
 
 from connectors.data_providers.base import AssetClass, Quote, QuoteProvider
-from connectors.data_providers.router import QuoteRouter, SymbolCatalogEntry, default_router
+from connectors.data_providers.openbb_adapter import (
+    MacroObservation,
+    OpenBBAdapter,
+    OpenBBAdapterError,
+    OpenBBDataValidationError,
+    OpenBBProviderError,
+    OpenBBQuoteProvider,
+    OpenBBUnavailableError,
+)
+from connectors.data_providers.router import (
+    QuoteRouter,
+    SymbolCatalogEntry,
+    build_router,
+    default_router,
+)
 
 __all__ = [
     "AssetClass",
+    "MacroObservation",
+    "OpenBBAdapter",
+    "OpenBBAdapterError",
+    "OpenBBDataValidationError",
+    "OpenBBProviderError",
+    "OpenBBQuoteProvider",
+    "OpenBBUnavailableError",
     "Quote",
     "QuoteProvider",
     "QuoteRouter",
     "SymbolCatalogEntry",
+    "build_router",
     "default_router",
 ]

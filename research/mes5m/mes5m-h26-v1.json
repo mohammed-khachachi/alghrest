@@ -1,0 +1,123 @@
+{
+  "firm_eligibility": "BLOCKED",
+  "qualified_contracts": 0,
+  "passing_probability": "UNKNOWN",
+  "execution_permissions": false,
+  "trade_permitted": false,
+  "execution_enabled": false,
+  "schema_version": "mes5m-research-spec-v1",
+  "experiment_id": "mes5m-range-volume-h26-v1",
+  "instrument": "MES",
+  "contract": "MESH26",
+  "interval": "5m",
+  "source_name": "MES_H26_1min.csv",
+  "source_csv_sha256": "b8765ffd496c17457e4edbd956336537f6996981e80d042c0692345a0e21ee01",
+  "source_timezone": "America/New_York",
+  "account_timezone": "America/Chicago",
+  "source_acquired_at": "2026-10-09T21:07:58.978873Z",
+  "partitions": [
+    {
+      "role": "DEVELOPMENT",
+      "start": "2025-12-15",
+      "end": "2026-01-23"
+    },
+    {
+      "role": "VALIDATION",
+      "start": "2026-01-27",
+      "end": "2026-02-13"
+    },
+    {
+      "role": "SEALED_HOLDOUT",
+      "start": "2026-02-18",
+      "end": "2026-03-13"
+    }
+  ],
+  "personal_exclusion_ranges": [
+    [
+      "2025-12-24",
+      "2025-12-26"
+    ],
+    [
+      "2025-12-31",
+      "2026-01-02"
+    ],
+    [
+      "2026-01-19",
+      "2026-01-20"
+    ],
+    [
+      "2026-02-16",
+      "2026-02-17"
+    ]
+  ],
+  "costs": [
+    {
+      "id": "baseline",
+      "commission_per_side_usd": "1.20",
+      "adverse_ticks_per_side": 1,
+      "classification": "ASSUMPTION_NOT_OBSERVED_OR_BOUND"
+    },
+    {
+      "id": "adverse",
+      "commission_per_side_usd": "1.50",
+      "adverse_ticks_per_side": 2,
+      "classification": "ASSUMPTION_NOT_OBSERVED_OR_BOUND"
+    },
+    {
+      "id": "severe",
+      "commission_per_side_usd": "2.00",
+      "adverse_ticks_per_side": 4,
+      "classification": "ASSUMPTION_NOT_OBSERVED_OR_BOUND"
+    }
+  ],
+  "range_period": 12,
+  "minimum_bars": 13,
+  "volume_multiplier": "1.5",
+  "window_start_utc": "07:00",
+  "window_end_utc": "14:00",
+  "first_decision_utc": "08:05",
+  "decision_end_exclusive_utc": "12:55",
+  "entry_delay_seconds": 60,
+  "stop_offset_ticks": 1,
+  "target_distance_multiple": 2,
+  "maximum_holding_minutes": 60,
+  "flat_by_utc": "13:55",
+  "maximum_research_contracts": 1,
+  "maximum_daily_entries": 2,
+  "pause_after_consecutive_losses": 5,
+  "trade_risk_cap_usd": "100",
+  "equity_risk_fraction": "0.01",
+  "personal_daily_stop_usd": "200",
+  "public_daily_loss_usd": "550",
+  "public_drawdown_usd": "1500",
+  "public_starting_balance_usd": "25000",
+  "public_target_usd": "1750",
+  "financial_reserve_usd": "100",
+  "gap_reserve_usd": "5",
+  "personal_maximum_micros": 10,
+  "personal_maximum_minis": 1,
+  "mini_supported": false,
+  "simultaneous_mini_micro_mixing": false,
+  "trailing_stop": false,
+  "averaging": false,
+  "historical_performance_authorized": false,
+  "holdout_access_authorized": false,
+  "account_simulation_authorized": false,
+  "minimum_dates": 40,
+  "minimum_calendar_weeks": 8,
+  "minimum_partition_dates": [
+    15,
+    10,
+    10
+  ],
+  "minimum_trades": 30,
+  "minimum_partition_trades": [
+    10,
+    5,
+    10
+  ],
+  "minimum_per_direction": 5,
+  "minimum_dates_per_eastern_offset": 5,
+  "minimum_outcomes_per_range_condition": 5,
+  "sample_sufficiency": "UNKNOWN"
+}

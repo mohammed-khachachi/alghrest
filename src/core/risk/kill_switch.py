@@ -170,12 +170,24 @@ class KillSwitch:
             return portfolio.total_capital
         return Decimal("0")
 
-    async def reset(self, authorized_by: str = "manual") -> None:
+    async def reset(
+        self,
+        authorized_by: str = "manual",
+        *,
+        authorization: str = "",
+        reason: str = "",
+        expected_generation: int = -1,
+    ) -> None:
         """Reset kill switch — requires explicit human authorization."""
         self._log.warning("kill switch reset", authorized_by=authorized_by)
+        await state_manager.deactivate_kill_switch(
+            actor=authorized_by,
+            reason=reason,
+            authorization=authorization,
+            expected_generation=expected_generation,
+        )
         self._active = False
         self._active_reason = None
-        await state_manager.deactivate_kill_switch()
 
     @property
     def is_active(self) -> bool:

@@ -1,25 +1,8 @@
-// A single hardcoded User-Agent makes every self-hosted install share one
-// fingerprint: when the app's traffic grows, providers can throttle the whole
-// fleet by blocking that one string (observed: sustained HTTP 429 from Yahoo
-// for the previous fixed UA, while other realistic UAs on the same IP worked).
-// So pick one UA per server process from a small pool of plausible, current,
-// OS/browser-diverse strings — sticky for the process lifetime so our cookie/
-// crumb session stays consistent — and let operators pin their own explicitly.
-const UA_POOL = [
-  "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0",
-];
-
-function selectUserAgent(): string {
-  const pinned = process.env.YAHOO_USER_AGENT?.trim();
-  if (pinned) return pinned;
-  return UA_POOL[Math.floor(Math.random() * UA_POOL.length)];
-}
-
-const UA = selectUserAgent();
+// Use Node's native User-Agent for server requests. Browser impersonation can
+// make Yahoo reject otherwise valid public chart requests with HTTP 429.
+// Operators can still explicitly configure a User-Agent for their deployment.
+const UA = process.env.YAHOO_USER_AGENT?.trim();
+const SESSION_HEADERS: Record<string, string> = UA ? { "User-Agent": UA } : {};
 
 export type Quote = {
   symbol: string;
@@ -62,11 +45,11 @@ async function getSession(): Promise<{ cookie: string; crumb: string }> {
   if (session && Date.now() - session.fetched < 30 * 60 * 1000) return session;
   if (Date.now() < sessionFailedUntil) throw new Error("yahoo: crumb fetch failed (cached failure)");
   try {
-    const res = await fetch("https://fc.yahoo.com/", { signal:AbortSignal.timeout(4000), headers: { "User-Agent": UA }, redirect: "manual" });
+    const res = await fetch("https://fc.yahoo.com/", { signal:AbortSignal.timeout(4000), headers: SESSION_HEADERS, redirect: "manual" });
     const cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
     if (!cookie) throw new Error("yahoo: no session cookie");
     const crumbRes = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {signal:AbortSignal.timeout(4000),
-      headers: { "User-Agent": UA, Cookie: cookie },
+      headers: { ...SESSION_HEADERS, Cookie: cookie },
     });
     const crumb = (await crumbRes.text()).trim();
     if (!crumbRes.ok || !crumb || crumb.includes("<")) throw new Error("yahoo: crumb fetch failed");
@@ -112,7 +95,7 @@ async function yfetch(url: string, withCrumb = false): Promise<any> {
   if (Date.now() < cooldownUntil) {
     throw new Error("yahoo rate-limited (cooling down)");
   }
-  const headers: Record<string, string> = { "User-Agent": UA, Accept: "application/json" };
+  const headers: Record<string, string> = { ...SESSION_HEADERS, Accept: "application/json" };
   let full = url;
   await acquire();
   try {

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -14,6 +15,7 @@ from core.accounting.models import key
 from core.accounting.performance import load as load_performance
 from core.accounting.repository import FillConflictError, Ledger
 from core.data.models import Fill, KafkaTopic, Order, OrderStatus
+from core.execution.authorization import validate_authorization
 from core.execution.contracts import (
     TERMINAL,
     AccountScope,
@@ -22,6 +24,13 @@ from core.execution.contracts import (
     balance_differences,
     native_balances,
 )
+from core.resilience import (
+    DatabaseCircuitBreaker,
+    DatabaseCircuitOpenError,
+    ExponentialBackoffPolicy,
+    is_transient_db_error,
+)
+from core.risk.halt import halted as risk_halted
 
 
 def order_fingerprint(order: Order) -> str:
@@ -49,12 +58,23 @@ def order_fingerprint(order: Order) -> str:
 
 
 class ExecutionStore:
-    def __init__(self, ledger: Ledger) -> None:
+    def __init__(
+        self,
+        ledger: Ledger,
+        *,
+        backoff: ExponentialBackoffPolicy | None = None,
+        circuit_breaker: DatabaseCircuitBreaker | None = None,
+    ) -> None:
         self.ledger = ledger
         self.pool = ledger.pool
         self.book_id = ledger.book_id
         self._lease: Any = None
         self._lease_lock = asyncio.Lock()
+        self._writer_claimed = False
+        self.backoff = backoff or ledger.backoff
+        self.circuit_breaker = circuit_breaker or DatabaseCircuitBreaker(
+            name=f"execution:{ledger.book_id}"
+        )
 
     async def claim_writer(self) -> None:
         async with self._lease_lock:
@@ -71,6 +91,8 @@ class ExecutionStore:
                 await self.pool.release(lease)
                 raise
             self._lease = lease
+            self._writer_claimed = True
+            self.circuit_breaker.record_success()
 
     async def check_writer(self) -> None:
         async with self._lease_lock:
@@ -78,10 +100,74 @@ class ExecutionStore:
                 raise RecoveryBlockedError("Execution writer lease lost")
             await self._lease.execute("SELECT 1")
 
+    async def recover_writer(self) -> None:
+        """Release a dropped writer session and re-acquire the book's advisory lock with backoff."""
+        async with self._lease_lock:
+            if not self._writer_claimed:
+                raise RecoveryBlockedError("Execution writer lease lost")
+            if self._lease is not None and not self._lease.is_closed():
+                try:
+                    await self._lease.execute("SELECT 1")
+                    self.circuit_breaker.record_success()
+                    return
+                except BaseException as exc:
+                    if not is_transient_db_error(exc):
+                        raise
+            if self._lease is not None:
+                dead = self._lease
+                self._lease = None
+                with suppress(Exception):
+                    await self.pool.release(dead)
+            lock = int.from_bytes(
+                hashlib.sha256(f"execution:{self.book_id}".encode()).digest()[:8], signed=True
+            )
+
+            async def _reacquire() -> Any:
+                lease = await self.pool.acquire()
+                try:
+                    if not await lease.fetchval("SELECT pg_try_advisory_lock($1)", lock):
+                        raise RecoveryBlockedError("Another executor owns this book")
+                    return lease
+                except BaseException:
+                    with suppress(Exception):
+                        await self.pool.release(lease)
+                    raise
+
+            try:
+                self._lease = await self.backoff.run(
+                    _reacquire,
+                    circuit_breaker=self.circuit_breaker,
+                    is_retryable=is_transient_db_error,
+                )
+            except DatabaseCircuitOpenError as exc:
+                raise RecoveryBlockedError("Execution database circuit breaker open") from exc
+            except BaseException as exc:
+                if isinstance(exc, RecoveryBlockedError):
+                    raise
+                raise RecoveryBlockedError(
+                    f"Execution writer lease recovery failed: {type(exc).__name__}"
+                ) from exc
+
+    async def ensure_writer(self) -> None:
+        """Verify the active writer lease or recover it automatically on transient session loss."""
+        try:
+            self.circuit_breaker.check()
+        except DatabaseCircuitOpenError as exc:
+            raise RecoveryBlockedError("Execution database circuit breaker open") from exc
+        try:
+            await self.check_writer()
+            self.circuit_breaker.record_success()
+        except BaseException as exc:
+            if not self._writer_claimed or not is_transient_db_error(exc):
+                raise
+            await self.recover_writer()
+
     async def close(self) -> None:
         async with self._lease_lock:
+            self._writer_claimed = False
             if self._lease is not None:
-                await self.pool.release(self._lease)
+                with suppress(Exception):
+                    await self.pool.release(self._lease)
                 self._lease = None
             await self.ledger.close()
 
@@ -102,11 +188,19 @@ class ExecutionStore:
             saved = await conn.fetchval(
                 "SELECT accounts FROM execution.books WHERE book_id=$1", self.book_id
             )
-            if json.loads(saved) != json.loads(config):
+            normalized = [
+                AccountScope.model_validate(a).model_dump(mode="json") for a in json.loads(saved)
+            ]
+            if normalized != json.loads(config):
                 raise RecoveryBlockedError(
                     "Recovery account configuration differs from the durable book"
                 )
             await self._block(conn, "executor starting/recovering")
+            await conn.execute(
+                """INSERT INTO safety.halts(book_id,active,reason)
+                   VALUES($1,false,'explicit new-book initialization') ON CONFLICT DO NOTHING""",
+                self.book_id,
+            )
 
     async def _block(self, conn: Any, reason: str) -> None:
         await conn.execute(
@@ -132,6 +226,22 @@ class ExecutionStore:
             json.dumps(payload),
         )
 
+    async def check_proposal_history(self, conn: Any, order: Order) -> None:
+        """Fence pre-upgrade random IDs without changing their audit history.
+
+        Call while holding the book row lock, before claiming a new root intent.
+        TWAP children intentionally share a proposal and use their persisted plan.
+        """
+        if order.proposal_id is not None and await conn.fetchval(
+            """SELECT EXISTS(SELECT 1 FROM execution.orders
+               WHERE book_id=$1 AND request->>'proposal_id'=$2)""",
+            self.book_id,
+            str(order.proposal_id),
+        ):
+            raise RecoveryBlockedError(
+                "Replayed proposal has historical execution; review required"
+            )
+
     async def prepare(self, order: Order) -> bool:
         """Claim once before HTTP. Existing/uncertain intent can NEVER be resent."""
         digest = order_fingerprint(order)
@@ -145,6 +255,12 @@ class ExecutionStore:
                 if previous != digest:
                     raise OrderConflictError("Client order ID reused for different intent")
                 return False
+            await validate_authorization(conn, self.book_id, order, revision=state.revision)
+            if not order.algo_params.get("parent_id"):
+                await self.check_proposal_history(conn, order)
+            halted = await risk_halted(conn, self.book_id)
+            if halted:
+                raise RecoveryBlockedError("Persistent risk halt or missing halt state")
             gate = await conn.fetchrow(
                 "SELECT * FROM execution.books WHERE book_id=$1", self.book_id
             )
@@ -194,6 +310,21 @@ class ExecutionStore:
         if previous and previous != order_fingerprint(order):
             raise OrderConflictError("Client order ID reused for different intent")
         return bool(previous)
+
+    async def authorize(self, order: Order) -> None:
+        async with self.ledger.locked_state() as (conn, _state, _opening):
+            await validate_authorization(conn, self.book_id, order)
+
+    async def deny(self, order: Order, reason: str) -> None:
+        # Untrusted instructions must not reserve/poison a legitimate client ID.
+        await self.pool.execute(
+            """INSERT INTO execution.authorization_denials(book_id,proposal_id,client_order_id,reason)
+               VALUES($1,$2,$3,$4)""",
+            self.book_id,
+            order.proposal_id,
+            order.client_order_id,
+            reason,
+        )
 
     async def reject(self, order: Order, reason: str) -> None:
         rejected = order.model_copy(update={"status": OrderStatus.REJECTED})
@@ -250,6 +381,38 @@ class ExecutionStore:
                 {**rejected.model_dump(mode="json"), "rejection_reason": reason},
             )
             await self._block(conn, reason)
+
+    async def abort_if_unattempted(self, order: Order, reason: str) -> bool:
+        """Idempotently abort a claim if a DB disconnect occurred before the venue was contacted."""
+        rejected = order.model_copy(update={"status": OrderStatus.REJECTED})
+        async with self.ledger.locked_state() as (conn, _state, _opening):
+            row = await conn.fetchrow(
+                """SELECT phase,exchange_order_id FROM execution.orders
+                   WHERE book_id=$1 AND client_order_id=$2 FOR UPDATE""",
+                self.book_id,
+                order.client_order_id,
+            )
+            if row is None or row["phase"] == "rejected":
+                return False
+            if row["phase"] != "submitting" or row["exchange_order_id"] is not None:
+                raise RecoveryBlockedError("Cannot abort an already attempted submission")
+            await conn.execute(
+                """UPDATE execution.orders SET phase='rejected',current_order=$3::jsonb,error=$4
+                   WHERE book_id=$1 AND client_order_id=$2""",
+                self.book_id,
+                order.client_order_id,
+                rejected.model_dump_json(),
+                reason,
+            )
+            await self._event(
+                conn,
+                f"rejected:{order.client_order_id}",
+                KafkaTopic.ORDERS_EXECUTED,
+                "OrderRejected",
+                {**rejected.model_dump(mode="json"), "rejection_reason": reason},
+            )
+            await self._block(conn, reason)
+            return True
 
     async def uncertain(self, order: Order, reason: str) -> None:
         async with self.ledger.locked_state() as (conn, _state, _opening):
@@ -387,6 +550,8 @@ class ExecutionStore:
             if actual != version:
                 raise RecoveryBlockedError("Recovery cursor changed concurrently")
             for fill in fills:
+                if fill.accounting_book_id not in (None, self.book_id):
+                    raise ValueError("Recovered fill belongs to another accounting book")
                 scope = identity(fill)
                 if fill.exchange != account.exchange or fill.account_id != account.account_id:
                     raise ValueError("Fill belongs to another account")
@@ -446,17 +611,20 @@ class ExecutionStore:
             )
             await self._block(conn, "recovered fills awaiting reconciliation")
 
-    async def outbox(self) -> list[dict[str, Any]]:
+    async def outbox(self, *, include_execution_intents: bool = True) -> list[dict[str, Any]]:
         # Redeliver even previously acknowledged fills if the ledger lacks them
         # (consumer outage/retention); transport delivery is not ledger settlement.
         rows = await self.pool.fetch(
-            """SELECT * FROM execution.outbox o WHERE book_id=$1 AND
+            """SELECT * FROM execution.outbox o WHERE book_id=$1
+               AND ($2 OR topic<>ALL($3::text[])) AND
                (delivered_at IS NULL OR (message_type='Fill' AND NOT EXISTS (
                   SELECT 1 FROM accounting.fills f WHERE f.book_id=o.book_id
                   AND f.exchange=o.payload->>'exchange' AND f.account_id=o.payload->>'account_id'
                   AND f.symbol=o.payload->>'symbol' AND f.trade_id=o.payload->>'exchange_trade_id')))
                ORDER BY id LIMIT 500""",
             self.book_id,
+            include_execution_intents,
+            [KafkaTopic.ORDERS_PENDING.value, KafkaTopic.PROPOSALS_APPROVED.value],
         )
         return [dict(r) for r in rows]
 
@@ -477,6 +645,9 @@ class ExecutionStore:
     ) -> dict[str, Any]:
         async with self.ledger.locked_state() as (conn, state, _opening):
             reasons = list(issues)
+            halted = await risk_halted(conn, self.book_id)
+            if halted:
+                reasons.append("persistent risk halt or missing halt state")
             performance = await load_performance(conn, self.book_id)
             if (
                 performance is None

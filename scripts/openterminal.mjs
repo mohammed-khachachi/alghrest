@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lifecycleLogger, exitDescription } from './research-lifecycle.mjs';
 
 export const WEB_URL = 'http://127.0.0.1:3001';
 export const API_URL = 'http://127.0.0.1:4001';
@@ -34,18 +35,33 @@ export async function requireFreePort(port) {
 }
 
 /** A terminated npm/Node leader can still have live descendants in its process group. */
-export function signalOwnedProcess(child, signal = 'SIGTERM') {
+export function signalOwnedProcess(child, signal = 'SIGTERM', record = () => {}) {
   if (!child.pid) return;
   if (process.platform === 'win32') {
-    if (child.exitCode === null && child.signalCode === null)
-      spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {stdio:'ignore'});
+    if (child.exitCode === null && child.signalCode === null) {
+      const details = { signal: 'taskkill', sender: 'launcher', sender_pid: process.pid };
+      record('signal_requested', details);
+      const taskkill = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {stdio:'ignore'});
+      taskkill.once('error', error => record('signal_error', { ...details, error_code: error.code }));
+      taskkill.once('exit', code => record(code === 0 ? 'signal_sent' : 'signal_error', { ...details, code }));
+    }
   } else {
-    try {process.kill(-child.pid, signal);} catch (error) {if (error.code !== 'ESRCH') throw error;}
+    try {
+      process.kill(-child.pid, signal);
+      record('signal_sent', { signal, sender: 'launcher', sender_pid: process.pid });
+    } catch (error) {
+      record(error.code === 'ESRCH' ? 'signal_skipped' : 'signal_error', {
+        signal, sender: 'launcher', sender_pid: process.pid, error_code: error.code,
+      });
+      if (error.code !== 'ESRCH') throw error;
+    }
   }
 }
 
-export async function finishOwnedProcessGroups(children, graceMs = 6000) {
-  for (const child of children) signalOwnedProcess(child);
+export async function finishOwnedProcessGroups(children, graceMs = 6000, record = () => {}) {
+  const send = (child, signal) => signalOwnedProcess(child, signal,
+    (event, details) => record(child, event, details));
+  for (const child of children) send(child, 'SIGTERM');
   if (process.platform === 'win32') return;
   const alive = child => {
     if (!child.pid) return false;
@@ -53,7 +69,7 @@ export async function finishOwnedProcessGroups(children, graceMs = 6000) {
   };
   const deadline=Date.now()+graceMs;
   while (children.some(alive) && Date.now()<deadline) await new Promise(accept=>setTimeout(accept,50));
-  for (const child of children) signalOwnedProcess(child,'SIGKILL');
+  for (const child of children) if (alive(child)) send(child, 'SIGKILL');
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -73,45 +89,67 @@ export async function main(args = process.argv.slice(2)) {
   }
 
   console.log(`ALGHREST research: ${WEB_URL}\nPublic/indicative data. Separate manual journal. AI disabled. Ctrl+C to stop.`);
+  return runOpenTerminal();
+}
+
+/** Launch seam also permits isolated fixtures without binding the workspace ports. */
+export async function runOpenTerminal(service) {
   const windows = process.platform === 'win32';
-  const child = spawn(windows ? 'npm.cmd' : 'npm', ['run', 'dev'], {
-    cwd: workspace, env: researchEnvironment(), stdio: 'inherit',
-    shell: windows, detached: !windows,
+  service ??= { command: windows ? 'npm.cmd' : 'npm', args: ['run', 'dev'],
+    cwd: workspace, env: researchEnvironment(), shell: windows };
+  const log = lifecycleLogger('openterminal');
+  const child = spawn(service.command, service.args, {
+    cwd: service.cwd, env: service.env, stdio: 'inherit',
+    shell: service.shell, detached: !windows,
   });
+  const record = (event, details = {}) => log(event, {
+    service: 'OpenTerminal', child_pid: child.pid ?? null, ...details,
+  });
+  child.once('spawn', () => record('child_started', { reason: 'launch' }));
   let stopping = false;
+  let reason = 'child_exit';
   let stopTimer;
   function stop(signal = 'SIGTERM') {
+    record('signal_received', { signal, reason: 'supervisor_signal' });
     if (stopping || !child.pid) return;
     stopping = true;
-    if (windows) {
-      spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
-    } else {
-      try { process.kill(-child.pid, signal); } catch (error) {
-        if (error.code !== 'ESRCH') throw error;
-      }
-      stopTimer = setTimeout(() => {
-        try { process.kill(-child.pid, 'SIGKILL'); } catch (error) {
-          if (error.code !== 'ESRCH') console.error('Unable to stop the research process group.');
-        }
-      }, 5000);
-      stopTimer.unref();
-    }
+    reason = 'supervisor_signal';
+    record('shutdown_requested', { reason, signal });
+    signalOwnedProcess(child, signal, (event, details) => record(event, { reason, ...details }));
+    stopTimer = setTimeout(() => {
+      try {
+        signalOwnedProcess(child, 'SIGKILL', (event, details) => record(event, { reason: 'shutdown_timeout', ...details }));
+      } catch { console.error('Unable to stop the research process group.'); }
+    }, 5000);
+    stopTimer.unref();
   }
   const interrupt = () => stop('SIGINT');
   const terminate = () => stop();
-  process.once('SIGINT', interrupt);
-  process.once('SIGTERM', terminate);
+  process.on('SIGINT', interrupt);
+  process.on('SIGTERM', terminate);
   await new Promise((accept, reject) => {
-    child.once('error', reject);
-    child.once('exit', (code) => {
-      if (!stopping && code !== 0) reject(new Error(`Research workspace exited (${code}).`));
+    child.once('error', error => {
+      reason = 'child_start_error';
+      record('child_error', { reason, error_code: error.code });
+      reject(new Error(`Research workspace could not start (${error.code ?? 'unknown'}).`));
+    });
+    child.once('exit', (code, signal) => {
+      if (!stopping) reason = code === 0 ? 'child_exit' : 'unexpected_child_exit';
+      record('child_exit', { reason, signal, code });
+      if (!stopping && code !== 0) reject(new Error(`Research workspace exited (${exitDescription(code, signal)}).`));
       else accept();
     });
   }).finally(async () => {
-    await finishOwnedProcessGroups([child]);
-    clearTimeout(stopTimer);
-    process.removeListener('SIGINT', interrupt);
-    process.removeListener('SIGTERM', terminate);
+    try {
+      record('cleanup_started', { reason });
+      await finishOwnedProcessGroups([child], 6000,
+        (_child, event, details) => record(event, { reason: 'owned_group_cleanup', ...details }));
+      record('cleanup_finished', { reason });
+    } finally {
+      clearTimeout(stopTimer);
+      process.removeListener('SIGINT', interrupt);
+      process.removeListener('SIGTERM', terminate);
+    }
   });
 }
 

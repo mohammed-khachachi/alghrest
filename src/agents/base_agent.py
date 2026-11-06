@@ -178,6 +178,18 @@ class BaseAgent(ABC):
     ) -> None:
         """Publish an AgentMessage to a Kafka topic."""
         settings.require_order_execution()
+        if topic in {
+            KafkaTopic.PROPOSALS_BUS,
+            KafkaTopic.PROPOSALS_APPROVED,
+            KafkaTopic.ORDERS_PENDING,
+            KafkaTopic.ORDERS_EXECUTED,
+            KafkaTopic.FILLS_CONFIRMED,
+            KafkaTopic.PORTFOLIO_STATE,
+            KafkaTopic.RISK_ALERTS,
+        } and not (topic == KafkaTopic.RISK_ALERTS and payload.get("halt_scope") == "global"):
+            if payload.get("accounting_book_id") not in (None, settings.accounting_book_id):
+                raise ValueError("Cannot publish another book's execution/risk state")
+            payload = {**payload, "accounting_book_id": settings.accounting_book_id}
         msg = AgentMessage(
             source_agent_id=self.agent_id,
             topic=topic,
@@ -199,7 +211,7 @@ class BaseAgent(ABC):
     ) -> AlghrestConsumer:
         """Create a topic consumer scoped to this agent's group."""
         return AlghrestConsumer(
-            agent_name=self.name,
+            agent_name=f"{self.name}.{settings.accounting_book_id}",
             topics=topics,
             auto_offset_reset=auto_offset_reset,
         )

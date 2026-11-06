@@ -11,7 +11,6 @@ from redis.asyncio import Redis
 
 from core.accounting.models import BookState, CashBalance, OpeningBalances
 from core.accounting.valuation import MissingValuationError, Valuation
-from core.config import settings
 from core.orchestrator.state_manager import StateManager
 from tests.factories import with_performance
 
@@ -72,10 +71,10 @@ async def test_snapshot_cache_is_recreatable_and_short_lived(state):
             ],
         )
     )
-    portfolio = await Valuation(state, now, []).portfolio("redis-test", book, [])
+    portfolio = await Valuation(state, now, []).portfolio(state.book_id, book, [])
     try:
         await state.set_accounting_portfolio(portfolio)
-        assert 0 < await state.redis.ttl("alghrest:portfolio:current") <= 15
+        assert 0 < await state.redis.ttl(state.book_key("alghrest:portfolio:current")) <= 15
         assert await state.get_portfolio() == portfolio
         await state.invalidate_portfolio()
         assert await state.get_portfolio() is None
@@ -87,7 +86,7 @@ async def test_snapshot_cache_is_recreatable_and_short_lived(state):
 
 
 async def test_trade_gate_requires_fresh_matching_revision_and_book(state, monkeypatch):
-    monkeypatch.setattr(settings, "accounting_book", f"test-{uuid4()}")
+    book_id = state.book_id
     now = datetime.now(UTC)
     book = BookState.from_opening(
         OpeningBalances(
@@ -96,15 +95,15 @@ async def test_trade_gate_requires_fresh_matching_revision_and_book(state, monke
             cash=[CashBalance(exchange="binance", currency="USD", amount=Decimal(1000))],
         )
     )
-    portfolio = await Valuation(state, now, []).portfolio(settings.accounting_book_id, book, [])
+    portfolio = await Valuation(state, now, []).portfolio(book_id, book, [])
     portfolio = with_performance(portfolio)
     report = {
-        "book_id": settings.accounting_book_id,
+        "book_id": book_id,
         "ready": True,
         "revision": 0,
         "checked_at": now.isoformat(),
     }
-    cache_key = f"alghrest:reconciliation:{settings.accounting_book_id}"
+    cache_key = f"alghrest:reconciliation:{book_id}"
     try:
         await state.set_accounting_portfolio(portfolio)
         assert not await state.trading_ready()

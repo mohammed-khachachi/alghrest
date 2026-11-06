@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useDashboardStore } from '@/store/useStore';
 import { Skeleton } from '@/components/common/Skeleton';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -28,6 +29,7 @@ function usePulse(value: number): boolean {
 }
 
 function TopicCard({ topic }: TopicCardProps) {
+  useLanguage();
   const pulsing = usePulse(topic.total_messages);
   const lagOk = topic.consumer_lag_ms < 500;
   const lagWarn = topic.consumer_lag_ms >= 500 && topic.consumer_lag_ms < 1000;
@@ -49,7 +51,7 @@ function TopicCard({ topic }: TopicCardProps) {
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3
           className="font-mono text-xs font-semibold text-white truncate"
-          title={topic.name}
+          title={tr(topic.name)}
         >
           {topic.name}
         </h3>
@@ -60,13 +62,13 @@ function TopicCard({ topic }: TopicCardProps) {
 
       <div className="grid grid-cols-2 gap-2 text-xs mb-3">
         <div>
-          <div className="text-text-muted">msg/s</div>
+          <div className="text-text-muted">{tr("msg/s")}</div>
           <div className="font-mono font-bold text-white">
-            {topic.messages_per_sec.toFixed(1)}
+            {tr(topic.messages_per_sec.toFixed(1))}
           </div>
         </div>
         <div>
-          <div className="text-text-muted">lag</div>
+          <div className="text-text-muted">{tr("lag")}</div>
           <div
             className={clsx(
               'font-mono font-bold',
@@ -75,31 +77,31 @@ function TopicCard({ topic }: TopicCardProps) {
               !lagOk && !lagWarn && 'text-red-400',
             )}
           >
-            {topic.consumer_lag_ms}ms
-          </div>
+            {tr(topic.consumer_lag_ms)}{tr("ms")}</div>
         </div>
         <div>
-          <div className="text-text-muted">total</div>
+          <div className="text-text-muted">{tr("total")}</div>
           <div className="font-mono text-slate-300">
-            {topic.total_messages.toLocaleString()}
+            {tr(topic.total_messages.toLocaleString())}
           </div>
         </div>
         <div>
-          <div className="text-text-muted">partitions</div>
-          <div className="font-mono text-slate-300">{topic.partition_count}</div>
+          <div className="text-text-muted">{tr("partitions")}</div>
+          <div className="font-mono text-slate-300">{tr(topic.partition_count)}</div>
         </div>
       </div>
 
       <MiniSparkline data={sparkData} color="#6366f1" height={28} />
 
       <div className="mt-2 text-xs text-text-muted font-mono truncate">
-        {new Date(topic.last_message_ts).toLocaleTimeString('en-US', { hour12: false })}
+        {tr(new Date(topic.last_message_ts).toLocaleTimeString('en-US', { hour12: false }))}
       </div>
     </div>
   );
 }
 
 function TopicCardSkeleton() {
+  useLanguage();
   return (
     <div className="bg-bg-surface border border-white/8 rounded-xl p-4 space-y-3">
       <Skeleton className="h-3 w-3/4 rounded" />
@@ -110,6 +112,7 @@ function TopicCardSkeleton() {
 }
 
 export function Kafka() {
+  useLanguage();
   const kafkaTopics = useDashboardStore((s) => s.kafkaTopics);
 
   const topicMap = new Map(kafkaTopics.map((t) => [t.name, t]));
@@ -119,9 +122,7 @@ export function Kafka() {
       {/* Topic grid */}
       <ErrorBoundary>
         <div>
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
-            Topic Metrics — 16 Topics
-          </h2>
+          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">{tr("Topic Metrics — 16 Topics")}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {kafkaTopics.length === 0
               ? Array.from({ length: 16 }).map((_, i) => (
@@ -135,8 +136,8 @@ export function Kafka() {
                         key={name}
                         className="bg-bg-surface border border-white/8 rounded-xl p-4 opacity-40"
                       >
-                        <div className="font-mono text-xs text-text-muted">{name}</div>
-                        <div className="text-xs text-text-muted mt-1">No data</div>
+                        <div className="font-mono text-xs text-text-muted">{tr(name)}</div>
+                        <div className="text-xs text-text-muted mt-1">{tr("No data")}</div>
                       </div>
                     );
                   }
@@ -149,9 +150,7 @@ export function Kafka() {
       {/* Flow diagram */}
       <ErrorBoundary>
         <div className="bg-bg-surface border border-white/8 rounded-xl p-6">
-          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-6">
-            Message Flow — Tier Topology
-          </h2>
+          <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-6">{tr("Message Flow — Tier Topology")}</h2>
           <KafkaFlowDiagram />
         </div>
       </ErrorBoundary>

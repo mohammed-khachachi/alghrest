@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../../i18n";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clsx } from 'clsx';
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function SymbolSelector({ value, onChange }: Props) {
+  useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export function SymbolSelector({ value, onChange }: Props) {
           open && 'border-white/30',
         )}
       >
-        <span className={clsx(value.length === 0 && 'text-text-muted')}>{label}</span>
+        <span className={clsx(value.length === 0 && 'text-text-muted')}>{tr(label)}</span>
         <div className="flex items-center gap-2">
           {value.length > 0 && (
             <span
@@ -110,7 +112,7 @@ export function SymbolSelector({ value, onChange }: Props) {
                 }
               }}
               className="rounded p-0.5 text-text-muted hover:bg-white/10 hover:text-white"
-              aria-label="Clear selection"
+              aria-label={tr("Clear selection")}
             >
               <X size={14} />
             </span>
@@ -127,7 +129,7 @@ export function SymbolSelector({ value, onChange }: Props) {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search BTC, EUR/USD, AAPL…"
+              placeholder={tr("Search BTC, EUR/USD, AAPL…")}
               className="w-full bg-transparent text-sm outline-none placeholder:text-text-muted"
             />
           </div>
@@ -135,11 +137,8 @@ export function SymbolSelector({ value, onChange }: Props) {
           {usingFallback && (
             <div className="flex items-start gap-2 border-b border-white/8 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-300">
               <AlertCircle size={12} className="mt-0.5 shrink-0" />
-              <span>
-                API unreachable — showing offline catalog. Start{' '}
-                <code className="font-mono">python api/mock_server.py</code> for
-                live quotes.
-              </span>
+              <span>{tr("API unreachable — showing offline catalog. Start")}{tr(' ')}
+                <code className="font-mono">{tr("python api/mock_server.py")}</code>{tr(" for live quotes.")}</span>
             </div>
           )}
           <div className="max-h-72 overflow-y-auto py-1">
@@ -151,9 +150,7 @@ export function SymbolSelector({ value, onChange }: Props) {
               </div>
             )}
             {!isLoading && grouped.size === 0 && (
-              <div className="px-3 py-4 text-center text-xs text-text-muted">
-                No matches
-              </div>
+              <div className="px-3 py-4 text-center text-xs text-text-muted">{tr("No matches")}</div>
             )}
             {(['crypto', 'forex', 'equity'] as AssetClass[]).map((cls) => {
               const entries = grouped.get(cls);
@@ -161,7 +158,7 @@ export function SymbolSelector({ value, onChange }: Props) {
               return (
                 <div key={cls} className="py-1">
                   <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                    {ASSET_CLASS_LABEL[cls]}
+                    {tr(ASSET_CLASS_LABEL[cls])}
                   </div>
                   {entries.map((e) => {
                     const isSel = selected.has(e.symbol);
@@ -171,7 +168,7 @@ export function SymbolSelector({ value, onChange }: Props) {
                         key={e.symbol}
                         onClick={() => toggle(e.symbol)}
                         className={clsx(
-                          'flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-sm transition',
+                          'flex w-full items-center justify-between gap-3 px-3 py-1.5 text-start text-sm transition',
                           'hover:bg-white/5',
                           isSel && 'bg-white/5',
                         )}

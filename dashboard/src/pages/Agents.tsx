@@ -1,3 +1,4 @@
+import { useLanguage, tr } from "../i18n";
 import { useState, useMemo } from 'react';
 import { useDashboardStore } from '@/store/useStore';
 import { Skeleton } from '@/components/common/Skeleton';
@@ -11,6 +12,7 @@ type FilterTier = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type FilterStatus = 'ALL' | 'RUNNING' | 'DEGRADED' | 'ERROR' | 'PAUSED';
 
 function StatusDot({ status }: { status: string }) {
+  useLanguage();
   return (
     <span
       className={clsx(
@@ -31,13 +33,14 @@ function AgentCard({
   beat: AgentHeartbeat;
   onClick: () => void;
 }) {
+  useLanguage();
   const tierColor = TIER_COLORS[beat.tier] ?? '#64748b';
 
   return (
     <button
       onClick={onClick}
       className={clsx(
-        'bg-bg-surface border border-white/8 rounded-xl p-4 text-left',
+        'bg-bg-surface border border-white/8 rounded-xl p-4 text-start',
         'hover:border-white/20 hover:bg-white/4 transition-all duration-200',
         'focus:outline-none focus:ring-2 focus:ring-indigo-500/50',
         'relative overflow-hidden',
@@ -53,18 +56,16 @@ function AgentCard({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <StatusDot status={beat.status} />
-            <span className="font-mono text-xs text-text-muted">
-              AGT-{String(beat.agent_id).padStart(2, '0')}
+            <span className="font-mono text-xs text-text-muted">{tr("AGT-")}{tr(String(beat.agent_id).padStart(2, '0'))}
             </span>
             <span
               className="text-xs px-1.5 py-0.5 rounded font-mono"
               style={{ backgroundColor: `${tierColor}20`, color: tierColor }}
-            >
-              T{beat.tier}
+            >{tr("T")}{tr(beat.tier)}
             </span>
           </div>
           <h3 className="text-sm font-semibold text-white truncate">
-            {beat.agent_name}
+            {tr(beat.agent_name)}
           </h3>
         </div>
         <span
@@ -78,24 +79,24 @@ function AgentCard({
             beat.status === 'SHUTDOWN' && 'bg-red-900/50 text-red-400',
           )}
         >
-          {beat.status}
+          {tr(beat.status)}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
         <div className="flex items-center gap-1.5 text-text-muted">
           <Activity size={11} />
-          <span className="font-mono">{beat.messages_processed.toLocaleString()}</span>
-          <span>msgs</span>
+          <span className="font-mono">{tr(beat.messages_processed.toLocaleString())}</span>
+          <span>{tr("msgs")}</span>
         </div>
         <div className="flex items-center gap-1.5 text-text-muted">
           <Clock size={11} />
-          <span className="font-mono">{beat.last_heartbeat_secs}s</span>
-          <span>ago</span>
+          <span className="font-mono">{tr(beat.last_heartbeat_secs)}{tr("s")}</span>
+          <span>{tr("ago")}</span>
         </div>
         <div className="flex items-center gap-1.5 text-text-muted">
           <MemoryStick size={11} />
-          <span className="font-mono">{beat.memory_mb.toFixed(0)} MB</span>
+          <span className="font-mono">{tr(beat.memory_mb.toFixed(0))}{tr(" MB")}</span>
         </div>
         <div
           className={clsx(
@@ -103,8 +104,8 @@ function AgentCard({
             beat.error_rate_pct > 5 ? 'text-red-400' : 'text-text-muted',
           )}
         >
-          <span className="font-mono">{beat.error_rate_pct.toFixed(1)}%</span>
-          <span>err</span>
+          <span className="font-mono">{tr(beat.error_rate_pct.toFixed(1))}%</span>
+          <span>{tr("err")}</span>
         </div>
       </div>
     </button>
@@ -112,6 +113,7 @@ function AgentCard({
 }
 
 function AgentCardSkeleton() {
+  useLanguage();
   return (
     <div className="bg-bg-surface border border-white/8 rounded-xl p-4 space-y-3">
       <Skeleton className="h-4 w-2/3 rounded" />
@@ -122,6 +124,7 @@ function AgentCardSkeleton() {
 }
 
 export function Agents() {
+  useLanguage();
   const heartbeats = useDashboardStore((s) => s.agentHeartbeats);
   const [filterTier, setFilterTier] = useState<FilterTier>(0);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('ALL');
@@ -148,7 +151,7 @@ export function Agents() {
     <div className="p-6 space-y-4">
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-text-muted uppercase tracking-wider mr-1">Tier:</span>
+        <span className="text-xs text-text-muted uppercase tracking-wider mr-1">{tr("Tier:")}</span>
         {([0, 1, 2, 3, 4, 5, 6, 7] as FilterTier[]).map((t) => (
           <button
             key={t}
@@ -160,13 +163,11 @@ export function Agents() {
                 : 'bg-white/5 text-text-muted hover:bg-white/10',
             )}
           >
-            {t === 0 ? 'All' : `T${t}`}
+            {tr(t === 0 ? 'All' : `T${t}`)}
           </button>
         ))}
 
-        <span className="text-xs text-text-muted uppercase tracking-wider ml-4 mr-1">
-          Status:
-        </span>
+        <span className="text-xs text-text-muted uppercase tracking-wider ml-4 mr-1">{tr("Status:")}</span>
         {(['ALL', 'RUNNING', 'DEGRADED', 'ERROR', 'PAUSED'] as FilterStatus[]).map((s) => (
           <button
             key={s}
@@ -178,7 +179,7 @@ export function Agents() {
                 : 'bg-white/5 text-text-muted hover:bg-white/10',
             )}
           >
-            {s}
+            {tr(s)}
           </button>
         ))}
       </div>
@@ -196,11 +197,10 @@ export function Agents() {
                       key={def.id}
                       className="bg-bg-surface border border-white/8 rounded-xl p-4 opacity-40"
                     >
-                      <div className="font-mono text-xs text-text-muted mb-1">
-                        AGT-{String(def.id).padStart(2, '0')}
+                      <div className="font-mono text-xs text-text-muted mb-1">{tr("AGT-")}{tr(String(def.id).padStart(2, '0'))}
                       </div>
-                      <div className="text-sm text-white">{def.name}</div>
-                      <div className="text-xs text-text-muted mt-2">Offline</div>
+                      <div className="text-sm text-white">{tr(def.name)}</div>
+                      <div className="text-xs text-text-muted mt-2">{tr("Offline")}</div>
                     </div>
                   );
                 }

@@ -243,7 +243,7 @@ async def test_cache_expires_quickly_if_process_dies():
     agent, _ = accountant()
     await agent.snapshot()
     portfolio = agent.state.set_accounting_portfolio.await_args.args[0]
-    state = StateManager()
+    state = StateManager(book_id=portfolio.accounting_book_id)
     state._redis = SimpleNamespace(set=AsyncMock())
     await state.set_accounting_portfolio(portfolio)
     assert state._redis.set.await_args.kwargs["ex"] == 15

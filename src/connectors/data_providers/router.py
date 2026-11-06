@@ -9,6 +9,8 @@ from connectors.data_providers.base import AssetClass, HistoricalBar, Quote, Quo
 from connectors.data_providers.crypto_provider import MockCryptoProvider
 from connectors.data_providers.equity_provider import MockEquityProvider
 from connectors.data_providers.forex_provider import MockForexProvider
+from connectors.data_providers.openbb_adapter import OpenBBAdapter, OpenBBQuoteProvider
+from core.config import Settings, settings as default_settings
 
 
 @dataclass(frozen=True)
@@ -93,15 +95,61 @@ class QuoteRouter:
         return await provider.history(entry.symbol, days)
 
 
-def _build_default_router() -> QuoteRouter:
+def build_router(
+    *,
+    config: Settings | None = None,
+    adapter: OpenBBAdapter | None = None,
+    use_openbb: bool | None = None,
+) -> QuoteRouter:
+    """Build a QuoteRouter backed by OpenBB when enabled, or mock providers otherwise."""
+    cfg = config or default_settings
+    enable_obb = cfg.openbb_enabled if use_openbb is None else use_openbb
+
+    mock_crypto = MockCryptoProvider()
+    mock_forex = MockForexProvider()
+    mock_equity = MockEquityProvider()
+
+    if not enable_obb:
+        return QuoteRouter(
+            providers={
+                AssetClass.CRYPTO: mock_crypto,
+                AssetClass.FOREX: mock_forex,
+                AssetClass.EQUITY: mock_equity,
+            },
+            catalog=_CATALOG,
+        )
+
+    obb_adapter = adapter or OpenBBAdapter(config=cfg)
     return QuoteRouter(
         providers={
-            AssetClass.CRYPTO: MockCryptoProvider(),
-            AssetClass.FOREX: MockForexProvider(),
-            AssetClass.EQUITY: MockEquityProvider(),
+            AssetClass.CRYPTO: OpenBBQuoteProvider(
+                AssetClass.CRYPTO,
+                adapter=obb_adapter,
+                fallback_provider=mock_crypto,
+                provider_name=cfg.openbb_default_crypto_provider,
+                fallback_to_mock=cfg.openbb_fallback_to_mock,
+            ),
+            AssetClass.FOREX: OpenBBQuoteProvider(
+                AssetClass.FOREX,
+                adapter=obb_adapter,
+                fallback_provider=mock_forex,
+                provider_name=cfg.openbb_default_forex_provider,
+                fallback_to_mock=cfg.openbb_fallback_to_mock,
+            ),
+            AssetClass.EQUITY: OpenBBQuoteProvider(
+                AssetClass.EQUITY,
+                adapter=obb_adapter,
+                fallback_provider=mock_equity,
+                provider_name=cfg.openbb_default_equity_provider,
+                fallback_to_mock=cfg.openbb_fallback_to_mock,
+            ),
         },
         catalog=_CATALOG,
     )
+
+
+def _build_default_router() -> QuoteRouter:
+    return build_router()
 
 
 default_router = _build_default_router()

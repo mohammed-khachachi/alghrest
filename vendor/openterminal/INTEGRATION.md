@@ -20,3 +20,19 @@ symbol using local quotes, six-month history and news. No MES/MNQ mapping or
 external futures file is required there. `IntegrationBridge.tsx` synchronizes
 public symbols with the fixed parent origin; it transfers no credentials,
 account state or quotes. The manual assistant remains separately available.
+
+The local interface also supports English and Arabic. Its header language
+selector follows the parent dashboard while embedded and saves a preference
+when used separately. Language messages contain only a validated `en`/`ar` code
+and use the existing parent origin/window checks. Local dictionaries in
+`web/i18n/` translate interface text without external translation calls; original
+news, names, user entries and video content remain in their source language.
+
+Yahoo requests use Node's native User-Agent by default. The previous random
+browser identities returned HTTP 429 for public chart requests that succeeded
+with Node's default, causing `/api/quotes` and `/api/history/:symbol` to return
+502 when other providers failed. An explicit `YAHOO_USER_AGENT` override remains
+supported. `server/src/providers/yahoo.test.ts` covers the history route's
+recovery and the explicit override. Live verification after the change returned
+200 through the web proxy for AAPL, BTC-USD and ES=F quotes and ES=F 5-minute
+history. Public-provider availability and data freshness remain independent.

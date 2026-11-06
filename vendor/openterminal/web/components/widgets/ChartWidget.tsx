@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -33,6 +34,7 @@ const INDICATOR_COLOR: Record<string, string> = {
 };
 
 export default function ChartWidget({ widget }: { widget: WidgetInstance }) {
+  useLanguage();
   const symbol = useWidgetSymbol(widget);
   const [range, setRange] = useState<Range>("6M");
   const [chartType, setChartType] = useState<ChartType>("candles");
@@ -237,45 +239,45 @@ export default function ChartWidget({ widget }: { widget: WidgetInstance }) {
       <div className="flex gap-1 p-1 flex-wrap shrink-0">
         {RANGES.map((r) => (
           <button key={r} className={`term-btn ${range === r ? "active" : ""}`} onClick={() => setRange(r)}>
-            {r}
+            {tr(r)}
           </button>
         ))}
         <span className="w-2" />
         {CHART_TYPES.map((t) => (
           <button key={t} className={`term-btn ${chartType === t ? "active" : ""}`} onClick={() => setChartType(t)}>
-            {t.toUpperCase()}
+            {tr(t.toUpperCase())}
           </button>
         ))}
         <span className="w-2" />
         {INDICATORS.map((ind) => (
           <button key={ind} className={`term-btn ${active.has(ind) ? "active" : ""}`} onClick={() => toggleIndicator(ind)}>
-            {ind}
+            {tr(ind)}
           </button>
         ))}
       </div>
-      {error && <div className="p-2 down">Error: {(error as Error).message}</div>}
+      {error && <div className="p-2 down">{tr("Error: ")}{tr((error as Error).message)}</div>}
       <div className="relative flex-1 min-h-0">
         {legend && (
           <div className="absolute top-1 left-2 z-10 flex flex-col gap-0.5 text-[11px] pointer-events-none bg-[rgba(10,10,10,0.7)] px-2 py-1 rounded max-w-[95%]">
-            <div className="flex gap-3">
-              <span className="dim">O <span className="text-[var(--text)]">{fmt(legend.open)}</span></span>
-              <span className="dim">H <span className="up">{fmt(legend.high)}</span></span>
-              <span className="dim">L <span className="down">{fmt(legend.low)}</span></span>
-              <span className="dim">C <span className={legend.close >= legend.open ? "up" : "down"}>{fmt(legend.close)}</span></span>
-              <span className="dim">Vol <span className="text-[var(--text)]">{fmtBig(legend.volume)}</span></span>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+              <span className="dim">{tr("O ")}<span className="text-[var(--text)]">{tr(fmt(legend.open))}</span></span>
+              <span className="dim">{tr("H ")}<span className="up">{tr(fmt(legend.high))}</span></span>
+              <span className="dim">{tr("L ")}<span className="down">{tr(fmt(legend.low))}</span></span>
+              <span className="dim">{tr("C ")}<span className={legend.close >= legend.open ? "up" : "down"}>{tr(fmt(legend.close))}</span></span>
+              <span className="dim">{tr("Vol ")}<span className="text-[var(--text)]">{tr(fmtBig(legend.volume))}</span></span>
             </div>
             {indicatorRows.length > 0 && (
               <div className="flex gap-3 flex-wrap">
                 {indicatorRows.map((r) => (
                   <span key={r.label} className="dim">
-                    {r.label} <span style={{ color: r.color }}>{r.value}</span>
+                    {tr(r.label)} <span style={{ color: r.color }}>{tr(r.value)}</span>
                   </span>
                 ))}
               </div>
             )}
           </div>
         )}
-        <div ref={containerRef} className="w-full h-full" />
+        <div dir="ltr" ref={containerRef} className="w-full h-full" />
       </div>
     </div>
   );

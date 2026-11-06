@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, tr } from "../../i18n";
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,6 +16,7 @@ type Chain = {
 };
 
 export default function OptionsWidget({ widget }: { widget: WidgetInstance }) {
+  useLanguage();
   const symbol = useWidgetSymbol(widget);
   const [expiry, setExpiry] = useState<string | undefined>();
 
@@ -28,11 +30,11 @@ export default function OptionsWidget({ widget }: { widget: WidgetInstance }) {
   if (error)
     return (
       <div className="p-2">
-        <div className="down">Option chain unavailable for {symbol}</div>
-        <div className="dim">{(error as Error).message}</div>
+        <div className="down">{tr("Option chain unavailable for ")}{tr(symbol)}</div>
+        <div className="dim">{tr((error as Error).message)}</div>
       </div>
     );
-  if (isLoading || !data) return <div className="p-2 dim">Loading option chain…</div>;
+  if (isLoading || !data) return <div className="p-2 dim">{tr("Loading option chain…")}</div>;
 
   const byStrike = new Map<number, { call?: OptionRow; put?: OptionRow }>();
   for (const c of data.calls) if (c.strike !== null) byStrike.set(c.strike, { ...byStrike.get(c.strike), call: c });
@@ -42,29 +44,29 @@ export default function OptionsWidget({ widget }: { widget: WidgetInstance }) {
   return (
     <div>
       <div className="flex gap-2 items-center p-1">
-        <span className="dim">Underlying</span>
-        <span className="amber font-bold">{fmt(data.underlyingPrice)}</span>
-        <span className="dim ml-2">Expiry</span>
+        <span className="dim">{tr("Underlying")}</span>
+        <span className="amber font-bold">{tr(fmt(data.underlyingPrice))}</span>
+        <span className="dim ml-2">{tr("Expiry")}</span>
         <select
           value={expiry ?? data.selectedDate ?? ""}
           onChange={(e) => setExpiry(e.target.value)}
         >
           {data.expirationDates.map((d) => (
-            <option key={d} value={d}>{d}</option>
+            <option key={d} value={d}>{tr(d)}</option>
           ))}
         </select>
       </div>
       <table className="data-table">
         <thead>
           <tr>
-            <th colSpan={5} className="!text-center up">CALLS</th>
-            <th className="!text-center">STRIKE</th>
-            <th colSpan={5} className="!text-center down">PUTS</th>
+            <th colSpan={5} className="!text-center up">{tr("CALLS")}</th>
+            <th className="!text-center">{tr("STRIKE")}</th>
+            <th colSpan={5} className="!text-center down">{tr("PUTS")}</th>
           </tr>
           <tr>
-            <th>Last</th><th>Bid</th><th>Ask</th><th>Vol</th><th>OI · IV</th>
+            <th>{tr("Last")}</th><th>{tr("Bid")}</th><th>{tr("Ask")}</th><th>{tr("Vol")}</th><th>{tr("OI · IV")}</th>
             <th></th>
-            <th>Last</th><th>Bid</th><th>Ask</th><th>Vol</th><th>OI · IV</th>
+            <th>{tr("Last")}</th><th>{tr("Bid")}</th><th>{tr("Ask")}</th><th>{tr("Vol")}</th><th>{tr("OI · IV")}</th>
           </tr>
         </thead>
         <tbody>
@@ -72,20 +74,20 @@ export default function OptionsWidget({ widget }: { widget: WidgetInstance }) {
             const { call, put } = byStrike.get(strike)!;
             return (
               <tr key={strike}>
-                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{fmt(call?.lastPrice)}</td>
-                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{fmt(call?.bid)}</td>
-                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{fmt(call?.ask)}</td>
-                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{fmtBig(call?.volume)}</td>
+                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{tr(fmt(call?.lastPrice))}</td>
+                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{tr(fmt(call?.bid))}</td>
+                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{tr(fmt(call?.ask))}</td>
+                <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>{tr(fmtBig(call?.volume))}</td>
                 <td className={call?.inTheMoney ? "bg-[#0d2010]" : ""}>
-                  {fmtBig(call?.openInterest)} · {call?.impliedVolatility ? fmt(call.impliedVolatility * 100, 0) + "%" : "—"}
+                  {tr(fmtBig(call?.openInterest))} · {tr(call?.impliedVolatility ? fmt(call.impliedVolatility * 100, 0) + "%" : "—")}
                 </td>
-                <td className="!text-center font-bold amber">{fmt(strike)}</td>
-                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{fmt(put?.lastPrice)}</td>
-                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{fmt(put?.bid)}</td>
-                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{fmt(put?.ask)}</td>
-                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{fmtBig(put?.volume)}</td>
+                <td className="!text-center font-bold amber">{tr(fmt(strike))}</td>
+                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{tr(fmt(put?.lastPrice))}</td>
+                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{tr(fmt(put?.bid))}</td>
+                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{tr(fmt(put?.ask))}</td>
+                <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>{tr(fmtBig(put?.volume))}</td>
                 <td className={put?.inTheMoney ? "bg-[#200d0d]" : ""}>
-                  {fmtBig(put?.openInterest)} · {put?.impliedVolatility ? fmt(put.impliedVolatility * 100, 0) + "%" : "—"}
+                  {tr(fmtBig(put?.openInterest))} · {tr(put?.impliedVolatility ? fmt(put.impliedVolatility * 100, 0) + "%" : "—")}
                 </td>
               </tr>
             );

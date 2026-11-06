@@ -5,20 +5,24 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 
 import structlog
 
 from agents.base_agent import BaseAgent
+from core.accounting.repository import Ledger
 from core.config import settings
 from core.data.models import (
     AgentConfig,
     KafkaTopic,
     Order,
+    OrderSide,
     OrderStatus,
     OrderType,
     TradeProposal,
     TradeProposalStatus,
 )
+from core.execution.authorization import ApprovalStore
 
 log = structlog.get_logger(__name__)
 
@@ -42,10 +46,14 @@ class OrderRouter(BaseAgent):
             name="OrderRouter",
             config=config,
         )
+        self.authorizations: ApprovalStore | None = None
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 
     async def initialize(self) -> None:
+        self.authorizations = ApprovalStore(
+            await Ledger.connect(settings.database_url, settings.accounting_book_id)
+        )
         log.info(
             "order_router.initialized",
             exchanges=[a.exchange.value for a in settings.execution_accounts],
@@ -67,11 +75,17 @@ class OrderRouter(BaseAgent):
                 )
 
     async def shutdown(self) -> None:
+        if self.authorizations is not None:
+            await self.authorizations.ledger.close()
         log.info("order_router.shutdown")
 
     # ── Routing Logic ──────────────────────────────────────────────────────────
 
     async def _route(self, msg: dict[str, Any]) -> None:
+        if msg.get("accounting_book_id") != settings.accounting_book_id:
+            return
+        if self.authorizations is None:
+            raise RuntimeError("Durable approval store must be initialized")
         proposal = TradeProposal(**msg)
 
         if proposal.status != TradeProposalStatus.APPROVED:
@@ -103,7 +117,21 @@ class OrderRouter(BaseAgent):
             return
         order_type = self._select_order_type(proposal)
 
+        # A delivery/restart is not a new business intent. The durable execution
+        # journal already claims client IDs atomically; preserve that identity
+        # across every reconstruction, including an uncertain Kafka publication.
+        intent = uuid5(
+            NAMESPACE_URL,
+            f"alghrest:{settings.accounting_book_id}:proposal:{proposal.proposal_id}",
+        )
+
         order = Order(
+            accounting_book_id=settings.accounting_book_id,
+            authorization_id=intent,
+            order_id=intent,
+            client_order_id=intent,
+            created_at=created,
+            updated_at=created,
             proposal_id=proposal.proposal_id,
             symbol=proposal.symbol,
             exchange=exchange,
@@ -111,8 +139,10 @@ class OrderRouter(BaseAgent):
             side=proposal.side,
             order_type=order_type,
             size=proposal.size,
-            price=proposal.limit_price if order_type == OrderType.LIMIT else None,
-            stop_price=proposal.stop_loss,
+            price=proposal.limit_price if order_type in (OrderType.LIMIT, OrderType.TWAP) else None,
+            # The supported spot SELL path closes proven long inventory. A
+            # copied entry stop is not a new protective short-position intent.
+            stop_price=proposal.stop_loss if proposal.side == OrderSide.BUY else None,
             time_in_force="GTC",
             status=OrderStatus.PENDING,
             strategy_id=proposal.strategy_id,
@@ -120,11 +150,7 @@ class OrderRouter(BaseAgent):
             algo_params=self._build_algo_params(proposal, order_type),
         )
 
-        await self.publish(
-            KafkaTopic.ORDERS_PENDING,
-            order.model_dump(mode="json"),
-            "Order",
-        )
+        await self.authorizations.bind(proposal, order)
         log.info(
             "order_router.routed",
             symbol=proposal.symbol,
@@ -149,9 +175,13 @@ class OrderRouter(BaseAgent):
     def _build_algo_params(proposal: TradeProposal, order_type: OrderType) -> dict[str, Any]:
         if order_type == OrderType.TWAP:
             return {
-                "duration_minutes": 30,
-                "num_slices": 6,
-                "slice_interval_seconds": 300,
+                "duration_minutes": (
+                    settings.execution_twap_num_slices * settings.execution_twap_interval_seconds
+                    + 59
+                )
+                // 60,
+                "num_slices": settings.execution_twap_num_slices,
+                "slice_interval_seconds": settings.execution_twap_interval_seconds,
                 "max_participation_rate": 0.10,
             }
         if order_type == OrderType.VWAP:

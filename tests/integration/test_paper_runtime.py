@@ -18,6 +18,7 @@ import pytest
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 
 from agents.tier1_executive.proposal_approver import ProposalApprover
+from agents.tier1_executive.risk_governor import RiskGovernor
 from agents.tier5_execution.exchange_executor import ExchangeExecutor
 from agents.tier5_execution.order_router import OrderRouter
 from agents.tier7_monitoring.portfolio_accountant import PortfolioAccountant
@@ -26,7 +27,8 @@ from core.accounting.models import CashBalance, OpeningBalances
 from core.accounting.repository import Ledger
 from core.config import settings
 from core.data.models import AgentMessage, Exchange, KafkaTopic, OrderSide, OrderType, TradeProposal
-from core.execution.contracts import AccountScope
+from core.execution.authorization import ApprovalStore
+from core.execution.contracts import AccountScope, InstrumentRules
 from core.execution.recovery import RecoveryCoordinator
 from core.execution.store import ExecutionStore
 from core.orchestrator.message_bus import AlghrestConsumer, AlghrestProducer
@@ -51,9 +53,21 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
             KafkaTopic.PROPOSALS_APPROVED,
             KafkaTopic.ORDERS_PENDING,
             KafkaTopic.FILLS_CONFIRMED,
+            KafkaTopic.RISK_ALERTS,
         )
     }
-    account = AccountScope(exchange=Exchange.BINANCE, symbols=["BTC/USDT", "SOL/USDT", "GALA/USDT"])
+    account = AccountScope(
+        exchange=Exchange.BINANCE,
+        symbols=["BTC/USDT", "SOL/USDT", "GALA/USDT"],
+        market_rules={
+            "SOL/USDT": InstrumentRules(
+                tick_size="0.01",
+                quantity_step="0.000001",
+                min_quantity="0.000001",
+                min_notional="1",
+            )
+        },
+    )
     monkeypatch.setattr(settings, "execution_accounts", [account])
     proposals = []
     last_fill = None
@@ -88,7 +102,7 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         await producer.initialize()
 
         async def publish(source_topic, payload, message_type):
-            if source_topic == KafkaTopic.RISK_ALERTS:
+            if source_topic == KafkaTopic.RISK_ALERTS and message_type != "HaltAllStrategies":
                 if await state.is_kill_switch_active():
                     assert "system kill switch active" in payload["message"]
                     return
@@ -109,6 +123,7 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         assert (await recovery.run_once())["ready"]
         assert await state.trading_ready()
         approver, router, executor = ProposalApprover(), OrderRouter(), ExchangeExecutor()
+        approver.authorizations = router.authorizations = ApprovalStore(ledger)
         for component in (approver, router, executor):
             component.state = state
             component.publish = publish
@@ -116,6 +131,7 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         agent = PortfolioAccountant()
         agent.ledger = ledger
         proposal = TradeProposal(
+            accounting_book_id=ledger.book_id,
             symbol="SOL/USDT",
             exchange=Exchange.BINANCE,
             asset_class="CRYPTO",
@@ -131,15 +147,23 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         )
         proposals.append(proposal)
 
+        risk_seen = asyncio.Event()
+
         async def dispatch(message, fill_handler):
             kind, payload = message["topic"], message["payload"]
             if kind == KafkaTopic.PROPOSALS_BUS:
                 await approver._process(payload)
             elif kind == KafkaTopic.PROPOSALS_APPROVED:
                 await router._route(payload)
+                await recovery.run_once()  # Deliver the durably bound root via its outbox.
             elif kind == KafkaTopic.ORDERS_PENDING:
                 await executor.handle_order(message)
                 await recovery.run_once()
+            elif kind == KafkaTopic.RISK_ALERTS:
+                assert message["message_type"] == "HaltAllStrategies"
+                await store.block("weekly halt received over Kafka")
+                await recovery.recover_orders(halted=True)
+                risk_seen.set()
             else:
                 await fill_handler(message)
 
@@ -176,6 +200,7 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         await paper.initialize()
         assert (await paper.balances())["USDT"] == Decimal("144.995")
         recovery = RecoveryCoordinator(store, [account], {account.key: paper}, state, publish)
+        approver.authorizations = router.authorizations = ApprovalStore(ledger)
         executor.store, executor.venues = store, {account.key: paper}
         agent.ledger = ledger
 
@@ -226,7 +251,8 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         assert (await paper.balances())["USDT"] == Decimal("149.990")
         assert (
             await ledger.pool.fetchval(
-                "SELECT count(*) FROM execution.paper_orders WHERE book_id=$1", ledger.book_id
+                "SELECT count(*) FROM execution.paper_orders WHERE book_id=$1 AND payload->>'order_type' != 'STOP'",
+                ledger.book_id,
             )
             == 2
         )
@@ -283,7 +309,10 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
         assert (await paper.balances())["USDT"] == Decimal("149.890")
         assert approver._approved_count == executor._placed_count == 22
         # A halt still prevents admission after the burst (on test Redis DB 15).
-        await state.activate_kill_switch("isolated load-test halt")
+        governor = RiskGovernor()
+        governor.state, governor.publish = state, publish
+        await governor._halt_all_strategies()
+        await asyncio.wait_for(risk_seen.wait(), timeout=30)
         halt_start = time.perf_counter()
         blocked = proposal.model_copy(
             update={"proposal_id": uuid4(), "created_at": datetime.now(UTC)}
@@ -323,13 +352,15 @@ async def test_durable_fill_survives_real_kafka_consumer_restart(monkeypatch):
             await state.redis.delete(
                 "accounting:mark:binance:SOL/USDT",
                 "accounting:mark:binance:USDT/USD",
-                *(f"proposal_review:{p.proposal_id}" for p in proposals),
-                "alghrest:portfolio:current",
-                "alghrest:kill_switch:active",
+                *(state.book_key(f"proposal_review:{p.proposal_id}") for p in proposals),
+                state.book_key("alghrest:portfolio:current"),
+                state.book_key("alghrest:kill_switch:active"),
                 f"alghrest:reconciliation:{ledger.book_id}",
             )
             await state.shutdown()
         for table in (
+            "authorization_denials",
+            "authorizations",
             "paper_fills",
             "paper_orders",
             "paper_accounts",
