@@ -3,7 +3,8 @@ import { LanguageSwitch } from '../../i18n';
 import { useLanguage, tr } from "../../i18n";
 import { accessHeaders } from '@/lib/access';
 import { useEffect, useState, useCallback } from 'react';
-import { Menu, Power, Clock } from 'lucide-react';
+import { Menu, Power, Clock, Sparkles } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useDashboardStore } from '@/store/useStore';
@@ -92,6 +93,22 @@ export function Header({ onMenuClick, researchOnly = false }: HeaderProps) {
       </div>
 
       <div className="flex-1" />
+
+      {/* Quick Gemini AI Assistant launcher */}
+      <NavLink
+        to="/chat"
+        className={({ isActive }) =>
+          clsx(
+            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all border',
+            isActive
+              ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300 shadow-sm'
+              : 'bg-white/5 border-border text-white/70 hover:text-white hover:bg-white/10',
+          )
+        }
+      >
+        <Sparkles size={13} className="text-indigo-400 animate-pulse" />
+        <span className="hidden sm:inline">{tr("Gemini AI")}</span>
+      </NavLink>
 
       <LanguageSwitch />
 

@@ -1,0 +1,8 @@
+{
+  "name": "ALGHREST — Trading & Intelligence Platform",
+  "description": "Autonomous multi-agent algorithmic trading and quantitative research platform with real-time analytics, risk rails, agent monitoring, and execution dashboard.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
