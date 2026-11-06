@@ -1,0 +1,47 @@
+{
+  "name": "@mohammed-khachachi/alghrest-client",
+  "version": "0.1.0",
+  "description": "Official TypeScript & JavaScript Client SDK for the ALGHREST Quantitative Trading & Intelligence Platform",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "trading",
+    "quantitative",
+    "alghrest",
+    "algorithmic-trading",
+    "openbb",
+    "kafka",
+    "finance",
+    "market-data",
+    "sdk"
+  ],
+  "author": "Mohammed Khachachi <khachachivscod@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mohammed-khachachi/alghrest.git",
+    "directory": "packages/client"
+  },
+  "bugs": {
+    "url": "https://github.com/mohammed-khachachi/alghrest/issues"
+  },
+  "homepage": "https://github.com/mohammed-khachachi/alghrest#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}

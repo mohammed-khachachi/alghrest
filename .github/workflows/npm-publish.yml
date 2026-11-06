@@ -1,0 +1,63 @@
+name: Publish ALGHREST Client to npm Registry
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Publish target'
+        required: true
+        default: 'npm'
+        type: choice
+        options:
+          - 'npm'
+          - 'github-packages'
+          - 'both'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies & build client SDK
+        working-directory: packages/client
+        run: |
+          npm ci || npm install
+          npm run build
+          npm pack --dry-run
+
+      - name: Publish to npm Registry
+        if: ${{ (github.event_name == 'push' || github.event.inputs.target == 'npm' || github.event.inputs.target == 'both') && env.NODE_AUTH_TOKEN != '' }}
+        working-directory: packages/client
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Setup Node.js for GitHub Packages
+        if: ${{ github.event_name == 'push' || github.event.inputs.target == 'github-packages' || github.event.inputs.target == 'both' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://npm.pkg.github.com'
+
+      - name: Publish to GitHub Packages
+        if: ${{ github.event_name == 'push' || github.event.inputs.target == 'github-packages' || github.event.inputs.target == 'both' }}
+        working-directory: packages/client
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
